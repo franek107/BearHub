@@ -7,11 +7,9 @@ local Players = game:GetService("Players")
 local Camera = workspace.CurrentCamera
 local SoundService = game:GetService("SoundService")
 
--- SOUND IDS
 local CLICK_SOUND_ID = "rbxassetid://6895079853"
 local SLIDER_SOUND_ID = "rbxassetid://5765856907"
 local DRAG_SOUND_ID = "rbxassetid://5765856907"
-local HOVER_SOUND_ID = "rbxassetid://6895079853"
 
 local function playSound(id, volume, pitch)
 	local s = Instance.new("Sound")
@@ -24,13 +22,8 @@ local function playSound(id, volume, pitch)
 	return s
 end
 
-local function playClick()
-	playSound(CLICK_SOUND_ID, 0.25, 1.2)
-end
-
-local function playSlider()
-	playSound(SLIDER_SOUND_ID, 0.15, 1.5)
-end
+local function playClick() playSound(CLICK_SOUND_ID, 0.25, 1.2) end
+local function playSlider() playSound(SLIDER_SOUND_ID, 0.15, 1.5) end
 
 local dragSoundObj = nil
 local dragSoundPlaying = false
@@ -79,22 +72,22 @@ gui.DisplayOrder = 9999
 gui.Parent = playerGui
 
 local PURPLE = Color3.fromRGB(100, 70, 200)
-local GRAY   = Color3.fromRGB(60, 60, 70)
-local DARK   = Color3.fromRGB(35, 35, 42)
+local GRAY = Color3.fromRGB(60, 60, 70)
+local DARK = Color3.fromRGB(35, 35, 42)
 local CHECK_ICON = "rbxassetid://6031094667"
-local BEAR_ICON  = "rbxassetid://7733658504"
+local BEAR_ICON = "rbxassetid://7733658504"
 
 local ESP = {
 	Enabled = true,
 	MaxDistance = 300,
 	ShowLocalPlayer = false,
 	VisibleOnly = false,
-	Box       = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
-	Skeleton  = {Enabled=true,  Color=Color3.fromRGB(255,255,255)},
-	Name      = {Enabled=true,  Color=Color3.fromRGB(255,255,255)},
-	ID        = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
+	Box = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
+	Skeleton = {Enabled=true, Color=Color3.fromRGB(255,255,255)},
+	Name = {Enabled=true, Color=Color3.fromRGB(255,255,255)},
+	ID = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
 	HealthBar = {Enabled=false, Color=Color3.fromRGB(0,255,0)},
-	Distance  = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
+	Distance = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
 	Snaplines = {Enabled=false, Color=Color3.fromRGB(100,70,200)},
 }
 
@@ -102,46 +95,23 @@ local FOV_SCALE_TRIGGER = 1
 local FOV_SCALE_AIMBOT = 3
 
 local TRIGGERBOT = {
-	Enabled      = false,
-	KeybindName  = "NONE",
-	KeybindCheck = nil,
-	Type         = "First Person",
-	ShowFOV      = false,
-	FOVColor     = Color3.fromRGB(100, 70, 200),
-	FOV          = 30,
-	ExcludeDead  = false,
-	VisibleOnly  = false,
-	MaxDistance   = 250,
-	ShotDelay    = 0,
+	Enabled = false, KeybindName = "NONE", KeybindCheck = nil,
+	Type = "First Person", ShowFOV = false,
+	FOVColor = Color3.fromRGB(100, 70, 200), FOV = 30,
+	ExcludeDead = false, VisibleOnly = false,
+	MaxDistance = 250, ShotDelay = 0,
 }
 
 local AIMBOT = {
-	Enabled      = false,
-	KeybindName  = "NONE",
-	KeybindCheck = nil,
-	DrawFOV      = false,
-	FOVColor     = Color3.fromRGB(100, 70, 200),
-	VisibleCheck = false,
-	ExcludeDead  = true,
-	Bone         = "Head",
-	FOV          = 10,
-	MaxDistance  = 250,
-	SmoothX      = 80,
-	SmoothY      = 80,
+	Enabled = false, KeybindName = "NONE", KeybindCheck = nil,
+	DrawFOV = false, FOVColor = Color3.fromRGB(100, 70, 200),
+	VisibleCheck = false, ExcludeDead = true,
+	Bone = "Head", FOV = 10, MaxDistance = 250,
+	SmoothX = 80, SmoothY = 80,
 }
 
-local HITBOX = {
-	Enabled = false,
-	Bone = "Head",
-	Size = 0,
-}
-
-local MISC = {
-	SemiGod  = false,
-	NoRecoil = false,
-	NoSpread = false,
-	InfAmmo  = false,
-}
+local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
+local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false}
 
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
 
@@ -151,8 +121,7 @@ UIS.InputBegan:Connect(function(inp)
 	elseif uit == Enum.UserInputType.MouseButton2 then mbHeld[2] = true
 	elseif uit == Enum.UserInputType.MouseButton3 then mbHeld[3] = true
 	elseif uit == Enum.UserInputType.MouseButton4 then mbHeld[4] = true
-	elseif uit == Enum.UserInputType.MouseButton5 then mbHeld[5] = true
-	end
+	elseif uit == Enum.UserInputType.MouseButton5 then mbHeld[5] = true end
 end)
 
 UIS.InputEnded:Connect(function(inp)
@@ -161,8 +130,7 @@ UIS.InputEnded:Connect(function(inp)
 	elseif uit == Enum.UserInputType.MouseButton2 then mbHeld[2] = false
 	elseif uit == Enum.UserInputType.MouseButton3 then mbHeld[3] = false
 	elseif uit == Enum.UserInputType.MouseButton4 then mbHeld[4] = false
-	elseif uit == Enum.UserInputType.MouseButton5 then mbHeld[5] = false
-	end
+	elseif uit == Enum.UserInputType.MouseButton5 then mbHeld[5] = false end
 end)
 
 local fovCircle = Instance.new("Frame")
@@ -175,8 +143,7 @@ local fovStroke = Instance.new("UIStroke", fovCircle)
 fovStroke.Color = PURPLE
 fovStroke.Thickness = 1.5
 fovStroke.Transparency = 0.3
-local fovCorner = Instance.new("UICorner", fovCircle)
-fovCorner.CornerRadius = UDim.new(1, 0)
+Instance.new("UICorner", fovCircle).CornerRadius = UDim.new(1, 0)
 
 local fovCircleAim = Instance.new("Frame")
 fovCircleAim.BackgroundTransparency = 1
@@ -188,8 +155,7 @@ local fovStrokeAim = Instance.new("UIStroke", fovCircleAim)
 fovStrokeAim.Color = PURPLE
 fovStrokeAim.Thickness = 1.5
 fovStrokeAim.Transparency = 0.3
-local fovCornerAim = Instance.new("UICorner", fovCircleAim)
-fovCornerAim.CornerRadius = UDim.new(1, 0)
+Instance.new("UICorner", fovCircleAim).CornerRadius = UDim.new(1, 0)
 
 local function updateFOVCircle()
 	if TRIGGERBOT.ShowFOV and TRIGGERBOT.Enabled then
@@ -198,18 +164,14 @@ local function updateFOVCircle()
 		fovCircle.Position = UDim2.new(0, Camera.ViewportSize.X/2, 0, Camera.ViewportSize.Y/2)
 		fovStroke.Color = TRIGGERBOT.FOVColor
 		fovCircle.Visible = true
-	else
-		fovCircle.Visible = false
-	end
+	else fovCircle.Visible = false end
 	if AIMBOT.DrawFOV and AIMBOT.Enabled then
 		local r = AIMBOT.FOV * FOV_SCALE_AIMBOT
 		fovCircleAim.Size = UDim2.new(0, r*2, 0, r*2)
 		fovCircleAim.Position = UDim2.new(0, Camera.ViewportSize.X/2, 0, Camera.ViewportSize.Y/2)
 		fovStrokeAim.Color = AIMBOT.FOVColor
 		fovCircleAim.Visible = true
-	else
-		fovCircleAim.Visible = false
-	end
+	else fovCircleAim.Visible = false end
 end
 
 local espObjects = {}
@@ -268,9 +230,7 @@ local function hideAll(d)
 		if k ~= "holder" then
 			if type(v) == "table" then
 				for _, x in pairs(v) do pcall(function() x.Visible = false end) end
-			else
-				pcall(function() v.Visible = false end)
-			end
+			else pcall(function() v.Visible = false end) end
 		end
 	end
 end
@@ -447,15 +407,9 @@ local function updateESP()
 														drawLine(d.skeleton[i], s1, s2, 2)
 														d.skeleton[i].BackgroundColor3 = ESP.Skeleton.Color
 														d.skeleton[i].Visible = true
-													else
-														d.skeleton[i].Visible = false
-													end
-												else
-													d.skeleton[i].Visible = false
-												end
-											else
-												d.skeleton[i].Visible = false
-											end
+													else d.skeleton[i].Visible = false end
+												else d.skeleton[i].Visible = false end
+											else d.skeleton[i].Visible = false end
 										end
 									end
 								else
@@ -477,13 +431,9 @@ RunService.RenderStepped:Connect(function()
 	pcall(updateFOVCircle)
 end)
 
-task.spawn(function()
-	while true do task.wait(5); pcall(fullRefresh) end
-end)
+task.spawn(function() while true do task.wait(5); pcall(fullRefresh) end end)
 
-player.CharacterAdded:Connect(function()
-	task.wait(0.5); pcall(fullRefresh)
-end)
+player.CharacterAdded:Connect(function() task.wait(0.5); pcall(fullRefresh) end)
 
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	Camera = workspace.CurrentCamera; pcall(fullRefresh)
@@ -503,16 +453,11 @@ end
 
 Players.PlayerRemoving:Connect(function(p) clearESP(p) end)
 
-------------------------------------------------------------
--- TRIGGERBOT
-------------------------------------------------------------
 local lastShot = 0
 
 local function isFirstPerson()
 	local ok1, cm = pcall(function() return player.CameraMode end)
-	if ok1 and cm == Enum.CameraMode.LockFirstPerson then
-		return true
-	end
+	if ok1 and cm == Enum.CameraMode.LockFirstPerson then return true end
 	local char = player.Character
 	if char then
 		local head = char:FindFirstChild("Head")
@@ -558,10 +503,7 @@ local function getTriggerTarget()
 						end)
 						if ok and on and d2 and d2 > 0 then
 							local sd = (sp - vc).Magnitude
-							if sd <= fr and sd < bestD then
-								best = plr
-								bestD = sd
-							end
+							if sd <= fr and sd < bestD then best = plr; bestD = sd end
 						end
 					end
 				end
@@ -588,17 +530,10 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
-------------------------------------------------------------
--- AIMBOT
-------------------------------------------------------------
 local function getBonePosition(char, boneChoice)
-	if boneChoice == "Head" then
-		return getPos(char, "Head")
-	elseif boneChoice == "Torso" then
-		return getPos(char, "UpperTorso") or getPos(char, "Torso") or getPos(char, "HumanoidRootPart")
-	elseif boneChoice == "Legs" then
-		return getPos(char, "LeftUpperLeg") or getPos(char, "Left Leg") or getPos(char, "LowerTorso")
-	end
+	if boneChoice == "Head" then return getPos(char, "Head")
+	elseif boneChoice == "Torso" then return getPos(char, "UpperTorso") or getPos(char, "Torso") or getPos(char, "HumanoidRootPart")
+	elseif boneChoice == "Legs" then return getPos(char, "LeftUpperLeg") or getPos(char, "Left Leg") or getPos(char, "LowerTorso") end
 	return getPos(char, "Head")
 end
 
@@ -635,11 +570,7 @@ local function getAimbotTarget()
 								end)
 								if ok and on and d2 and d2 > 0 then
 									local sd = (sp - vc).Magnitude
-									if sd <= fr and sd < bestD then
-										best = plr
-										bestD = sd
-										bestPos = bonePos
-									end
+									if sd <= fr and sd < bestD then best = plr; bestD = sd; bestPos = bonePos end
 								end
 							end
 						end
@@ -659,10 +590,8 @@ RunService.RenderStepped:Connect(function()
 				local camPos = Camera.CFrame.Position
 				local currentLook = Camera.CFrame.LookVector
 				local desiredLook = (targetPos - camPos).Unit
-				local smoothX = math.clamp(AIMBOT.SmoothX, 1, 100)
-				local smoothY = math.clamp(AIMBOT.SmoothY, 1, 100)
-				local alphaX = smoothX / 100
-				local alphaY = smoothY / 100
+				local alphaX = math.clamp(AIMBOT.SmoothX, 1, 100) / 100
+				local alphaY = math.clamp(AIMBOT.SmoothY, 1, 100) / 100
 				local newLook = Vector3.new(
 					currentLook.X + (desiredLook.X - currentLook.X) * alphaX,
 					currentLook.Y + (desiredLook.Y - currentLook.Y) * alphaY,
@@ -674,41 +603,28 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-------------------------------------------------------------
--- HITBOX EXPANDER (bezpośrednia modyfikacja Size + Transparency)
-------------------------------------------------------------
-local hitboxOriginalSizes = {} -- [part] = oryginalny Size
-local hitboxOriginalTransparency = {} -- [part] = oryginalna Transparency
+local hitboxOriginalSizes = {}
+local hitboxOriginalTransparency = {}
 local hitboxOriginalCanCollide = {}
+local hitboxOriginalMaterial = {}
+local hitboxOriginalColor = {}
 
 local HITBOX_SCALE = 0.15
 
 local HITBOX_BONE_MAP = {
-	Head = {
-		R15 = {"Head"},
-		R6  = {"Head"},
-	},
-	Torso = {
-		R15 = {"UpperTorso", "LowerTorso"},
-		R6  = {"Torso"},
-	},
-	Legs = {
-		R15 = {"LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"},
-		R6  = {"Left Leg", "Right Leg"},
-	},
+	Head = {R15 = {"Head"}, R6 = {"Head"}},
+	Torso = {R15 = {"UpperTorso", "LowerTorso"}, R6 = {"Torso"}},
+	Legs = {R15 = {"LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"}, R6 = {"Left Leg", "Right Leg"}},
 }
 
 local function getHitboxParts(char)
 	local isR15 = char:FindFirstChild("UpperTorso") ~= nil
 	local rig = isR15 and "R15" or "R6"
-	local boneChoice = HITBOX.Bone
-	local names = HITBOX_BONE_MAP[boneChoice] and HITBOX_BONE_MAP[boneChoice][rig] or {"Head"}
+	local names = HITBOX_BONE_MAP[HITBOX.Bone] and HITBOX_BONE_MAP[HITBOX.Bone][rig] or {"Head"}
 	local parts = {}
 	for _, name in ipairs(names) do
 		local part = char:FindFirstChild(name)
-		if part and part:IsA("BasePart") then
-			table.insert(parts, part)
-		end
+		if part and part:IsA("BasePart") then table.insert(parts, part) end
 	end
 	return parts
 end
@@ -718,6 +634,8 @@ local function saveOriginal(part)
 		hitboxOriginalSizes[part] = part.Size
 		hitboxOriginalTransparency[part] = part.Transparency
 		hitboxOriginalCanCollide[part] = part.CanCollide
+		hitboxOriginalMaterial[part] = part.Material
+		hitboxOriginalColor[part] = part.Color
 	end
 end
 
@@ -727,69 +645,60 @@ local function restorePart(part)
 			part.Size = hitboxOriginalSizes[part]
 			part.Transparency = hitboxOriginalTransparency[part]
 			part.CanCollide = hitboxOriginalCanCollide[part]
+			part.Material = hitboxOriginalMaterial[part]
+			part.Color = hitboxOriginalColor[part]
 		end)
 		hitboxOriginalSizes[part] = nil
 		hitboxOriginalTransparency[part] = nil
 		hitboxOriginalCanCollide[part] = nil
+		hitboxOriginalMaterial[part] = nil
+		hitboxOriginalColor[part] = nil
 	end
 end
 
 local function expandPart(part)
 	if not part or not part.Parent then return end
-	
 	saveOriginal(part)
-	
 	local origSize = hitboxOriginalSizes[part]
 	local expand = HITBOX.Size * HITBOX_SCALE
-	
 	pcall(function()
-		part.Size = Vector3.new(
-			origSize.X + expand,
-			origSize.Y + expand,
-			origSize.Z + expand
-		)
+		part.Size = Vector3.new(origSize.X + expand, origSize.Y + expand, origSize.Z + expand)
 		part.Transparency = 0.6
 		part.CanCollide = false
 		part.Massless = true
-		part.Color = Color3.fromRGB(255, 80, 80)
 		part.Material = Enum.Material.ForceField
+		part.Color = Color3.fromRGB(255, 80, 80)
 	end)
 end
 
 local function restoreAllForChar(char)
 	if not char then return end
 	for _, part in ipairs(char:GetChildren()) do
-		if part:IsA("BasePart") and hitboxOriginalSizes[part] then
-			restorePart(part)
-		end
+		if part:IsA("BasePart") and hitboxOriginalSizes[part] then restorePart(part) end
 	end
 end
 
-local function cleanupDeadHitboxRefs()
+local function cleanupDead()
 	local toRemove = {}
 	for part in pairs(hitboxOriginalSizes) do
-		if not part or not part.Parent then
-			table.insert(toRemove, part)
-		end
+		if not part or not part.Parent then table.insert(toRemove, part) end
 	end
 	for _, part in ipairs(toRemove) do
 		hitboxOriginalSizes[part] = nil
 		hitboxOriginalTransparency[part] = nil
 		hitboxOriginalCanCollide[part] = nil
+		hitboxOriginalMaterial[part] = nil
+		hitboxOriginalColor[part] = nil
 	end
 end
 
 local lastHitboxBone = "Head"
-local lastHitboxSize = 0
 local lastHitboxEnabled = false
 
 RunService.Heartbeat:Connect(function()
 	local boneChanged = (lastHitboxBone ~= HITBOX.Bone)
-	local sizeChanged = (lastHitboxSize ~= HITBOX.Size)
 	local enabledChanged = (lastHitboxEnabled ~= HITBOX.Enabled)
-	
 	lastHitboxBone = HITBOX.Bone
-	lastHitboxSize = HITBOX.Size
 	lastHitboxEnabled = HITBOX.Enabled
 
 	for _, plr in ipairs(Players:GetPlayers()) do
@@ -797,43 +706,29 @@ RunService.Heartbeat:Connect(function()
 			local char = plr.Character
 			if char then
 				if HITBOX.Enabled and HITBOX.Size > 0 then
-					-- Jak zmienił się bone - przywróć wszystkie stare
-					if boneChanged then
-						restoreAllForChar(char)
-					end
-					
-					-- Znajdź aktualne części do powiększenia
+					if boneChanged then restoreAllForChar(char) end
 					local targetParts = getHitboxParts(char)
 					local targetSet = {}
 					for _, p in ipairs(targetParts) do targetSet[p] = true end
-					
-					-- Przywróć części które nie powinny być już powiększone
 					for _, part in ipairs(char:GetChildren()) do
 						if part:IsA("BasePart") and hitboxOriginalSizes[part] and not targetSet[part] then
 							restorePart(part)
 						end
 					end
-					
-					-- Powiększ docelowe części
 					for _, part in ipairs(targetParts) do
-						pcall(function()
-							expandPart(part)
-						end)
+						pcall(function() expandPart(part) end)
 					end
 				else
-					-- Wyłączone - przywróć wszystko
-					if enabledChanged or (HITBOX.Size == 0 and next(hitboxOriginalSizes)) then
-						restoreAllForChar(char)
-					end
+					if enabledChanged then restoreAllForChar(char) end
 				end
 			end
 		end
 	end
-	cleanupDeadHitboxRefs()
+	cleanupDead()
 end)
 
 Players.PlayerAdded:Connect(function(p)
-	p.CharacterAdded:Connect(function() task.wait(0.5); cleanupDeadHitboxRefs() end)
+	p.CharacterAdded:Connect(function() task.wait(0.5); cleanupDead() end)
 	p.CharacterRemoving:Connect(function()
 		local char = p.Character
 		if char then restoreAllForChar(char) end
@@ -842,7 +737,7 @@ end)
 
 for _, p in ipairs(Players:GetPlayers()) do
 	if p ~= player then
-		p.CharacterAdded:Connect(function() task.wait(0.5); cleanupDeadHitboxRefs() end)
+		p.CharacterAdded:Connect(function() task.wait(0.5); cleanupDead() end)
 		p.CharacterRemoving:Connect(function()
 			local char = p.Character
 			if char then restoreAllForChar(char) end
@@ -850,9 +745,6 @@ for _, p in ipairs(Players:GetPlayers()) do
 	end
 end
 
-------------------------------------------------------------
--- MISCELLANEOUS FEATURES
-------------------------------------------------------------
 task.spawn(function()
 	while true do
 		task.wait(0.15)
@@ -862,9 +754,7 @@ task.spawn(function()
 				local hum = char:FindFirstChildOfClass("Humanoid")
 				if hum then
 					pcall(function()
-						if hum.Health < hum.MaxHealth then
-							hum.Health = hum.MaxHealth
-						end
+						if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
 					end)
 				end
 			end
@@ -886,15 +776,9 @@ local function hookTool(tool)
 					for _, v in ipairs(tool:GetDescendants()) do
 						if v:IsA("NumberValue") or v:IsA("IntValue") then
 							local n = v.Name:lower()
-							if MISC.NoRecoil and (n:find("recoil") or n:find("kick")) then
-								v.Value = 0
-							end
-							if MISC.NoSpread and (n:find("spread") or n:find("bulletspread")) then
-								v.Value = 0
-							end
-							if MISC.NoSpread and n:find("accuracy") then
-								v.Value = 1
-							end
+							if MISC.NoRecoil and (n:find("recoil") or n:find("kick")) then v.Value = 0 end
+							if MISC.NoSpread and (n:find("spread") or n:find("bulletspread")) then v.Value = 0 end
+							if MISC.NoSpread and n:find("accuracy") then v.Value = 1 end
 							if MISC.InfAmmo and (n == "ammo" or n == "currentammo" or n:find("magazine") or n:find("clip") or n == "bullets" or n == "storedammo") then
 								v.Value = 999
 							end
@@ -936,14 +820,9 @@ local function healPlayer()
 	local char = player.Character
 	if not char then return end
 	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum then
-		pcall(function() hum.Health = hum.MaxHealth end)
-	end
+	if hum then pcall(function() hum.Health = hum.MaxHealth end) end
 end
 
-------------------------------------------------------------
--- GUI
-------------------------------------------------------------
 local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
 
 local main = Instance.new("Frame", gui)
@@ -954,16 +833,14 @@ main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 main.BorderSizePixel = 0
 main.ClipsDescendants = true
 main.Active = true
-local mainCorner = Instance.new("UICorner", main)
-mainCorner.CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
 
 local sidebar = Instance.new("Frame", main)
 sidebar.Size = UDim2.new(0, 190, 1, 0)
 sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 sidebar.BorderSizePixel = 0
 sidebar.Active = true
-local sideCorner = Instance.new("UICorner", sidebar)
-sideCorner.CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 10)
 
 local bearIcon = Instance.new("ImageLabel", sidebar)
 bearIcon.Size = UDim2.new(0, 80, 0, 80)
@@ -987,8 +864,7 @@ contentArea.Position = UDim2.new(0, 200, 0, 10)
 contentArea.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 contentArea.BorderSizePixel = 0
 contentArea.ClipsDescendants = true
-local caCorner = Instance.new("UICorner", contentArea)
-caCorner.CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", contentArea).CornerRadius = UDim.new(0, 8)
 
 local contentTitle = Instance.new("TextLabel", contentArea)
 contentTitle.Size = UDim2.new(1, -20, 0, 40)
@@ -1013,8 +889,7 @@ colorPickerGui.BorderSizePixel = 0
 colorPickerGui.Visible = false
 colorPickerGui.ZIndex = 100
 colorPickerGui.Active = true
-local cpCorner = Instance.new("UICorner", colorPickerGui)
-cpCorner.CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", colorPickerGui).CornerRadius = UDim.new(0, 10)
 local cpStroke = Instance.new("UIStroke", colorPickerGui)
 cpStroke.Color = PURPLE
 cpStroke.Thickness = 2
@@ -1046,8 +921,7 @@ cpGrid.BackgroundColor3 = Color3.fromRGB(255,0,0)
 cpGrid.BorderSizePixel = 0
 cpGrid.ZIndex = 101
 cpGrid.ClipsDescendants = true
-local cpGridCorner = Instance.new("UICorner", cpGrid)
-cpGridCorner.CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", cpGrid).CornerRadius = UDim.new(0, 6)
 
 local satOver = Instance.new("Frame", cpGrid)
 satOver.Size = UDim2.new(1,0,1,0)
@@ -1071,8 +945,7 @@ cpCur.Size = UDim2.new(0,10,0,10)
 cpCur.BackgroundColor3 = Color3.new(1,1,1)
 cpCur.BorderSizePixel = 0
 cpCur.ZIndex = 105
-local cpCurCorner = Instance.new("UICorner", cpCur)
-cpCurCorner.CornerRadius = UDim.new(1,0)
+Instance.new("UICorner", cpCur).CornerRadius = UDim.new(1,0)
 local cpCurStroke = Instance.new("UIStroke", cpCur)
 cpCurStroke.Color = Color3.new(0,0,0)
 cpCurStroke.Thickness = 1
@@ -1083,8 +956,7 @@ hueBar.Position = UDim2.new(0,10,0,195)
 hueBar.BorderSizePixel = 0
 hueBar.ZIndex = 101
 hueBar.BackgroundColor3 = Color3.new(1,1,1)
-local hueBarCorner = Instance.new("UICorner", hueBar)
-hueBarCorner.CornerRadius = UDim.new(0,6)
+Instance.new("UICorner", hueBar).CornerRadius = UDim.new(0,6)
 local hueGrad = Instance.new("UIGradient", hueBar)
 hueGrad.Color = ColorSequence.new({
 	ColorSequenceKeypoint.new(0, Color3.fromRGB(255,0,0)),
@@ -1102,8 +974,7 @@ hueSlider.Position = UDim2.new(0,-2,0,-2)
 hueSlider.BackgroundColor3 = Color3.new(1,1,1)
 hueSlider.BorderSizePixel = 0
 hueSlider.ZIndex = 102
-local hueSliderCorner = Instance.new("UICorner", hueSlider)
-hueSliderCorner.CornerRadius = UDim.new(0,2)
+Instance.new("UICorner", hueSlider).CornerRadius = UDim.new(0,2)
 
 local cpPrev = Instance.new("Frame", colorPickerGui)
 cpPrev.Size = UDim2.new(0,40,0,30)
@@ -1111,8 +982,7 @@ cpPrev.Position = UDim2.new(0,10,0,222)
 cpPrev.BackgroundColor3 = Color3.fromRGB(255,0,0)
 cpPrev.BorderSizePixel = 0
 cpPrev.ZIndex = 101
-local cpPrevCorner = Instance.new("UICorner", cpPrev)
-cpPrevCorner.CornerRadius = UDim.new(0,6)
+Instance.new("UICorner", cpPrev).CornerRadius = UDim.new(0,6)
 
 local cpApply = Instance.new("TextButton", colorPickerGui)
 cpApply.Size = UDim2.new(0,80,0,28)
@@ -1124,8 +994,7 @@ cpApply.Font = Enum.Font.GothamBold
 cpApply.TextSize = 13
 cpApply.ZIndex = 102
 cpApply.AutoButtonColor = false
-local cpApplyCorner = Instance.new("UICorner", cpApply)
-cpApplyCorner.CornerRadius = UDim.new(0,6)
+Instance.new("UICorner", cpApply).CornerRadius = UDim.new(0,6)
 
 local cH, cS, cV = 0, 1, 1
 local activeCC = nil
@@ -1212,8 +1081,7 @@ local function mkCheck(parent, text, tbl, key, order)
 	box.Text = ""
 	box.AutoButtonColor = false
 	box.BorderSizePixel = 0
-	local bc = Instance.new("UICorner", box)
-	bc.CornerRadius = UDim.new(0,5)
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0,5)
 	local check = Instance.new("ImageLabel", box)
 	check.Size = UDim2.new(0.75, 0, 0.75, 0)
 	check.Position = UDim2.new(0.125, 0, 0.125, 0)
@@ -1247,13 +1115,8 @@ local function mkCheckColor(parent, text, tbl, key, colorKey, order)
 	h.LayoutOrder = order or 0
 	local isSubTable = (colorKey == nil)
 	local en, colorRef
-	if isSubTable then
-		en = ESP[key].Enabled
-		colorRef = ESP[key].Color
-	else
-		en = tbl[key] or false
-		colorRef = tbl[colorKey]
-	end
+	if isSubTable then en = ESP[key].Enabled; colorRef = ESP[key].Color
+	else en = tbl[key] or false; colorRef = tbl[colorKey] end
 	local box = Instance.new("TextButton", h)
 	box.Size = UDim2.new(0,22,0,22)
 	box.Position = UDim2.new(0,5,0.5,-11)
@@ -1261,8 +1124,7 @@ local function mkCheckColor(parent, text, tbl, key, colorKey, order)
 	box.Text = ""
 	box.AutoButtonColor = false
 	box.BorderSizePixel = 0
-	local bc = Instance.new("UICorner", box)
-	bc.CornerRadius = UDim.new(0,5)
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0,5)
 	local check = Instance.new("ImageLabel", box)
 	check.Size = UDim2.new(0.75, 0, 0.75, 0)
 	check.Position = UDim2.new(0.125, 0, 0.125, 0)
@@ -1286,8 +1148,7 @@ local function mkCheckColor(parent, text, tbl, key, colorKey, order)
 	circle.Text = ""
 	circle.AutoButtonColor = false
 	circle.BorderSizePixel = 0
-	local cc = Instance.new("UICorner", circle)
-	cc.CornerRadius = UDim.new(1,0)
+	Instance.new("UICorner", circle).CornerRadius = UDim.new(1,0)
 	local cs = Instance.new("UIStroke", circle)
 	cs.Color = Color3.fromRGB(80,80,90)
 	cs.Thickness = 2
@@ -1295,11 +1156,8 @@ local function mkCheckColor(parent, text, tbl, key, colorKey, order)
 		playClick()
 		openCP(circle.BackgroundColor3, function(nc)
 			circle.BackgroundColor3 = nc
-			if isSubTable then
-				ESP[key].Color = nc
-			else
-				tbl[colorKey] = nc
-			end
+			if isSubTable then ESP[key].Color = nc
+			else tbl[colorKey] = nc end
 		end)
 	end)
 	box.MouseButton1Click:Connect(function()
@@ -1307,11 +1165,8 @@ local function mkCheckColor(parent, text, tbl, key, colorKey, order)
 		en = not en
 		box.BackgroundColor3 = en and PURPLE or GRAY
 		check.Visible = en
-		if isSubTable then
-			ESP[key].Enabled = en
-		else
-			tbl[key] = en
-		end
+		if isSubTable then ESP[key].Enabled = en
+		else tbl[key] = en end
 	end)
 end
 
@@ -1344,23 +1199,20 @@ local function mkSlider(parent, text, minV, maxV, def, suf, tbl, key, order)
 	bg.Position = UDim2.new(0,5,0,30)
 	bg.BackgroundColor3 = Color3.fromRGB(50,50,60)
 	bg.BorderSizePixel = 0
-	local bgc = Instance.new("UICorner", bg)
-	bgc.CornerRadius = UDim.new(1,0)
+	Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
 	local pct = (val - minV) / (maxV - minV)
 	local fill = Instance.new("Frame", bg)
 	fill.Size = UDim2.new(pct,0,1,0)
 	fill.BackgroundColor3 = PURPLE
 	fill.BorderSizePixel = 0
-	local fc = Instance.new("UICorner", fill)
-	fc.CornerRadius = UDim.new(1,0)
+	Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
 	local knob = Instance.new("Frame", bg)
 	knob.Size = UDim2.new(0,16,0,16)
 	knob.Position = UDim2.new(pct,-8,0.5,-8)
 	knob.BackgroundColor3 = Color3.new(1,1,1)
 	knob.BorderSizePixel = 0
 	knob.ZIndex = 2
-	local kc = Instance.new("UICorner", knob)
-	kc.CornerRadius = UDim.new(1,0)
+	Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
 	local hit = Instance.new("TextButton", bg)
 	hit.Size = UDim2.new(1,20,0,30)
 	hit.Position = UDim2.new(0,-10,0.5,-15)
@@ -1420,8 +1272,7 @@ local function mkDropdown(parent, text, opts, tbl, key, order)
 	btn.TextSize = 13
 	btn.TextXAlignment = Enum.TextXAlignment.Left
 	btn.AutoButtonColor = false
-	local btnc = Instance.new("UICorner", btn)
-	btnc.CornerRadius = UDim.new(0,6)
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 	local dd = Instance.new("Frame", h)
 	dd.Size = UDim2.new(1,-10,0,#opts*30)
 	dd.Position = UDim2.new(0,5,0,58)
@@ -1429,8 +1280,7 @@ local function mkDropdown(parent, text, opts, tbl, key, order)
 	dd.BorderSizePixel = 0
 	dd.Visible = false
 	dd.ZIndex = 50
-	local ddc = Instance.new("UICorner", dd)
-	ddc.CornerRadius = UDim.new(0,6)
+	Instance.new("UICorner", dd).CornerRadius = UDim.new(0,6)
 	local ddl = Instance.new("UIListLayout", dd)
 	ddl.Padding = UDim.new(0,0)
 	for _, opt in ipairs(opts) do
@@ -1495,8 +1345,7 @@ local function mkKeybind(parent, text, tbl, order)
 	box.Text = ""
 	box.AutoButtonColor = false
 	box.BorderSizePixel = 0
-	local bc = Instance.new("UICorner", box)
-	bc.CornerRadius = UDim.new(0,5)
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0,5)
 	local check = Instance.new("ImageLabel", box)
 	check.Size = UDim2.new(0.75, 0, 0.75, 0)
 	check.Position = UDim2.new(0.125, 0, 0.125, 0)
@@ -1523,8 +1372,7 @@ local function mkKeybind(parent, text, tbl, order)
 	keyBtn.Font = Enum.Font.GothamBold
 	keyBtn.TextSize = 11
 	keyBtn.AutoButtonColor = false
-	local kbc = Instance.new("UICorner", keyBtn)
-	kbc.CornerRadius = UDim.new(0,5)
+	Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0,5)
 	local totalOpts = #BIND_OPTIONS + 1
 	local ddFrame = Instance.new("Frame", h)
 	ddFrame.Size = UDim2.new(0,170,0,math.min(totalOpts,8)*28)
@@ -1534,8 +1382,7 @@ local function mkKeybind(parent, text, tbl, order)
 	ddFrame.Visible = false
 	ddFrame.ZIndex = 200
 	ddFrame.ClipsDescendants = true
-	local ddc = Instance.new("UICorner", ddFrame)
-	ddc.CornerRadius = UDim.new(0,6)
+	Instance.new("UICorner", ddFrame).CornerRadius = UDim.new(0,6)
 	local dds = Instance.new("UIStroke", ddFrame)
 	dds.Color = PURPLE
 	dds.Thickness = 1.5
@@ -1620,14 +1467,9 @@ local function mkButton(parent, text, callback, order)
 	btn.TextSize = 13
 	btn.AutoButtonColor = false
 	btn.LayoutOrder = order or 0
-	local bc = Instance.new("UICorner", btn)
-	bc.CornerRadius = UDim.new(0,6)
-	btn.MouseEnter:Connect(function()
-		btn.BackgroundColor3 = Color3.fromRGB(120, 90, 220)
-	end)
-	btn.MouseLeave:Connect(function()
-		btn.BackgroundColor3 = PURPLE
-	end)
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+	btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(120, 90, 220) end)
+	btn.MouseLeave:Connect(function() btn.BackgroundColor3 = PURPLE end)
 	btn.MouseButton1Click:Connect(function()
 		playClick()
 		if callback then pcall(callback) end
@@ -1657,8 +1499,7 @@ vL.Size = UDim2.new(0.48,0,0,260)
 vL.Position = UDim2.new(0,10,0,5)
 vL.BackgroundColor3 = DARK
 vL.BorderSizePixel = 0
-local vlc = Instance.new("UICorner", vL)
-vlc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", vL).CornerRadius = UDim.new(0,8)
 local vll = Instance.new("UIListLayout", vL)
 vll.Padding = UDim.new(0,4)
 vll.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1672,8 +1513,7 @@ vR.Size = UDim2.new(0.48,0,0,320)
 vR.Position = UDim2.new(0.5,5,0,5)
 vR.BackgroundColor3 = DARK
 vR.BorderSizePixel = 0
-local vrc = Instance.new("UICorner", vR)
-vrc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", vR).CornerRadius = UDim.new(0,8)
 local vrl = Instance.new("UIListLayout", vR)
 vrl.Padding = UDim.new(0,4)
 vrl.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1722,8 +1562,7 @@ tbL.Size = UDim2.new(0.48,0,0,300)
 tbL.Position = UDim2.new(0,10,0,5)
 tbL.BackgroundColor3 = DARK
 tbL.BorderSizePixel = 0
-local tblc = Instance.new("UICorner", tbL)
-tblc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", tbL).CornerRadius = UDim.new(0,8)
 local tbll = Instance.new("UIListLayout", tbL)
 tbll.Padding = UDim.new(0,4)
 tbll.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1737,8 +1576,7 @@ tbR.Size = UDim2.new(0.48,0,0,300)
 tbR.Position = UDim2.new(0.5,5,0,5)
 tbR.BackgroundColor3 = DARK
 tbR.BorderSizePixel = 0
-local tbrc = Instance.new("UICorner", tbR)
-tbrc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", tbR).CornerRadius = UDim.new(0,8)
 local tbrl = Instance.new("UIListLayout", tbR)
 tbrl.Padding = UDim.new(0,4)
 tbrl.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1769,8 +1607,7 @@ abL.Size = UDim2.new(0.48,0,0,300)
 abL.Position = UDim2.new(0,10,0,5)
 abL.BackgroundColor3 = DARK
 abL.BorderSizePixel = 0
-local ablc = Instance.new("UICorner", abL)
-ablc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", abL).CornerRadius = UDim.new(0,8)
 local abll = Instance.new("UIListLayout", abL)
 abll.Padding = UDim.new(0,4)
 abll.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1784,8 +1621,7 @@ abR.Size = UDim2.new(0.48,0,0,360)
 abR.Position = UDim2.new(0.5,5,0,5)
 abR.BackgroundColor3 = DARK
 abR.BorderSizePixel = 0
-local abrc = Instance.new("UICorner", abR)
-abrc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", abR).CornerRadius = UDim.new(0,8)
 local abrl = Instance.new("UIListLayout", abR)
 abrl.Padding = UDim.new(0,4)
 abrl.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1817,8 +1653,7 @@ hbL.Size = UDim2.new(0.48,0,0,250)
 hbL.Position = UDim2.new(0,10,0,5)
 hbL.BackgroundColor3 = DARK
 hbL.BorderSizePixel = 0
-local hblc = Instance.new("UICorner", hbL)
-hblc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", hbL).CornerRadius = UDim.new(0,8)
 local hbll = Instance.new("UIListLayout", hbL)
 hbll.Padding = UDim.new(0,4)
 hbll.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1885,8 +1720,7 @@ mL.Size = UDim2.new(0.48,0,0,220)
 mL.Position = UDim2.new(0,10,0,5)
 mL.BackgroundColor3 = DARK
 mL.BorderSizePixel = 0
-local mlc = Instance.new("UICorner", mL)
-mlc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", mL).CornerRadius = UDim.new(0,8)
 local mll = Instance.new("UIListLayout", mL)
 mll.Padding = UDim.new(0,4)
 mll.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1906,8 +1740,7 @@ mR.Size = UDim2.new(0.48,0,0,150)
 mR.Position = UDim2.new(0.5,5,0,5)
 mR.BackgroundColor3 = DARK
 mR.BorderSizePixel = 0
-local mrc = Instance.new("UICorner", mR)
-mrc.CornerRadius = UDim.new(0,8)
+Instance.new("UICorner", mR).CornerRadius = UDim.new(0,8)
 local mrl = Instance.new("UIListLayout", mR)
 mrl.Padding = UDim.new(0,6)
 mrl.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1932,20 +1765,11 @@ for _, name in ipairs(placeholders) do
 	l.TextSize = 16
 end
 
-local tabsData = {
-	{"AimAssistance"},
-	{"Visualization"},
-	{"Miscellaneous"},
-	{"Players"},
-	{"Settings"},
-}
-
+local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Players"},{"Settings"}}
 local selTab = nil
 
 local function switchPage(name)
-	for n, p in pairs(tabPages) do
-		p.Visible = (n == name)
-	end
+	for n, p in pairs(tabPages) do p.Visible = (n == name) end
 	contentTitle.Text = name
 end
 
@@ -1960,8 +1784,7 @@ local function mkTabBtn(name, order)
 	btn.TextXAlignment = Enum.TextXAlignment.Left
 	btn.AutoButtonColor = false
 	btn.LayoutOrder = order
-	local btnc = Instance.new("UICorner", btn)
-	btnc.CornerRadius = UDim.new(0,6)
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 	btn.MouseEnter:Connect(function()
 		if selTab ~= btn then btn.BackgroundTransparency = 0.7 end
 	end)
@@ -2005,8 +1828,7 @@ miniBall.ScaleType = Enum.ScaleType.Fit
 miniBall.AutoButtonColor = false
 miniBall.Visible = false
 miniBall.ClipsDescendants = true
-local miniBallCorner = Instance.new("UICorner", miniBall)
-miniBallCorner.CornerRadius = UDim.new(1, 0)
+Instance.new("UICorner", miniBall).CornerRadius = UDim.new(1, 0)
 
 local minimized = false
 local animating = false
@@ -2144,18 +1966,14 @@ end)
 
 UIS.InputEnded:Connect(function(inp)
 	if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-		if dragging and mainDragMoved then
-			stopDragSound()
-		end
+		if dragging and mainDragMoved then stopDragSound() end
 		dragging = false
 		mainDragMoved = false
 		canvasDrag = false
 		hueDrag = false
 		for _, s in ipairs(allSliders) do s.setDrag(false) end
 		if ballDrag then
-			if ballMoved then
-				stopDragSound()
-			end
+			if ballMoved then stopDragSound() end
 			ballDrag = false
 			if not ballMoved then
 				local now = tick()
