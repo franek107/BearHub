@@ -1,3 +1,4 @@
+do
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
@@ -2319,6 +2320,8 @@ miniBall.Visible = false
 miniBall.ClipsDescendants = true
 Instance.new("UICorner", miniBall).CornerRadius = UDim.new(1, 0)
 
+end -- koniec pierwszego bloku
+do -- nowy blok
 local minimized = false
 local animating = false
 local TW = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
@@ -2476,3 +2479,4 @@ UIS.InputEnded:Connect(function(inp)
 		end
 	end
 end)
+end -- koniec drugiego bloku
