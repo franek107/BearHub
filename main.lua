@@ -28,7 +28,6 @@ local function playSlider() playSound(SLIDER_SOUND_ID, 0.15, 1.5) end
 
 local function doClick()
 	local ok = false
-	
 	pcall(function()
 		VIM:SendMouseButtonEvent(
 			Camera.ViewportSize.X / 2,
@@ -43,16 +42,11 @@ local function doClick()
 		)
 		ok = true
 	end)
-	
 	if not ok then
 		pcall(function()
-			if mouse1click then
-				mouse1click()
-				ok = true
-			end
+			if mouse1click then mouse1click(); ok = true end
 		end)
 	end
-	
 	if not ok then
 		pcall(function()
 			if mouse1press and mouse1release then
@@ -63,7 +57,6 @@ local function doClick()
 			end
 		end)
 	end
-	
 	return ok
 end
 
@@ -141,7 +134,7 @@ local TRIGGERBOT = {
 	Type = "First Person", ShowFOV = false,
 	FOVColor = Color3.fromRGB(100, 70, 200), FOV = 30,
 	ExcludeDead = false, VisibleOnly = false,
-	MaxDistance = 250, ShotDelay = 0,
+	MaxDistance = 250, ShotDelay = 100,
 }
 
 local AIMBOT = {
@@ -154,6 +147,7 @@ local AIMBOT = {
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false}
+local SPECTATE = {Target = nil, Active = false}
 
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
 
@@ -664,8 +658,7 @@ local function getHitboxParts(char)
 end
 
 local function findMesh(part)
-	local mesh = part:FindFirstChildOfClass("SpecialMesh") or part:FindFirstChildOfClass("BlockMesh") or part:FindFirstChildOfClass("CylinderMesh") or part:FindFirstChildOfClass("FileMesh")
-	return mesh
+	return part:FindFirstChildOfClass("SpecialMesh") or part:FindFirstChildOfClass("BlockMesh") or part:FindFirstChildOfClass("CylinderMesh") or part:FindFirstChildOfClass("FileMesh")
 end
 
 local function saveMeshData(part)
@@ -698,11 +691,9 @@ local function createHighlight(part)
 	end
 	local char = part.Parent
 	if not char then return nil end
-	
 	local hlName = "BearHub_HL_" .. part.Name
 	local existing = char:FindFirstChild(hlName)
 	if existing then existing:Destroy() end
-	
 	local sphere = Instance.new("SelectionSphere")
 	sphere.Name = hlName
 	sphere.Adornee = part
@@ -724,21 +715,14 @@ end
 
 local function expandPart(part)
 	if not part or not part.Parent then return end
-	
 	local scale = 1 + (HITBOX.Size * 0.15)
-	
 	local mesh = findMesh(part)
 	if mesh then
 		saveMeshData(part)
-		pcall(function()
-			mesh.Scale = savedMeshScales[mesh] * scale
-		end)
+		pcall(function() mesh.Scale = savedMeshScales[mesh] * scale end)
 	end
-	
 	local hl = createHighlight(part)
 	if hl then
-		local baseSize = part.Size.Magnitude
-		local expandSize = baseSize * (scale - 1) * 0.5
 		hl.Adornee = part
 		hl.Transparency = 0.5
 		hl.SurfaceTransparency = 0.7
@@ -754,9 +738,7 @@ end
 local function restoreAllForChar(char)
 	if not char then return end
 	for _, part in ipairs(char:GetChildren()) do
-		if part:IsA("BasePart") then
-			restorePart(part)
-		end
+		if part:IsA("BasePart") then restorePart(part) end
 	end
 	for _, child in ipairs(char:GetChildren()) do
 		if child.Name:find("BearHub_HL_") then
@@ -785,14 +767,12 @@ end
 
 local lastHitboxBone = "Head"
 local lastHitboxEnabled = false
-local lastHitboxSize = 0
 
 RunService.Heartbeat:Connect(function()
 	local boneChanged = (lastHitboxBone ~= HITBOX.Bone)
 	local enabledChanged = (lastHitboxEnabled ~= HITBOX.Enabled)
 	lastHitboxBone = HITBOX.Bone
 	lastHitboxEnabled = HITBOX.Enabled
-	lastHitboxSize = HITBOX.Size
 
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr ~= player then
@@ -821,10 +801,7 @@ RunService.Heartbeat:Connect(function()
 end)
 
 Players.PlayerAdded:Connect(function(p)
-	p.CharacterAdded:Connect(function(char)
-		task.wait(1)
-		cleanupDead()
-	end)
+	p.CharacterAdded:Connect(function(char) task.wait(1); cleanupDead() end)
 	p.CharacterRemoving:Connect(function()
 		local char = p.Character
 		if char then restoreAllForChar(char) end
@@ -833,16 +810,61 @@ end)
 
 for _, p in ipairs(Players:GetPlayers()) do
 	if p ~= player then
-		p.CharacterAdded:Connect(function(char)
-			task.wait(1)
-			cleanupDead()
-		end)
+		p.CharacterAdded:Connect(function(char) task.wait(1); cleanupDead() end)
 		p.CharacterRemoving:Connect(function()
 			local char = p.Character
 			if char then restoreAllForChar(char) end
 		end)
 	end
 end
+
+------------------------------------------------------------
+-- SPECTATE SYSTEM
+------------------------------------------------------------
+local function startSpectate(target)
+	if not target or not target.Character then return end
+	local hum = target.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		pcall(function()
+			Camera.CameraSubject = hum
+			SPECTATE.Target = target
+			SPECTATE.Active = true
+		end)
+	end
+end
+
+local function stopSpectate()
+	SPECTATE.Target = nil
+	SPECTATE.Active = false
+	local myChar = player.Character
+	if myChar then
+		local myHum = myChar:FindFirstChildOfClass("Humanoid")
+		if myHum then
+			pcall(function() Camera.CameraSubject = myHum end)
+		end
+	end
+end
+
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		if SPECTATE.Active and SPECTATE.Target then
+			if not SPECTATE.Target.Parent or not SPECTATE.Target.Character then
+				stopSpectate()
+			else
+				local hum = SPECTATE.Target.Character:FindFirstChildOfClass("Humanoid")
+				if hum and Camera.CameraSubject ~= hum then
+					pcall(function() Camera.CameraSubject = hum end)
+				end
+			end
+		end
+	end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+	if SPECTATE.Target == p then stopSpectate() end
+end)
+------------------------------------------------------------
 
 task.spawn(function()
 	while true do
@@ -1851,18 +1873,389 @@ mrp.PaddingRight = UDim.new(0,5)
 mkSection(mR, "Options", 1)
 mkButton(mR, "Heal", healPlayer, 2)
 
-local placeholders = {"Players","Settings"}
-for _, name in ipairs(placeholders) do
-	local p = createPage(name)
-	local l = Instance.new("TextLabel", p)
-	l.Size = UDim2.new(1,-20,0,40)
-	l.Position = UDim2.new(0,10,0,10)
-	l.BackgroundTransparency = 1
-	l.Text = name .. " - Coming Soon"
-	l.TextColor3 = Color3.fromRGB(100,100,110)
-	l.Font = Enum.Font.Gotham
-	l.TextSize = 16
+------------------------------------------------------------
+-- PLAYERS PAGE (Z LISTĄ GRACZY I SPECTATE)
+------------------------------------------------------------
+local playersPage = createPage("Players")
+
+local playersSubBar = Instance.new("Frame", playersPage)
+playersSubBar.Size = UDim2.new(1,-20,0,30)
+playersSubBar.Position = UDim2.new(0,10,0,0)
+playersSubBar.BackgroundTransparency = 1
+local psbl = Instance.new("UIListLayout", playersSubBar)
+psbl.FillDirection = Enum.FillDirection.Horizontal
+psbl.Padding = UDim.new(0,15)
+
+local playersSubPagesFrame = Instance.new("Frame", playersPage)
+playersSubPagesFrame.Size = UDim2.new(1,0,1,-40)
+playersSubPagesFrame.Position = UDim2.new(0,0,0,38)
+playersSubPagesFrame.BackgroundTransparency = 1
+
+local playerListPage = Instance.new("Frame", playersSubPagesFrame)
+playerListPage.Size = UDim2.new(1,0,1,0)
+playerListPage.BackgroundTransparency = 1
+playerListPage.Visible = true
+
+-- LEWA STRONA - LISTA GRACZY
+local plListFrame = Instance.new("Frame", playerListPage)
+plListFrame.Size = UDim2.new(0.48,0,1,-10)
+plListFrame.Position = UDim2.new(0,10,0,5)
+plListFrame.BackgroundColor3 = DARK
+plListFrame.BorderSizePixel = 0
+Instance.new("UICorner", plListFrame).CornerRadius = UDim.new(0,8)
+
+local plListTitle = Instance.new("TextLabel", plListFrame)
+plListTitle.Size = UDim2.new(1,-10,0,25)
+plListTitle.Position = UDim2.new(0,10,0,5)
+plListTitle.BackgroundTransparency = 1
+plListTitle.Text = "Players in Server"
+plListTitle.TextColor3 = Color3.fromRGB(160,160,170)
+plListTitle.Font = Enum.Font.GothamBold
+plListTitle.TextSize = 14
+plListTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local plCountLbl = Instance.new("TextLabel", plListFrame)
+plCountLbl.Size = UDim2.new(0,80,0,25)
+plCountLbl.Position = UDim2.new(1,-90,0,5)
+plCountLbl.BackgroundTransparency = 1
+plCountLbl.Text = "0 players"
+plCountLbl.TextColor3 = Color3.fromRGB(150,150,160)
+plCountLbl.Font = Enum.Font.Gotham
+plCountLbl.TextSize = 12
+plCountLbl.TextXAlignment = Enum.TextXAlignment.Right
+
+local plScroll = Instance.new("ScrollingFrame", plListFrame)
+plScroll.Size = UDim2.new(1,-10,1,-40)
+plScroll.Position = UDim2.new(0,5,0,32)
+plScroll.BackgroundTransparency = 1
+plScroll.ScrollBarThickness = 3
+plScroll.ScrollBarImageColor3 = PURPLE
+plScroll.CanvasSize = UDim2.new(0,0,0,0)
+plScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+plScroll.BorderSizePixel = 0
+
+local plScrollLayout = Instance.new("UIListLayout", plScroll)
+plScrollLayout.Padding = UDim.new(0,4)
+plScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- PRAWA STRONA - INFO O WYBRANYM GRACZU + PRZYCISKI
+local plInfoFrame = Instance.new("Frame", playerListPage)
+plInfoFrame.Size = UDim2.new(0.48,0,1,-10)
+plInfoFrame.Position = UDim2.new(0.5,5,0,5)
+plInfoFrame.BackgroundColor3 = DARK
+plInfoFrame.BorderSizePixel = 0
+Instance.new("UICorner", plInfoFrame).CornerRadius = UDim.new(0,8)
+
+local plInfoTitle = Instance.new("TextLabel", plInfoFrame)
+plInfoTitle.Size = UDim2.new(1,-20,0,25)
+plInfoTitle.Position = UDim2.new(0,10,0,10)
+plInfoTitle.BackgroundTransparency = 1
+plInfoTitle.Text = "Selected Player"
+plInfoTitle.TextColor3 = Color3.fromRGB(160,160,170)
+plInfoTitle.Font = Enum.Font.GothamBold
+plInfoTitle.TextSize = 14
+plInfoTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local plAvatarFrame = Instance.new("Frame", plInfoFrame)
+plAvatarFrame.Size = UDim2.new(0,80,0,80)
+plAvatarFrame.Position = UDim2.new(0.5,-40,0,45)
+plAvatarFrame.BackgroundColor3 = Color3.fromRGB(50,50,60)
+plAvatarFrame.BorderSizePixel = 0
+Instance.new("UICorner", plAvatarFrame).CornerRadius = UDim.new(1,0)
+
+local plAvatar = Instance.new("ImageLabel", plAvatarFrame)
+plAvatar.Size = UDim2.new(1,0,1,0)
+plAvatar.BackgroundTransparency = 1
+plAvatar.Image = ""
+plAvatar.ScaleType = Enum.ScaleType.Crop
+Instance.new("UICorner", plAvatar).CornerRadius = UDim.new(1,0)
+
+local plNameLbl = Instance.new("TextLabel", plInfoFrame)
+plNameLbl.Size = UDim2.new(1,-20,0,20)
+plNameLbl.Position = UDim2.new(0,10,0,135)
+plNameLbl.BackgroundTransparency = 1
+plNameLbl.Text = "No player selected"
+plNameLbl.TextColor3 = Color3.new(1,1,1)
+plNameLbl.Font = Enum.Font.GothamBold
+plNameLbl.TextSize = 15
+plNameLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+local plUsernameLbl = Instance.new("TextLabel", plInfoFrame)
+plUsernameLbl.Size = UDim2.new(1,-20,0,18)
+plUsernameLbl.Position = UDim2.new(0,10,0,157)
+plUsernameLbl.BackgroundTransparency = 1
+plUsernameLbl.Text = ""
+plUsernameLbl.TextColor3 = Color3.fromRGB(150,150,160)
+plUsernameLbl.Font = Enum.Font.Gotham
+plUsernameLbl.TextSize = 12
+plUsernameLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+local plIdLbl = Instance.new("TextLabel", plInfoFrame)
+plIdLbl.Size = UDim2.new(1,-20,0,18)
+plIdLbl.Position = UDim2.new(0,10,0,178)
+plIdLbl.BackgroundTransparency = 1
+plIdLbl.Text = ""
+plIdLbl.TextColor3 = Color3.fromRGB(150,150,160)
+plIdLbl.Font = Enum.Font.Gotham
+plIdLbl.TextSize = 12
+plIdLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+local plActionsFrame = Instance.new("Frame", plInfoFrame)
+plActionsFrame.Size = UDim2.new(1,-20,0,90)
+plActionsFrame.Position = UDim2.new(0,10,0,210)
+plActionsFrame.BackgroundTransparency = 1
+
+local plActionsLayout = Instance.new("UIListLayout", plActionsFrame)
+plActionsLayout.Padding = UDim.new(0,6)
+plActionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local plSpectateBtn = Instance.new("TextButton", plActionsFrame)
+plSpectateBtn.Size = UDim2.new(1,0,0,34)
+plSpectateBtn.BackgroundColor3 = PURPLE
+plSpectateBtn.BorderSizePixel = 0
+plSpectateBtn.Text = "Spectate"
+plSpectateBtn.TextColor3 = Color3.new(1,1,1)
+plSpectateBtn.Font = Enum.Font.GothamBold
+plSpectateBtn.TextSize = 14
+plSpectateBtn.AutoButtonColor = false
+plSpectateBtn.LayoutOrder = 1
+Instance.new("UICorner", plSpectateBtn).CornerRadius = UDim.new(0,6)
+
+local plUnspectateBtn = Instance.new("TextButton", plActionsFrame)
+plUnspectateBtn.Size = UDim2.new(1,0,0,34)
+plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+plUnspectateBtn.BorderSizePixel = 0
+plUnspectateBtn.Text = "Unspectate"
+plUnspectateBtn.TextColor3 = Color3.new(1,1,1)
+plUnspectateBtn.Font = Enum.Font.GothamBold
+plUnspectateBtn.TextSize = 14
+plUnspectateBtn.AutoButtonColor = false
+plUnspectateBtn.LayoutOrder = 2
+Instance.new("UICorner", plUnspectateBtn).CornerRadius = UDim.new(0,6)
+
+local plStatusLbl = Instance.new("TextLabel", plInfoFrame)
+plStatusLbl.Size = UDim2.new(1,-20,0,20)
+plStatusLbl.Position = UDim2.new(0,10,1,-28)
+plStatusLbl.BackgroundTransparency = 1
+plStatusLbl.Text = ""
+plStatusLbl.TextColor3 = Color3.fromRGB(100, 200, 100)
+plStatusLbl.Font = Enum.Font.GothamBold
+plStatusLbl.TextSize = 12
+plStatusLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+local selectedPlayer = nil
+local playerButtons = {}
+
+local function updateSelectedPlayerInfo()
+	if selectedPlayer and selectedPlayer.Parent then
+		plNameLbl.Text = selectedPlayer.DisplayName or selectedPlayer.Name
+		plUsernameLbl.Text = "@" .. selectedPlayer.Name
+		plIdLbl.Text = "ID: " .. selectedPlayer.UserId
+		pcall(function()
+			local content = Players:GetUserThumbnailAsync(selectedPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+			plAvatar.Image = content
+		end)
+		if SPECTATE.Active and SPECTATE.Target == selectedPlayer then
+			plStatusLbl.Text = "SPECTATING"
+			plStatusLbl.TextColor3 = Color3.fromRGB(100, 200, 100)
+		else
+			plStatusLbl.Text = ""
+		end
+	else
+		plNameLbl.Text = "No player selected"
+		plUsernameLbl.Text = ""
+		plIdLbl.Text = ""
+		plAvatar.Image = ""
+		plStatusLbl.Text = ""
+	end
 end
+
+local function selectPlayer(plr)
+	selectedPlayer = plr
+	for p, data in pairs(playerButtons) do
+		if p == plr then
+			data.btn.BackgroundColor3 = Color3.fromRGB(70, 50, 140)
+		else
+			data.btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+		end
+	end
+	updateSelectedPlayerInfo()
+end
+
+local function createPlayerButton(plr)
+	if playerButtons[plr] then return end
+	local btn = Instance.new("TextButton", plScroll)
+	btn.Size = UDim2.new(1,-6,0,42)
+	btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+	btn.BorderSizePixel = 0
+	btn.Text = ""
+	btn.AutoButtonColor = false
+	btn.LayoutOrder = plr.UserId
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+
+	local avatarFrame = Instance.new("Frame", btn)
+	avatarFrame.Size = UDim2.new(0,32,0,32)
+	avatarFrame.Position = UDim2.new(0,5,0.5,-16)
+	avatarFrame.BackgroundColor3 = Color3.fromRGB(50,50,60)
+	avatarFrame.BorderSizePixel = 0
+	Instance.new("UICorner", avatarFrame).CornerRadius = UDim.new(1,0)
+
+	local avatar = Instance.new("ImageLabel", avatarFrame)
+	avatar.Size = UDim2.new(1,0,1,0)
+	avatar.BackgroundTransparency = 1
+	avatar.Image = ""
+	avatar.ScaleType = Enum.ScaleType.Crop
+	Instance.new("UICorner", avatar).CornerRadius = UDim.new(1,0)
+
+	pcall(function()
+		local content = Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+		avatar.Image = content
+	end)
+
+	local nameLbl = Instance.new("TextLabel", btn)
+	nameLbl.Size = UDim2.new(1,-45,0,18)
+	nameLbl.Position = UDim2.new(0,42,0,3)
+	nameLbl.BackgroundTransparency = 1
+	nameLbl.Text = plr.DisplayName or plr.Name
+	nameLbl.TextColor3 = Color3.new(1,1,1)
+	nameLbl.Font = Enum.Font.GothamBold
+	nameLbl.TextSize = 13
+	nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+	nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+	local userLbl = Instance.new("TextLabel", btn)
+	userLbl.Size = UDim2.new(1,-45,0,16)
+	userLbl.Position = UDim2.new(0,42,0,21)
+	userLbl.BackgroundTransparency = 1
+	userLbl.Text = "@" .. plr.Name
+	userLbl.TextColor3 = Color3.fromRGB(150,150,160)
+	userLbl.Font = Enum.Font.Gotham
+	userLbl.TextSize = 11
+	userLbl.TextXAlignment = Enum.TextXAlignment.Left
+	userLbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+	btn.MouseEnter:Connect(function()
+		if selectedPlayer ~= plr then
+			btn.BackgroundColor3 = Color3.fromRGB(50,50,65)
+		end
+	end)
+	btn.MouseLeave:Connect(function()
+		if selectedPlayer ~= plr then
+			btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+		end
+	end)
+
+	btn.MouseButton1Click:Connect(function()
+		playClick()
+		selectPlayer(plr)
+	end)
+
+	playerButtons[plr] = {btn = btn, avatar = avatar, name = nameLbl}
+end
+
+local function removePlayerButton(plr)
+	if playerButtons[plr] then
+		pcall(function() playerButtons[plr].btn:Destroy() end)
+		playerButtons[plr] = nil
+	end
+	if selectedPlayer == plr then
+		selectedPlayer = nil
+		updateSelectedPlayerInfo()
+	end
+end
+
+local function refreshPlayerList()
+	for plr in pairs(playerButtons) do
+		if not plr.Parent then
+			removePlayerButton(plr)
+		end
+	end
+	local count = 0
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= player then
+			if not playerButtons[plr] then
+				createPlayerButton(plr)
+			end
+			count = count + 1
+		end
+	end
+	plCountLbl.Text = count .. " player" .. (count == 1 and "" or "s")
+end
+
+Players.PlayerAdded:Connect(function(plr)
+	task.wait(0.5)
+	if plr ~= player then
+		createPlayerButton(plr)
+		refreshPlayerList()
+	end
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+	removePlayerButton(plr)
+	task.wait(0.1)
+	refreshPlayerList()
+end)
+
+task.spawn(function()
+	task.wait(1)
+	refreshPlayerList()
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(2)
+		pcall(refreshPlayerList)
+		pcall(updateSelectedPlayerInfo)
+	end
+end)
+
+plSpectateBtn.MouseEnter:Connect(function()
+	plSpectateBtn.BackgroundColor3 = Color3.fromRGB(120, 90, 220)
+end)
+plSpectateBtn.MouseLeave:Connect(function()
+	plSpectateBtn.BackgroundColor3 = PURPLE
+end)
+plSpectateBtn.MouseButton1Click:Connect(function()
+	playClick()
+	if selectedPlayer and selectedPlayer.Parent then
+		startSpectate(selectedPlayer)
+		plStatusLbl.Text = "SPECTATING"
+		plStatusLbl.TextColor3 = Color3.fromRGB(100, 200, 100)
+	else
+		plStatusLbl.Text = "Select a player first!"
+		plStatusLbl.TextColor3 = Color3.fromRGB(255, 100, 100)
+		task.wait(2)
+		plStatusLbl.Text = ""
+	end
+end)
+
+plUnspectateBtn.MouseEnter:Connect(function()
+	plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(210, 80, 80)
+end)
+plUnspectateBtn.MouseLeave:Connect(function()
+	plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+end)
+plUnspectateBtn.MouseButton1Click:Connect(function()
+	playClick()
+	stopSpectate()
+	plStatusLbl.Text = "Stopped spectating"
+	plStatusLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
+	task.wait(1.5)
+	if plStatusLbl.Text == "Stopped spectating" then
+		plStatusLbl.Text = ""
+	end
+end)
+
+-- Settings placeholder
+local settingsPage = createPage("Settings")
+local sLbl = Instance.new("TextLabel", settingsPage)
+sLbl.Size = UDim2.new(1,-20,0,40)
+sLbl.Position = UDim2.new(0,10,0,10)
+sLbl.BackgroundTransparency = 1
+sLbl.Text = "Settings - Coming Soon"
+sLbl.TextColor3 = Color3.fromRGB(100,100,110)
+sLbl.Font = Enum.Font.Gotham
+sLbl.TextSize = 16
 
 local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Players"},{"Settings"}}
 local selTab = nil
@@ -1870,6 +2263,9 @@ local selTab = nil
 local function switchPage(name)
 	for n, p in pairs(tabPages) do p.Visible = (n == name) end
 	contentTitle.Text = name
+	if name == "Players" then
+		pcall(refreshPlayerList)
+	end
 end
 
 local function mkTabBtn(name, order)
