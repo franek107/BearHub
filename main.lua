@@ -149,6 +149,54 @@ local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false}
 local SPECTATE = {Target = nil, Active = false}
 
+------------------------------------------------------------
+-- SPECTATE FUNCTIONS (zdefiniowane wcześnie żeby były dostępne dla GUI)
+------------------------------------------------------------
+local function startSpectate(target)
+	if not target or not target.Character then return end
+	local hum = target.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		pcall(function()
+			Camera.CameraSubject = hum
+			SPECTATE.Target = target
+			SPECTATE.Active = true
+		end)
+	end
+end
+
+local function stopSpectate()
+	SPECTATE.Target = nil
+	SPECTATE.Active = false
+	local myChar = player.Character
+	if myChar then
+		local myHum = myChar:FindFirstChildOfClass("Humanoid")
+		if myHum then
+			pcall(function() Camera.CameraSubject = myHum end)
+		end
+	end
+end
+
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		if SPECTATE.Active and SPECTATE.Target then
+			if not SPECTATE.Target.Parent or not SPECTATE.Target.Character then
+				stopSpectate()
+			else
+				local hum = SPECTATE.Target.Character:FindFirstChildOfClass("Humanoid")
+				if hum and Camera.CameraSubject ~= hum then
+					pcall(function() Camera.CameraSubject = hum end)
+				end
+			end
+		end
+	end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+	if SPECTATE.Target == p then stopSpectate() end
+end)
+------------------------------------------------------------
+
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
 
 UIS.InputBegan:Connect(function(inp)
@@ -817,54 +865,6 @@ for _, p in ipairs(Players:GetPlayers()) do
 		end)
 	end
 end
-
-------------------------------------------------------------
--- SPECTATE SYSTEM
-------------------------------------------------------------
-local function startSpectate(target)
-	if not target or not target.Character then return end
-	local hum = target.Character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		pcall(function()
-			Camera.CameraSubject = hum
-			SPECTATE.Target = target
-			SPECTATE.Active = true
-		end)
-	end
-end
-
-local function stopSpectate()
-	SPECTATE.Target = nil
-	SPECTATE.Active = false
-	local myChar = player.Character
-	if myChar then
-		local myHum = myChar:FindFirstChildOfClass("Humanoid")
-		if myHum then
-			pcall(function() Camera.CameraSubject = myHum end)
-		end
-	end
-end
-
-task.spawn(function()
-	while true do
-		task.wait(0.5)
-		if SPECTATE.Active and SPECTATE.Target then
-			if not SPECTATE.Target.Parent or not SPECTATE.Target.Character then
-				stopSpectate()
-			else
-				local hum = SPECTATE.Target.Character:FindFirstChildOfClass("Humanoid")
-				if hum and Camera.CameraSubject ~= hum then
-					pcall(function() Camera.CameraSubject = hum end)
-				end
-			end
-		end
-	end
-end)
-
-Players.PlayerRemoving:Connect(function(p)
-	if SPECTATE.Target == p then stopSpectate() end
-end)
-------------------------------------------------------------
 
 task.spawn(function()
 	while true do
@@ -1874,30 +1874,11 @@ mkSection(mR, "Options", 1)
 mkButton(mR, "Heal", healPlayer, 2)
 
 ------------------------------------------------------------
--- PLAYERS PAGE (Z LISTĄ GRACZY I SPECTATE)
+-- PLAYERS PAGE - LISTA + SPECTATE
 ------------------------------------------------------------
 local playersPage = createPage("Players")
 
-local playersSubBar = Instance.new("Frame", playersPage)
-playersSubBar.Size = UDim2.new(1,-20,0,30)
-playersSubBar.Position = UDim2.new(0,10,0,0)
-playersSubBar.BackgroundTransparency = 1
-local psbl = Instance.new("UIListLayout", playersSubBar)
-psbl.FillDirection = Enum.FillDirection.Horizontal
-psbl.Padding = UDim.new(0,15)
-
-local playersSubPagesFrame = Instance.new("Frame", playersPage)
-playersSubPagesFrame.Size = UDim2.new(1,0,1,-40)
-playersSubPagesFrame.Position = UDim2.new(0,0,0,38)
-playersSubPagesFrame.BackgroundTransparency = 1
-
-local playerListPage = Instance.new("Frame", playersSubPagesFrame)
-playerListPage.Size = UDim2.new(1,0,1,0)
-playerListPage.BackgroundTransparency = 1
-playerListPage.Visible = true
-
--- LEWA STRONA - LISTA GRACZY
-local plListFrame = Instance.new("Frame", playerListPage)
+local plListFrame = Instance.new("Frame", playersPage)
 plListFrame.Size = UDim2.new(0.48,0,1,-10)
 plListFrame.Position = UDim2.new(0,10,0,5)
 plListFrame.BackgroundColor3 = DARK
@@ -1905,7 +1886,7 @@ plListFrame.BorderSizePixel = 0
 Instance.new("UICorner", plListFrame).CornerRadius = UDim.new(0,8)
 
 local plListTitle = Instance.new("TextLabel", plListFrame)
-plListTitle.Size = UDim2.new(1,-10,0,25)
+plListTitle.Size = UDim2.new(1,-100,0,25)
 plListTitle.Position = UDim2.new(0,10,0,5)
 plListTitle.BackgroundTransparency = 1
 plListTitle.Text = "Players in Server"
@@ -1915,7 +1896,7 @@ plListTitle.TextSize = 14
 plListTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 local plCountLbl = Instance.new("TextLabel", plListFrame)
-plCountLbl.Size = UDim2.new(0,80,0,25)
+plCountLbl.Size = UDim2.new(0,85,0,25)
 plCountLbl.Position = UDim2.new(1,-90,0,5)
 plCountLbl.BackgroundTransparency = 1
 plCountLbl.Text = "0 players"
@@ -1938,8 +1919,7 @@ local plScrollLayout = Instance.new("UIListLayout", plScroll)
 plScrollLayout.Padding = UDim.new(0,4)
 plScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- PRAWA STRONA - INFO O WYBRANYM GRACZU + PRZYCISKI
-local plInfoFrame = Instance.new("Frame", playerListPage)
+local plInfoFrame = Instance.new("Frame", playersPage)
 plInfoFrame.Size = UDim2.new(0.48,0,1,-10)
 plInfoFrame.Position = UDim2.new(0.5,5,0,5)
 plInfoFrame.BackgroundColor3 = DARK
@@ -2107,9 +2087,13 @@ local function createPlayerButton(plr)
 	avatar.ScaleType = Enum.ScaleType.Crop
 	Instance.new("UICorner", avatar).CornerRadius = UDim.new(1,0)
 
-	pcall(function()
-		local content = Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
-		avatar.Image = content
+	task.spawn(function()
+		pcall(function()
+			local content = Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+			if avatar and avatar.Parent then
+				avatar.Image = content
+			end
+		end)
 	end)
 
 	local nameLbl = Instance.new("TextLabel", btn)
@@ -2165,10 +2149,14 @@ local function removePlayerButton(plr)
 end
 
 local function refreshPlayerList()
+	local toRemove = {}
 	for plr in pairs(playerButtons) do
-		if not plr.Parent then
-			removePlayerButton(plr)
+		if not plr or not plr.Parent then
+			table.insert(toRemove, plr)
 		end
+	end
+	for _, plr in ipairs(toRemove) do
+		removePlayerButton(plr)
 	end
 	local count = 0
 	for _, plr in ipairs(Players:GetPlayers()) do
@@ -2184,26 +2172,25 @@ end
 
 Players.PlayerAdded:Connect(function(plr)
 	task.wait(0.5)
-	if plr ~= player then
-		createPlayerButton(plr)
-		refreshPlayerList()
+	if plr ~= player and plr.Parent then
+		pcall(refreshPlayerList)
 	end
 end)
 
 Players.PlayerRemoving:Connect(function(plr)
 	removePlayerButton(plr)
 	task.wait(0.1)
-	refreshPlayerList()
+	pcall(refreshPlayerList)
 end)
 
 task.spawn(function()
 	task.wait(1)
-	refreshPlayerList()
+	pcall(refreshPlayerList)
 end)
 
 task.spawn(function()
 	while true do
-		task.wait(2)
+		task.wait(3)
 		pcall(refreshPlayerList)
 		pcall(updateSelectedPlayerInfo)
 	end
@@ -2224,8 +2211,12 @@ plSpectateBtn.MouseButton1Click:Connect(function()
 	else
 		plStatusLbl.Text = "Select a player first!"
 		plStatusLbl.TextColor3 = Color3.fromRGB(255, 100, 100)
-		task.wait(2)
-		plStatusLbl.Text = ""
+		task.spawn(function()
+			task.wait(2)
+			if plStatusLbl.Text == "Select a player first!" then
+				plStatusLbl.Text = ""
+			end
+		end)
 	end
 end)
 
@@ -2240,13 +2231,14 @@ plUnspectateBtn.MouseButton1Click:Connect(function()
 	stopSpectate()
 	plStatusLbl.Text = "Stopped spectating"
 	plStatusLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
-	task.wait(1.5)
-	if plStatusLbl.Text == "Stopped spectating" then
-		plStatusLbl.Text = ""
-	end
+	task.spawn(function()
+		task.wait(1.5)
+		if plStatusLbl.Text == "Stopped spectating" then
+			plStatusLbl.Text = ""
+		end
+	end)
 end)
 
--- Settings placeholder
 local settingsPage = createPage("Settings")
 local sLbl = Instance.new("TextLabel", settingsPage)
 sLbl.Size = UDim2.new(1,-20,0,40)
@@ -2264,7 +2256,9 @@ local function switchPage(name)
 	for n, p in pairs(tabPages) do p.Visible = (n == name) end
 	contentTitle.Text = name
 	if name == "Players" then
-		pcall(refreshPlayerList)
+		task.spawn(function()
+			pcall(refreshPlayerList)
+		end)
 	end
 end
 
