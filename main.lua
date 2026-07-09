@@ -52,7 +52,7 @@ local AIMBOT = {
 }
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
-local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false}
+local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false, NoClip = false, NoClipSpeed = 30}
 local SPECTATE = {Target = nil, Active = false}
 
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
@@ -689,20 +689,6 @@ local visCheck = _G.BearHub_visCheck
 do
 	local lastShot = 0
 
-	local function isFirstPerson()
-		local ok1, cm = pcall(function() return player.CameraMode end)
-		if ok1 and cm == Enum.CameraMode.LockFirstPerson then return true end
-		local char = player.Character
-		if char then
-			local head = char:FindFirstChild("Head")
-			if head then
-				local dist = (Camera.CFrame.Position - head.Position).Magnitude
-				if dist < 2 then return true end
-			end
-		end
-		return false
-	end
-
 	local function getTriggerTarget()
 		if not TRIGGERBOT.Enabled then return nil end
 		local vc = Camera.ViewportSize / 2
@@ -1018,19 +1004,21 @@ do
 end
 
 --============================================================
--- BLOK 5: MISC + TOOLS
+-- BLOK 5: MISC + TOOLS + NOCLIP
 --============================================================
 do
+	-- SEMI GOD MOD - poprawiona wersja
 	task.spawn(function()
 		while true do
-			task.wait(0.15)
+			task.wait(0.1)
 			if MISC.SemiGod then
 				local char = player.Character
 				if char then
 					local hum = char:FindFirstChildOfClass("Humanoid")
-					if hum then
+					if hum and hum.Health > 0 then
 						pcall(function()
-							if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
+							hum.MaxHealth = math.huge
+							hum.Health = math.huge
 						end)
 					end
 				end
@@ -1038,25 +1026,221 @@ do
 		end
 	end)
 
+	-- Listener na HealthChanged
+	local function hookHumanoid(char)
+		if not char then return end
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if not hum then return end
+		hum.HealthChanged:Connect(function(hp)
+			if MISC.SemiGod then
+				pcall(function()
+					hum.MaxHealth = math.huge
+					hum.Health = math.huge
+				end)
+			end
+		end)
+	end
+
+	if player.Character then hookHumanoid(player.Character) end
+	player.CharacterAdded:Connect(function(c)
+		task.wait(0.5)
+		hookHumanoid(c)
+	end)
+
+	-- HEAL
+	_G.BearHub_healPlayer = function()
+		local char = player.Character
+		if not char then return end
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			pcall(function()
+				hum.Health = hum.MaxHealth
+			end)
+		end
+	end
+
+	-- NOCLIP + FLY
+	local flyBodyVelocity = nil
+	local flyBodyGyro = nil
+	local flying = false
+
+	local function stopFly()
+		flying = false
+		if flyBodyVelocity then
+			pcall(function() flyBodyVelocity:Destroy() end)
+			flyBodyVelocity = nil
+		end
+		if flyBodyGyro then
+			pcall(function() flyBodyGyro:Destroy() end)
+			flyBodyGyro = nil
+		end
+	end
+
+	local function startFly()
+		local char = player.Character
+		if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+		if not root then return end
+
+		stopFly()
+		flying = true
+
+		flyBodyVelocity = Instance.new("BodyVelocity")
+		flyBodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+		flyBodyVelocity.Parent = root
+
+		flyBodyGyro = Instance.new("BodyGyro")
+		flyBodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+		flyBodyGyro.P = 9000
+		flyBodyGyro.D = 500
+		flyBodyGyro.Parent = root
+
+		task.spawn(function()
+			while flying and MISC.NoClip do
+				RunService.RenderStepped:Wait()
+				if not char.Parent then break end
+				local currentRoot = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+				if not currentRoot then break end
+
+				local speed = MISC.NoClipSpeed or 30
+
+				local forward = 0
+				local right = 0
+				local up = 0
+
+				if UIS:IsKeyDown(Enum.KeyCode.W) then forward = forward + 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.S) then forward = forward - 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.A) then right = right - 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.D) then right = right + 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.Space) then up = up + 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then up = up - 1 end
+
+				local camCFrame = Camera.CFrame
+				local camForward = camCFrame.LookVector
+				local camRight = camCFrame.RightVector
+
+				local moveVec = (camForward * forward + camRight * right + Vector3.new(0, up, 0))
+
+				if moveVec.Magnitude > 0 then
+					moveVec = moveVec.Unit * speed
+				end
+
+				pcall(function()
+					if flyBodyVelocity and flyBodyVelocity.Parent then
+						flyBodyVelocity.Velocity = moveVec
+					end
+					if flyBodyGyro and flyBodyGyro.Parent then
+						flyBodyGyro.CFrame = camCFrame
+					end
+				end)
+			end
+			stopFly()
+		end)
+	end
+
+	-- NoClip loop
+	RunService.Stepped:Connect(function()
+		if MISC.NoClip then
+			local char = player.Character
+			if char then
+				for _, part in ipairs(char:GetDescendants()) do
+					if part:IsA("BasePart") then
+						pcall(function()
+							part.CanCollide = false
+						end)
+					end
+				end
+				if not flying then
+					startFly()
+				end
+			end
+		else
+			if flying then
+				stopFly()
+				local char = player.Character
+				if char then
+					for _, part in ipairs(char:GetDescendants()) do
+						if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+							pcall(function()
+								part.CanCollide = true
+							end)
+						end
+					end
+				end
+			end
+		end
+	end)
+
+	player.CharacterAdded:Connect(function()
+		task.wait(0.5)
+		stopFly()
+	end)
+
+	-- TOOLS HOOK
 	local hookedTools = {}
 
 	local function hookTool(tool)
 		if not tool or not tool:IsA("Tool") then return end
 		if hookedTools[tool] then return end
 		hookedTools[tool] = true
+
 		task.spawn(function()
 			while tool.Parent do
-				task.wait(0.15)
+				task.wait(0.05)
+
 				if MISC.NoRecoil or MISC.NoSpread or MISC.InfAmmo then
 					pcall(function()
 						for _, v in ipairs(tool:GetDescendants()) do
 							if v:IsA("NumberValue") or v:IsA("IntValue") then
 								local n = v.Name:lower()
-								if MISC.NoRecoil and (n:find("recoil") or n:find("kick")) then v.Value = 0 end
-								if MISC.NoSpread and (n:find("spread") or n:find("bulletspread")) then v.Value = 0 end
-								if MISC.NoSpread and n:find("accuracy") then v.Value = 1 end
-								if MISC.InfAmmo and (n == "ammo" or n == "currentammo" or n:find("magazine") or n:find("clip") or n == "bullets" or n == "storedammo") then
-									v.Value = 999
+
+								if MISC.NoRecoil then
+									if n:find("recoil") or n:find("kick") or n:find("camerashake") or n:find("shake") then
+										v.Value = 0
+									end
+								end
+
+								if MISC.NoSpread then
+									if n:find("spread") or n:find("bulletspread") or n:find("firerandom") then
+										v.Value = 0
+									end
+									if n:find("accuracy") then
+										v.Value = 1
+									end
+								end
+
+								if MISC.InfAmmo then
+									if n == "ammo" or n == "currentammo" or n == "bullets" or n == "storedammo" 
+										or n:find("magazine") or n:find("clip") or n:find("mag") 
+										or n == "maxammo" or n == "reserveammo" or n == "totalammo" then
+										v.Value = 999
+									end
+								end
+							end
+
+							if v:IsA("BoolValue") then
+								local n = v.Name:lower()
+								if MISC.InfAmmo then
+									if n:find("reloading") or n:find("isreloading") then
+										v.Value = false
+									end
+								end
+							end
+						end
+
+						local attrs = tool:GetAttributes()
+						for name, val in pairs(attrs) do
+							local n = name:lower()
+							if type(val) == "number" then
+								if MISC.NoRecoil and (n:find("recoil") or n:find("kick")) then
+									tool:SetAttribute(name, 0)
+								end
+								if MISC.NoSpread and (n:find("spread") or n:find("accuracy")) then
+									tool:SetAttribute(name, 0)
+								end
+								if MISC.InfAmmo and (n == "ammo" or n:find("magazine") or n:find("clip")) then
+									tool:SetAttribute(name, 999)
 								end
 							end
 						end
@@ -1089,15 +1273,19 @@ do
 	end
 
 	if player.Character then scanTools(player.Character) end
-	player.CharacterAdded:Connect(function(c) task.wait(0.3); scanTools(c) end)
+	player.CharacterAdded:Connect(function(c)
+		task.wait(0.3)
+		scanTools(c)
+	end)
 	task.spawn(function() task.wait(1); pcall(scanBackpack) end)
 
-	_G.BearHub_healPlayer = function()
-		local char = player.Character
-		if not char then return end
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then pcall(function() hum.Health = hum.MaxHealth end) end
-	end
+	task.spawn(function()
+		while true do
+			task.wait(3)
+			if player.Character then pcall(function() scanTools(player.Character) end) end
+			pcall(scanBackpack)
+		end
+	end)
 end
 
 local healPlayer = _G.BearHub_healPlayer
@@ -2039,7 +2227,7 @@ do
 	local miscPage = createPage("Miscellaneous")
 
 	local mL = Instance.new("Frame", miscPage)
-	mL.Size = UDim2.new(0.48,0,0,220)
+	mL.Size = UDim2.new(0.48,0,0,340)
 	mL.Position = UDim2.new(0,10,0,5)
 	mL.BackgroundColor3 = DARK
 	mL.BorderSizePixel = 0
@@ -2052,11 +2240,15 @@ do
 	mlp.PaddingLeft = UDim.new(0,5)
 	mlp.PaddingRight = UDim.new(0,5)
 
-	mkSection(mL, "Settings", 1)
-	mkCheck(mL, "Semi God", MISC, "SemiGod", 2)
+	mkSection(mL, "Combat Cheats", 1)
+	mkCheck(mL, "Semi God (Auto-Heal)", MISC, "SemiGod", 2)
 	mkCheck(mL, "No Recoil", MISC, "NoRecoil", 3)
 	mkCheck(mL, "No Spread", MISC, "NoSpread", 4)
 	mkCheck(mL, "Infinity Ammo", MISC, "InfAmmo", 5)
+
+	mkSection(mL, "Movement", 6)
+	mkCheck(mL, "NoClip (Fly + No Collision)", MISC, "NoClip", 7)
+	mkSlider(mL, "NoClip Fly Speed", 1, 100, 30, " m/s", MISC, "NoClipSpeed", 8)
 
 	local mR = Instance.new("Frame", miscPage)
 	mR.Size = UDim2.new(0.48,0,0,150)
@@ -2327,7 +2519,6 @@ do
 		end
 	end
 
-	-- Auto-update distance co 0.5s
 	task.spawn(function()
 		while true do
 			task.wait(0.5)
@@ -2489,7 +2680,6 @@ do
 		end
 	end)
 
-	-- SPECTATE
 	plSpectateBtn.MouseEnter:Connect(function()
 		plSpectateBtn.BackgroundColor3 = Color3.fromRGB(120, 90, 220)
 	end)
@@ -2506,7 +2696,6 @@ do
 		end
 	end)
 
-	-- UNSPECTATE
 	plUnspectateBtn.MouseEnter:Connect(function()
 		plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(210, 80, 80)
 	end)
@@ -2519,7 +2708,6 @@ do
 		showStatus("Stopped spectating", Color3.fromRGB(150, 150, 160), 1.5)
 	end)
 
-	-- TELEPORT
 	plTeleportBtn.MouseEnter:Connect(function()
 		plTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 160, 240)
 	end)
@@ -2540,7 +2728,6 @@ do
 		end
 	end)
 
-	-- BRING
 	plBringBtn.MouseEnter:Connect(function()
 		plBringBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 120)
 	end)
@@ -2561,7 +2748,6 @@ do
 		end
 	end)
 
-	-- SWITCH
 	plSwitchBtn.MouseEnter:Connect(function()
 		plSwitchBtn.BackgroundColor3 = Color3.fromRGB(240, 170, 70)
 	end)
