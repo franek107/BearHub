@@ -1,3 +1,4 @@
+```lua
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
@@ -54,7 +55,6 @@ local AIMBOT = {
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false}
 local SPECTATE = {Target = nil, Active = false}
-local SILENT_KILL = {Active = false, Target = nil}
 
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
 
@@ -164,7 +164,7 @@ local startDragSound = _G.BearHub_startDragSound
 local stopDragSound = _G.BearHub_stopDragSound
 
 --============================================================
--- BLOK 2: SPECTATE + TELEPORT/BRING/SWITCH + SILENT KILL
+-- BLOK 2: SPECTATE + TELEPORT/BRING/SWITCH + SILENT KILL + CRASH
 --============================================================
 do
 	local function getRoot(char)
@@ -221,7 +221,6 @@ do
 		if not myRoot then return false, "You have no root part" end
 		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
-		
 		task.spawn(function()
 			local targetCFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
 			local startTime = tick()
@@ -250,7 +249,6 @@ do
 		if not myRoot then return false, "You have no root part" end
 		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
-		
 		task.spawn(function()
 			for i = 1, 5 do
 				if not target.Character then break end
@@ -258,7 +256,6 @@ do
 				if not currentRoot or not currentRoot.Parent then break end
 				local myCurrentRoot = getRoot(myChar)
 				if not myCurrentRoot then break end
-				
 				pcall(function()
 					local destination = myCurrentRoot.CFrame * CFrame.new(0, 0, -3) + Vector3.new(0, 2, 0)
 					currentRoot.CFrame = destination
@@ -278,18 +275,15 @@ do
 		if not myRoot then return false, "You have no root part" end
 		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
-		
 		task.spawn(function()
 			local myOriginalCFrame = myRoot.CFrame
 			local targetOriginalCFrame = targetRoot.CFrame
-			
 			local startTime = tick()
 			while tick() - startTime < 0.5 do
 				if not myChar.Parent or not myRoot.Parent then break end
 				if not target.Character then break end
 				local currentTargetRoot = getRoot(target.Character)
 				if not currentTargetRoot then break end
-				
 				pcall(function()
 					myRoot.CFrame = targetOriginalCFrame + Vector3.new(0, 2, 0)
 					zeroVelocity(myChar)
@@ -302,103 +296,212 @@ do
 		return true, "Switched with " .. (target.DisplayName or target.Name)
 	end
 
-	-- SILENT KILL: Teleportuj do gracza, celuj w niego, strzelaj, wroc na swoje miejsce
-	-- Wszystko w petli co klatke - "niewidoczny" zabojca
+	-- ============================================
+	-- SILENT KILL - nie rusza gracza, nie psuje kursora
+	-- ============================================
+	local skActive = false
+	local skStopSignal = false
+
 	_G.BearHub_startSilentKill = function(target)
 		if not target or not target.Character then return false, "Player has no character" end
-		local myChar = player.Character
-		if not myChar then return false, "You have no character" end
-		local myRoot = getRoot(myChar)
-		if not myRoot then return false, "You have no root part" end
-		
-		SILENT_KILL.Active = true
-		SILENT_KILL.Target = target
-		
+		if skActive then return false, "Silent Kill already running" end
+
+		skActive = true
+		skStopSignal = false
+		_G.BearHub_skDone = false
+
+		task.spawn(function()
+			while skActive and not skStopSignal do
+				-- Sprawdz czy target istnieje i zyje
+				if not target or not target.Parent then break end
+				local targetChar = target.Character
+				if not targetChar then
+					task.wait(0.1)
+					continue
+				end
+				local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+				if not targetHum or targetHum.Health <= 0 then
+					break
+				end
+				local targetHead = targetChar:FindFirstChild("Head")
+				if not targetHead then
+					task.wait(0.05)
+					continue
+				end
+
+				-- Zapisz stan kamery
+				local savedCamCFrame = Camera.CFrame
+				local savedCamType = Camera.CameraType
+
+				-- Tymczasowo celuj w glowe targeta
+				pcall(function()
+					Camera.CameraType = Enum.CameraType.Scriptable
+					Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetHead.Position)
+				end)
+
+				-- Strzal przez VIM
+				pcall(function()
+					VIM:SendMouseButtonEvent(
+						Camera.ViewportSize.X / 2,
+						Camera.ViewportSize.Y / 2,
+						0, true, game, 0
+					)
+				end)
+				task.wait(0.02)
+				pcall(function()
+					VIM:SendMouseButtonEvent(
+						Camera.ViewportSize.X / 2,
+						Camera.ViewportSize.Y / 2,
+						0, false, game, 0
+					)
+				end)
+
+				-- Natychmiast przywroc kamere
+				pcall(function()
+					Camera.CameraType = savedCamType
+					Camera.CFrame = savedCamCFrame
+				end)
+
+				task.wait(0.15)
+			end
+
+			-- Cleanup
+			skActive = false
+			skStopSignal = false
+			pcall(function()
+				Camera.CameraType = Enum.CameraType.Custom
+			end)
+			_G.BearHub_skDone = true
+		end)
+
 		return true, "Silent Kill started on " .. (target.DisplayName or target.Name)
 	end
 
 	_G.BearHub_stopSilentKill = function()
-		SILENT_KILL.Active = false
-		SILENT_KILL.Target = nil
+		skStopSignal = true
+		skActive = false
+		pcall(function()
+			Camera.CameraType = Enum.CameraType.Custom
+		end)
+		_G.BearHub_skDone = true
 		return true, "Silent Kill stopped"
 	end
 
-	-- Silent Kill loop - co klatke: teleport -> aim -> click -> wroc
-	task.spawn(function()
-		local shotCooldown = 0
-		while true do
-			RunService.Heartbeat:Wait()
-			if SILENT_KILL.Active and SILENT_KILL.Target then
-				local target = SILENT_KILL.Target
-				
-				-- Sprawdz czy target zyje
-				if not target.Parent then
-					SILENT_KILL.Active = false
-					SILENT_KILL.Target = nil
-					continue
-				end
-				
-				local targetChar = target.Character
-				if not targetChar then continue end
-				
-				local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-				if not targetHum or targetHum.Health <= 0 then
-					-- Target umarl - koniec
-					SILENT_KILL.Active = false
-					SILENT_KILL.Target = nil
-					continue
-				end
-				
-				local targetHead = targetChar:FindFirstChild("Head")
-				local targetRoot = getRoot(targetChar)
-				if not targetHead or not targetRoot then continue end
-				
-				local myChar = player.Character
-				if not myChar then continue end
-				local myRoot = getRoot(myChar)
-				if not myRoot then continue end
-				
-				local myHum = myChar:FindFirstChildOfClass("Humanoid")
-				if not myHum or myHum.Health <= 0 then
-					SILENT_KILL.Active = false
-					SILENT_KILL.Target = nil
-					continue
-				end
-				
-				-- Zapisz oryginalną pozycję
-				local originalCFrame = myRoot.CFrame
-				local originalCamCFrame = Camera.CFrame
-				
-				-- Teleportuj do gracza (blisko jego glowy, od przodu)
-				local attackPos = targetHead.CFrame * CFrame.new(0, 0, 3)
-				pcall(function()
-					myRoot.CFrame = attackPos
-				end)
-				
-				-- Celuj w glowe
-				pcall(function()
-					local camPos = attackPos.Position
-					local lookAt = targetHead.Position
-					Camera.CFrame = CFrame.new(camPos, lookAt)
-				end)
-				
-				-- Strzelaj z cooldownem
-				local now = tick()
-				if now - shotCooldown >= 0.08 then
-					shotCooldown = now
-					pcall(doClick)
-				end
-				
-				-- Wroc na swoje miejsce
-				pcall(function()
-					myRoot.CFrame = originalCFrame
-					Camera.CFrame = originalCamCFrame
-					zeroVelocity(myChar)
-				end)
-			end
-		end
-	end)
+	_G.BearHub_isSKActive = function()
+		return skActive
+	end
 
+	-- ============================================
+	-- CRASH PLAYER
+	-- ============================================
+	_G.BearHub_crashPlayer = function(target)
+		if not target then return false, "No target" end
+		if target == player then return false, "Cannot crash yourself" end
+
+		task.spawn(function()
+			-- Metoda 1: Spam Parts w workspace (przeciaza replikacje sieci)
+			pcall(function()
+				local spamFolder = Instance.new("Folder")
+				spamFolder.Name = "BH_" .. target.Name
+				spamFolder.Parent = workspace
+				for i = 1, 200 do
+					if not spamFolder.Parent then break end
+					local p = Instance.new("Part")
+					p.Size = Vector3.new(0.1, 0.1, 0.1)
+					p.CFrame = CFrame.new(0, -9999, 0)
+					p.Anchored = true
+					p.CanCollide = false
+					p.CastShadow = false
+					p.Parent = spamFolder
+					for j = 1, 5 do
+						local c = Instance.new("StringValue")
+						c.Value = string.rep("A", 200)
+						c.Parent = p
+					end
+				end
+				task.wait(3)
+				pcall(function() spamFolder:Destroy() end)
+			end)
+
+			-- Metoda 2: Spam animacji (przeciaza engine animacji klienta)
+			pcall(function()
+				local targetChar = target.Character
+				if not targetChar then return end
+				local hum = targetChar:FindFirstChildOfClass("Humanoid")
+				if not hum then return end
+				local animator = hum:FindFirstChildOfClass("Animator")
+				if not animator then return end
+				for i = 1, 50 do
+					pcall(function()
+						local anim = Instance.new("Animation")
+						anim.AnimationId = "rbxassetid://" .. math.random(1000000, 9999999)
+						animator:LoadAnimation(anim)
+					end)
+					task.wait(0.01)
+				end
+			end)
+
+			-- Metoda 3: Spam Sound (przeciaza audio engine klienta)
+			pcall(function()
+				local targetChar = target.Character
+				if not targetChar then return end
+				local root = targetChar:FindFirstChild("HumanoidRootPart")
+				if not root then return end
+				local sounds = {}
+				for i = 1, 100 do
+					pcall(function()
+						local s = Instance.new("Sound")
+						s.SoundId = "rbxassetid://" .. math.random(1000000, 9999999)
+						s.Volume = 0
+						s.RollOffMaxDistance = 0
+						s.Parent = root
+						s:Play()
+						table.insert(sounds, s)
+					end)
+				end
+				task.wait(2)
+				for _, s in ipairs(sounds) do
+					pcall(function() s:Destroy() end)
+				end
+			end)
+
+			-- Metoda 4: RemoteEvent flood
+			pcall(function()
+				local remotes = {}
+				local function findRemotes(parent, depth)
+					if depth > 3 then return end
+					for _, v in ipairs(parent:GetChildren()) do
+						if v:IsA("RemoteEvent") then
+							table.insert(remotes, v)
+						elseif v:IsA("Folder") or v:IsA("Model") then
+							findRemotes(v, depth + 1)
+						end
+					end
+				end
+				findRemotes(game:GetService("ReplicatedStorage"), 0)
+				findRemotes(workspace, 0)
+				for i = 1, math.min(#remotes, 5) do
+					local remote = remotes[i]
+					task.spawn(function()
+						for j = 1, 30 do
+							pcall(function()
+								remote:FireServer(
+									string.rep("X", 100),
+									math.random(),
+									Vector3.new(math.random(), math.random(), math.random())
+								)
+							end)
+							task.wait(0.02)
+						end
+					end)
+				end
+			end)
+		end)
+
+		return true, "Crashing " .. (target.DisplayName or target.Name) .. "..."
+	end
+
+	-- Spectate loop
 	task.spawn(function()
 		while true do
 			task.wait(0.5)
@@ -417,9 +520,10 @@ do
 
 	Players.PlayerRemoving:Connect(function(p)
 		if SPECTATE.Target == p then stopSpectate() end
-		if SILENT_KILL.Target == p then
-			SILENT_KILL.Active = false
-			SILENT_KILL.Target = nil
+		if skActive then
+			skStopSignal = true
+			skActive = false
+			pcall(function() Camera.CameraType = Enum.CameraType.Custom end)
 		end
 	end)
 end
@@ -429,8 +533,6 @@ local stopSpectate = _G.BearHub_stopSpectate
 local teleportTo = _G.BearHub_teleportTo
 local bringPlayer = _G.BearHub_bringPlayer
 local switchPlaces = _G.BearHub_switchPlaces
-local startSilentKill = _G.BearHub_startSilentKill
-local stopSilentKill = _G.BearHub_stopSilentKill
 
 --============================================================
 -- MOUSE INPUT
@@ -761,25 +863,20 @@ do
 	end)
 
 	task.spawn(function() while true do task.wait(5); pcall(fullRefresh) end end)
-
 	player.CharacterAdded:Connect(function() task.wait(0.5); pcall(fullRefresh) end)
-
 	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 		Camera = workspace.CurrentCamera; pcall(fullRefresh)
 	end)
-
 	Players.PlayerAdded:Connect(function(p)
 		p.CharacterAdded:Connect(function() task.wait(0.3); clearESP(p) end)
 		p.CharacterRemoving:Connect(function() clearESP(p) end)
 	end)
-
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= player then
 			p.CharacterAdded:Connect(function() task.wait(0.3); clearESP(p) end)
 			p.CharacterRemoving:Connect(function() clearESP(p) end)
 		end
 	end
-
 	Players.PlayerRemoving:Connect(function(p) clearESP(p) end)
 end
 
@@ -792,20 +889,6 @@ local visCheck = _G.BearHub_visCheck
 --============================================================
 do
 	local lastShot = 0
-
-	local function isFirstPerson()
-		local ok1, cm = pcall(function() return player.CameraMode end)
-		if ok1 and cm == Enum.CameraMode.LockFirstPerson then return true end
-		local char = player.Character
-		if char then
-			local head = char:FindFirstChild("Head")
-			if head then
-				local dist = (Camera.CFrame.Position - head.Position).Magnitude
-				if dist < 2 then return true end
-			end
-		end
-		return false
-	end
 
 	local function getTriggerTarget()
 		if not TRIGGERBOT.Enabled then return nil end
@@ -1075,7 +1158,6 @@ do
 		local enabledChanged = (lastHitboxEnabled ~= HITBOX.Enabled)
 		lastHitboxBone = HITBOX.Bone
 		lastHitboxEnabled = HITBOX.Enabled
-
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= player then
 				local char = plr.Character
@@ -1109,7 +1191,6 @@ do
 			if char then restoreAllForChar(char) end
 		end)
 	end)
-
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= player then
 			p.CharacterAdded:Connect(function(char) task.wait(1); cleanupDead() end)
@@ -2179,6 +2260,9 @@ do
 	mkSection(mR, "Options", 1)
 	mkButton(mR, "Heal", healPlayer, 2)
 
+	-- ============================================================
+	-- PLAYERS PAGE
+	-- ============================================================
 	local playersPage = createPage("Players")
 
 	local plListFrame = Instance.new("Frame", playersPage)
@@ -2222,6 +2306,7 @@ do
 	plScrollLayout.Padding = UDim.new(0,4)
 	plScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
+	-- INFO PANEL
 	local plInfoFrame = Instance.new("Frame", playersPage)
 	plInfoFrame.Size = UDim2.new(0.55,0,1,-10)
 	plInfoFrame.Position = UDim2.new(0.44,5,0,5)
@@ -2295,8 +2380,8 @@ do
 
 	-- ROW 1: Spectate + Unspectate
 	local row1 = Instance.new("Frame", plInfoFrame)
-	row1.Size = UDim2.new(1,-20,0,28)
-	row1.Position = UDim2.new(0,10,0,158)
+	row1.Size = UDim2.new(1,-20,0,26)
+	row1.Position = UDim2.new(0,10,0,157)
 	row1.BackgroundTransparency = 1
 
 	local plSpectateBtn = Instance.new("TextButton", row1)
@@ -2325,8 +2410,8 @@ do
 
 	-- ROW 2: Teleport + Bring
 	local row2 = Instance.new("Frame", plInfoFrame)
-	row2.Size = UDim2.new(1,-20,0,28)
-	row2.Position = UDim2.new(0,10,0,190)
+	row2.Size = UDim2.new(1,-20,0,26)
+	row2.Position = UDim2.new(0,10,0,187)
 	row2.BackgroundTransparency = 1
 
 	local plTeleportBtn = Instance.new("TextButton", row2)
@@ -2353,10 +2438,10 @@ do
 	plBringBtn.AutoButtonColor = false
 	Instance.new("UICorner", plBringBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 3: Switch + Silent Kill
+	-- ROW 3: Switch + Crash
 	local row3 = Instance.new("Frame", plInfoFrame)
-	row3.Size = UDim2.new(1,-20,0,28)
-	row3.Position = UDim2.new(0,10,0,222)
+	row3.Size = UDim2.new(1,-20,0,26)
+	row3.Position = UDim2.new(0,10,0,217)
 	row3.BackgroundTransparency = 1
 
 	local plSwitchBtn = Instance.new("TextButton", row3)
@@ -2371,9 +2456,27 @@ do
 	plSwitchBtn.AutoButtonColor = false
 	Instance.new("UICorner", plSwitchBtn).CornerRadius = UDim.new(0,6)
 
-	local plSilentKillBtn = Instance.new("TextButton", row3)
+	local plCrashBtn = Instance.new("TextButton", row3)
+	plCrashBtn.Size = UDim2.new(0.5,-3,1,0)
+	plCrashBtn.Position = UDim2.new(0.5,3,0,0)
+	plCrashBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30)
+	plCrashBtn.BorderSizePixel = 0
+	plCrashBtn.Text = "Crash"
+	plCrashBtn.TextColor3 = Color3.new(1,1,1)
+	plCrashBtn.Font = Enum.Font.GothamBold
+	plCrashBtn.TextSize = 12
+	plCrashBtn.AutoButtonColor = false
+	Instance.new("UICorner", plCrashBtn).CornerRadius = UDim.new(0,6)
+
+	-- ROW 4: Silent Kill + Stop SK
+	local row4 = Instance.new("Frame", plInfoFrame)
+	row4.Size = UDim2.new(1,-20,0,26)
+	row4.Position = UDim2.new(0,10,0,247)
+	row4.BackgroundTransparency = 1
+
+	local plSilentKillBtn = Instance.new("TextButton", row4)
 	plSilentKillBtn.Size = UDim2.new(0.5,-3,1,0)
-	plSilentKillBtn.Position = UDim2.new(0.5,3,0,0)
+	plSilentKillBtn.Position = UDim2.new(0,0,0,0)
 	plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
 	plSilentKillBtn.BorderSizePixel = 0
 	plSilentKillBtn.Text = "Silent Kill"
@@ -2383,20 +2486,19 @@ do
 	plSilentKillBtn.AutoButtonColor = false
 	Instance.new("UICorner", plSilentKillBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 4: Stop Silent Kill
-	local plStopSKBtn = Instance.new("TextButton", plInfoFrame)
-	plStopSKBtn.Size = UDim2.new(1,-20,0,24)
-	plStopSKBtn.Position = UDim2.new(0,10,0,254)
+	local plStopSKBtn = Instance.new("TextButton", row4)
+	plStopSKBtn.Size = UDim2.new(0.5,-3,1,0)
+	plStopSKBtn.Position = UDim2.new(0.5,3,0,0)
 	plStopSKBtn.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
 	plStopSKBtn.BorderSizePixel = 0
-	plStopSKBtn.Text = "Stop Silent Kill"
+	plStopSKBtn.Text = "Stop SK"
 	plStopSKBtn.TextColor3 = Color3.new(1,1,1)
 	plStopSKBtn.Font = Enum.Font.GothamBold
-	plStopSKBtn.TextSize = 11
+	plStopSKBtn.TextSize = 12
 	plStopSKBtn.AutoButtonColor = false
-	plStopSKBtn.Visible = false
 	Instance.new("UICorner", plStopSKBtn).CornerRadius = UDim.new(0,6)
 
+	-- STATUS
 	local plStatusLbl = Instance.new("TextLabel", plInfoFrame)
 	plStatusLbl.Size = UDim2.new(1,-20,0,20)
 	plStatusLbl.Position = UDim2.new(0,10,1,-28)
@@ -2439,19 +2541,11 @@ do
 			plUsernameLbl.Text = "@" .. selectedPlayer.Name
 			plIdLbl.Text = "ID: " .. selectedPlayer.UserId
 			local dist = getDistanceToPlayer(selectedPlayer)
-			if dist then
-				plDistLbl.Text = "Distance: " .. dist .. "m"
-			else
-				plDistLbl.Text = "Distance: N/A"
-			end
+			plDistLbl.Text = dist and ("Distance: " .. dist .. "m") or "Distance: N/A"
 			pcall(function()
 				local content = Players:GetUserThumbnailAsync(selectedPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
 				plAvatar.Image = content
 			end)
-			if SPECTATE.Active and SPECTATE.Target == selectedPlayer then
-				plStatusLbl.Text = "SPECTATING"
-				plStatusLbl.TextColor3 = Color3.fromRGB(100, 200, 100)
-			end
 		else
 			plNameLbl.Text = "No player selected"
 			plUsernameLbl.Text = ""
@@ -2462,25 +2556,29 @@ do
 		end
 	end
 
-	-- Auto-update distance + silent kill status
+	-- Auto-update distance + SK status
 	task.spawn(function()
 		while true do
 			task.wait(0.5)
 			if selectedPlayer and selectedPlayer.Parent then
 				local dist = getDistanceToPlayer(selectedPlayer)
-				if dist then
-					plDistLbl.Text = "Distance: " .. dist .. "m"
-				else
-					plDistLbl.Text = "Distance: N/A"
-				end
+				plDistLbl.Text = dist and ("Distance: " .. dist .. "m") or "Distance: N/A"
 			end
-			-- Update silent kill button visibility
-			plStopSKBtn.Visible = SILENT_KILL.Active
-			if SILENT_KILL.Active and SILENT_KILL.Target then
-				if not plStatusLbl.Text:find("SILENT KILL") then
-					plStatusLbl.Text = "SILENT KILL ACTIVE: " .. (SILENT_KILL.Target.DisplayName or SILENT_KILL.Target.Name)
-					plStatusLbl.TextColor3 = Color3.fromRGB(255, 60, 60)
-				end
+
+			-- Update SK button visual state
+			local skRunning = _G.BearHub_isSKActive and _G.BearHub_isSKActive()
+			if skRunning then
+				plSilentKillBtn.Text = "SK Active"
+				plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 30)
+			else
+				plSilentKillBtn.Text = "Silent Kill"
+				plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+			end
+
+			-- Check if SK finished (target died)
+			if _G.BearHub_skDone then
+				_G.BearHub_skDone = false
+				showStatus("Target eliminated!", Color3.fromRGB(100, 255, 100), 3)
 			end
 		end
 	end)
@@ -2525,9 +2623,7 @@ do
 		task.spawn(function()
 			pcall(function()
 				local content = Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
-				if avatar and avatar.Parent then
-					avatar.Image = content
-				end
+				if avatar and avatar.Parent then avatar.Image = content end
 			end)
 		end)
 
@@ -2554,16 +2650,11 @@ do
 		userLbl.TextTruncate = Enum.TextTruncate.AtEnd
 
 		btn.MouseEnter:Connect(function()
-			if selectedPlayer ~= plr then
-				btn.BackgroundColor3 = Color3.fromRGB(50,50,65)
-			end
+			if selectedPlayer ~= plr then btn.BackgroundColor3 = Color3.fromRGB(50,50,65) end
 		end)
 		btn.MouseLeave:Connect(function()
-			if selectedPlayer ~= plr then
-				btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
-			end
+			if selectedPlayer ~= plr then btn.BackgroundColor3 = Color3.fromRGB(40,40,50) end
 		end)
-
 		btn.MouseButton1Click:Connect(function()
 			playClick()
 			selectPlayer(plr)
@@ -2586,19 +2677,13 @@ do
 	local function refreshPlayerList()
 		local toRemove = {}
 		for plr in pairs(playerButtons) do
-			if not plr or not plr.Parent then
-				table.insert(toRemove, plr)
-			end
+			if not plr or not plr.Parent then table.insert(toRemove, plr) end
 		end
-		for _, plr in ipairs(toRemove) do
-			removePlayerButton(plr)
-		end
+		for _, plr in ipairs(toRemove) do removePlayerButton(plr) end
 		local count = 0
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= player then
-				if not playerButtons[plr] then
-					createPlayerButton(plr)
-				end
+				if not playerButtons[plr] then createPlayerButton(plr) end
 				count = count + 1
 			end
 		end
@@ -2609,36 +2694,21 @@ do
 
 	Players.PlayerAdded:Connect(function(plr)
 		task.wait(0.5)
-		if plr ~= player and plr.Parent then
-			pcall(refreshPlayerList)
-		end
+		if plr ~= player and plr.Parent then pcall(refreshPlayerList) end
 	end)
-
 	Players.PlayerRemoving:Connect(function(plr)
 		removePlayerButton(plr)
 		task.wait(0.1)
 		pcall(refreshPlayerList)
 	end)
-
+	task.spawn(function() task.wait(1); pcall(refreshPlayerList) end)
 	task.spawn(function()
-		task.wait(1)
-		pcall(refreshPlayerList)
-	end)
-
-	task.spawn(function()
-		while true do
-			task.wait(3)
-			pcall(refreshPlayerList)
-		end
+		while true do task.wait(3); pcall(refreshPlayerList) end
 	end)
 
 	-- SPECTATE
-	plSpectateBtn.MouseEnter:Connect(function()
-		plSpectateBtn.BackgroundColor3 = Color3.fromRGB(120, 90, 220)
-	end)
-	plSpectateBtn.MouseLeave:Connect(function()
-		plSpectateBtn.BackgroundColor3 = PURPLE
-	end)
+	plSpectateBtn.MouseEnter:Connect(function() plSpectateBtn.BackgroundColor3 = Color3.fromRGB(120, 90, 220) end)
+	plSpectateBtn.MouseLeave:Connect(function() plSpectateBtn.BackgroundColor3 = PURPLE end)
 	plSpectateBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
@@ -2650,12 +2720,8 @@ do
 	end)
 
 	-- UNSPECTATE
-	plUnspectateBtn.MouseEnter:Connect(function()
-		plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(210, 80, 80)
-	end)
-	plUnspectateBtn.MouseLeave:Connect(function()
-		plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
-	end)
+	plUnspectateBtn.MouseEnter:Connect(function() plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(210, 80, 80) end)
+	plUnspectateBtn.MouseLeave:Connect(function() plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60) end)
 	plUnspectateBtn.MouseButton1Click:Connect(function()
 		playClick()
 		stopSpectate()
@@ -2663,63 +2729,56 @@ do
 	end)
 
 	-- TELEPORT
-	plTeleportBtn.MouseEnter:Connect(function()
-		plTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 160, 240)
-	end)
-	plTeleportBtn.MouseLeave:Connect(function()
-		plTeleportBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
-	end)
+	plTeleportBtn.MouseEnter:Connect(function() plTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 160, 240) end)
+	plTeleportBtn.MouseLeave:Connect(function() plTeleportBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220) end)
 	plTeleportBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
 			local ok, msg = teleportTo(selectedPlayer)
-			if ok then
-				showStatus(msg, Color3.fromRGB(100, 200, 255), 2)
-			else
-				showStatus(msg or "Teleport failed", Color3.fromRGB(255, 100, 100), 2)
-			end
+			showStatus(msg or "Done", ok and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(255, 100, 100), 2)
 		else
 			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
 		end
 	end)
 
 	-- BRING
-	plBringBtn.MouseEnter:Connect(function()
-		plBringBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 120)
-	end)
-	plBringBtn.MouseLeave:Connect(function()
-		plBringBtn.BackgroundColor3 = Color3.fromRGB(80, 180, 100)
-	end)
+	plBringBtn.MouseEnter:Connect(function() plBringBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 120) end)
+	plBringBtn.MouseLeave:Connect(function() plBringBtn.BackgroundColor3 = Color3.fromRGB(80, 180, 100) end)
 	plBringBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
 			local ok, msg = bringPlayer(selectedPlayer)
-			if ok then
-				showStatus(msg, Color3.fromRGB(120, 220, 130), 2)
-			else
-				showStatus(msg or "Bring failed", Color3.fromRGB(255, 100, 100), 2)
-			end
+			showStatus(msg or "Done", ok and Color3.fromRGB(120, 220, 130) or Color3.fromRGB(255, 100, 100), 2)
 		else
 			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
 		end
 	end)
 
 	-- SWITCH
-	plSwitchBtn.MouseEnter:Connect(function()
-		plSwitchBtn.BackgroundColor3 = Color3.fromRGB(240, 170, 70)
-	end)
-	plSwitchBtn.MouseLeave:Connect(function()
-		plSwitchBtn.BackgroundColor3 = Color3.fromRGB(220, 150, 50)
-	end)
+	plSwitchBtn.MouseEnter:Connect(function() plSwitchBtn.BackgroundColor3 = Color3.fromRGB(240, 170, 70) end)
+	plSwitchBtn.MouseLeave:Connect(function() plSwitchBtn.BackgroundColor3 = Color3.fromRGB(220, 150, 50) end)
 	plSwitchBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
 			local ok, msg = switchPlaces(selectedPlayer)
-			if ok then
-				showStatus(msg, Color3.fromRGB(255, 180, 80), 2)
-			else
-				showStatus(msg or "Switch failed", Color3.fromRGB(255, 100, 100), 2)
+			showStatus(msg or "Done", ok and Color3.fromRGB(255, 180, 80) or Color3.fromRGB(255, 100, 100), 2)
+		else
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
+		end
+	end)
+
+	-- CRASH
+	plCrashBtn.MouseEnter:Connect(function() plCrashBtn.BackgroundColor3 = Color3.fromRGB(210, 50, 50) end)
+	plCrashBtn.MouseLeave:Connect(function() plCrashBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) end)
+	plCrashBtn.MouseButton1Click:Connect(function()
+		playClick()
+		if selectedPlayer and selectedPlayer.Parent then
+			if selectedPlayer == player then
+				showStatus("Cannot crash yourself!", Color3.fromRGB(255, 100, 100), 2)
+				return
 			end
+			local ok, msg = _G.BearHub_crashPlayer(selectedPlayer)
+			showStatus(msg or "Crashing...", Color3.fromRGB(255, 80, 80), 3)
 		else
 			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
 		end
@@ -2727,34 +2786,28 @@ do
 
 	-- SILENT KILL
 	plSilentKillBtn.MouseEnter:Connect(function()
-		if not SILENT_KILL.Active then
+		if not (_G.BearHub_isSKActive and _G.BearHub_isSKActive()) then
 			plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(230, 60, 60)
 		end
 	end)
 	plSilentKillBtn.MouseLeave:Connect(function()
-		if not SILENT_KILL.Active then
+		if not (_G.BearHub_isSKActive and _G.BearHub_isSKActive()) then
 			plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
 		end
 	end)
 	plSilentKillBtn.MouseButton1Click:Connect(function()
 		playClick()
-		if SILENT_KILL.Active then
-			-- Already active, stop it
-			stopSilentKill()
-			plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-			plSilentKillBtn.Text = "Silent Kill"
-			plStopSKBtn.Visible = false
+		if _G.BearHub_isSKActive and _G.BearHub_isSKActive() then
+			-- Zatrzymaj SK
+			if _G.BearHub_stopSilentKill then _G.BearHub_stopSilentKill() end
 			showStatus("Silent Kill stopped", Color3.fromRGB(150, 150, 160), 2)
 		else
 			if selectedPlayer and selectedPlayer.Parent then
-				local ok, msg = startSilentKill(selectedPlayer)
+				local ok, msg = _G.BearHub_startSilentKill(selectedPlayer)
 				if ok then
-					plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(255, 30, 30)
-					plSilentKillBtn.Text = "SK Active!"
-					plStopSKBtn.Visible = true
 					showStatus("SILENT KILL: " .. (selectedPlayer.DisplayName or selectedPlayer.Name), Color3.fromRGB(255, 60, 60))
 				else
-					showStatus(msg or "Silent Kill failed", Color3.fromRGB(255, 100, 100), 2)
+					showStatus(msg or "Failed", Color3.fromRGB(255, 100, 100), 2)
 				end
 			else
 				showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
@@ -2762,46 +2815,15 @@ do
 		end
 	end)
 
-	-- STOP SILENT KILL BUTTON
-	plStopSKBtn.MouseEnter:Connect(function()
-		plStopSKBtn.BackgroundColor3 = Color3.fromRGB(130, 40, 40)
-	end)
-	plStopSKBtn.MouseLeave:Connect(function()
-		plStopSKBtn.BackgroundColor3 = Color3.fromRGB(100, 30, 30)
-	end)
+	-- STOP SK
+	plStopSKBtn.MouseEnter:Connect(function() plStopSKBtn.BackgroundColor3 = Color3.fromRGB(130, 40, 40) end)
+	plStopSKBtn.MouseLeave:Connect(function() plStopSKBtn.BackgroundColor3 = Color3.fromRGB(100, 30, 30) end)
 	plStopSKBtn.MouseButton1Click:Connect(function()
 		playClick()
-		stopSilentKill()
-		plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-		plSilentKillBtn.Text = "Silent Kill"
-		plStopSKBtn.Visible = false
-		showStatus("Silent Kill stopped", Color3.fromRGB(150, 150, 160), 2)
-	end)
-
-	-- Auto-stop silent kill when target dies
-	task.spawn(function()
-		while true do
-			task.wait(0.3)
-			if SILENT_KILL.Active and (not SILENT_KILL.Target or not SILENT_KILL.Target.Parent) then
-				stopSilentKill()
-				plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-				plSilentKillBtn.Text = "Silent Kill"
-				plStopSKBtn.Visible = false
-				showStatus("Target eliminated!", Color3.fromRGB(100, 255, 100), 3)
-			elseif SILENT_KILL.Active and SILENT_KILL.Target then
-				local tChar = SILENT_KILL.Target.Character
-				if tChar then
-					local tHum = tChar:FindFirstChildOfClass("Humanoid")
-					if tHum and tHum.Health <= 0 then
-						stopSilentKill()
-						plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
-						plSilentKillBtn.Text = "Silent Kill"
-						plStopSKBtn.Visible = false
-						showStatus("Target eliminated!", Color3.fromRGB(100, 255, 100), 3)
-					end
-				end
-			end
+		if _G.BearHub_stopSilentKill then
+			_G.BearHub_stopSilentKill()
 		end
+		showStatus("Silent Kill stopped", Color3.fromRGB(150, 150, 160), 2)
 	end)
 
 	local settingsPage = createPage("Settings")
@@ -3038,3 +3060,4 @@ UIS.InputEnded:Connect(function(inp)
 		end
 	end
 end)
+```
