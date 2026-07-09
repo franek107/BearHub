@@ -163,9 +163,14 @@ local startDragSound = _G.BearHub_startDragSound
 local stopDragSound = _G.BearHub_stopDragSound
 
 --============================================================
--- BLOK 2: SPECTATE
+-- BLOK 2: SPECTATE + TELEPORT FUNCTIONS
 --============================================================
 do
+	local function getRoot(char)
+		if not char then return nil end
+		return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+	end
+
 	local function startSpectate(target)
 		if not target or not target.Character then return end
 		local hum = target.Character:FindFirstChildOfClass("Humanoid")
@@ -193,6 +198,55 @@ do
 	_G.BearHub_startSpectate = startSpectate
 	_G.BearHub_stopSpectate = stopSpectate
 
+	-- TELEPORT: przenosi mnie do wybranej osoby
+	_G.BearHub_teleportTo = function(target)
+		if not target or not target.Character then return false, "Player has no character" end
+		local myChar = player.Character
+		if not myChar then return false, "You have no character" end
+		local myRoot = getRoot(myChar)
+		local targetRoot = getRoot(target.Character)
+		if not myRoot then return false, "You have no root part" end
+		if not targetRoot then return false, "Target has no root part" end
+		pcall(function()
+			myRoot.CFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
+		end)
+		return true, "Teleported to " .. (target.DisplayName or target.Name)
+	end
+
+	-- BRING: przenosi wybraną osobę do mnie
+	_G.BearHub_bringPlayer = function(target)
+		if not target or not target.Character then return false, "Player has no character" end
+		local myChar = player.Character
+		if not myChar then return false, "You have no character" end
+		local myRoot = getRoot(myChar)
+		local targetRoot = getRoot(target.Character)
+		if not myRoot then return false, "You have no root part" end
+		if not targetRoot then return false, "Target has no root part" end
+		pcall(function()
+			targetRoot.CFrame = myRoot.CFrame + Vector3.new(0, 3, 0)
+		end)
+		return true, "Brought " .. (target.DisplayName or target.Name)
+	end
+
+	-- SWITCH: zamienia miejscami mnie z wybraną osobą
+	_G.BearHub_switchPlaces = function(target)
+		if not target or not target.Character then return false, "Player has no character" end
+		local myChar = player.Character
+		if not myChar then return false, "You have no character" end
+		local myRoot = getRoot(myChar)
+		local targetRoot = getRoot(target.Character)
+		if not myRoot then return false, "You have no root part" end
+		if not targetRoot then return false, "Target has no root part" end
+		pcall(function()
+			local myCFrame = myRoot.CFrame
+			local targetCFrame = targetRoot.CFrame
+			myRoot.CFrame = targetCFrame + Vector3.new(0, 3, 0)
+			task.wait(0.05)
+			targetRoot.CFrame = myCFrame + Vector3.new(0, 3, 0)
+		end)
+		return true, "Switched with " .. (target.DisplayName or target.Name)
+	end
+
 	task.spawn(function()
 		while true do
 			task.wait(0.5)
@@ -216,6 +270,9 @@ end
 
 local startSpectate = _G.BearHub_startSpectate
 local stopSpectate = _G.BearHub_stopSpectate
+local teleportTo = _G.BearHub_teleportTo
+local bringPlayer = _G.BearHub_bringPlayer
+local switchPlaces = _G.BearHub_switchPlaces
 
 --============================================================
 -- MOUSE INPUT
@@ -995,7 +1052,7 @@ local healPlayer = _G.BearHub_healPlayer
 -- BLOK 6: GUI - MAIN, SIDEBAR, COLOR PICKER
 --============================================================
 local main, sidebar, contentTitle, pagesFrame, colorPickerGui
-local openCP, canvasDrag, hueDrag
+local openCP
 local cpGrid, hueBar
 
 do
@@ -1250,12 +1307,12 @@ end
 openCP = _G.BearHub_openCP
 
 --============================================================
--- BLOK 7: GUI HELPERS (mkCheck, mkSlider itd)
+-- BLOK 7: GUI HELPERS
 --============================================================
 _G.BearHub_allSliders = {}
 _G.BearHub_tabPages = {}
 
-local mkSection, mkCheck, mkCheckColor, mkSlider, mkDropdown, mkKeybind, mkButton, createPage, mkSubBtn, mkTabBtn
+local mkSection, mkCheck, mkCheckColor, mkSlider, mkDropdown, mkKeybind, mkButton, createPage
 
 do
 	local allSliders = _G.BearHub_allSliders
@@ -1967,7 +2024,7 @@ do
 	local playersPage = createPage("Players")
 
 	local plListFrame = Instance.new("Frame", playersPage)
-	plListFrame.Size = UDim2.new(0.48,0,1,-10)
+	plListFrame.Size = UDim2.new(0.42,0,1,-10)
 	plListFrame.Position = UDim2.new(0,10,0,5)
 	plListFrame.BackgroundColor3 = DARK
 	plListFrame.BorderSizePixel = 0
@@ -2008,8 +2065,8 @@ do
 	plScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 	local plInfoFrame = Instance.new("Frame", playersPage)
-	plInfoFrame.Size = UDim2.new(0.48,0,1,-10)
-	plInfoFrame.Position = UDim2.new(0.5,5,0,5)
+	plInfoFrame.Size = UDim2.new(0.55,0,1,-10)
+	plInfoFrame.Position = UDim2.new(0.44,5,0,5)
 	plInfoFrame.BackgroundColor3 = DARK
 	plInfoFrame.BorderSizePixel = 0
 	Instance.new("UICorner", plInfoFrame).CornerRadius = UDim.new(0,8)
@@ -2025,8 +2082,8 @@ do
 	plInfoTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 	local plAvatarFrame = Instance.new("Frame", plInfoFrame)
-	plAvatarFrame.Size = UDim2.new(0,80,0,80)
-	plAvatarFrame.Position = UDim2.new(0.5,-40,0,45)
+	plAvatarFrame.Size = UDim2.new(0,70,0,70)
+	plAvatarFrame.Position = UDim2.new(0.5,-35,0,40)
 	plAvatarFrame.BackgroundColor3 = Color3.fromRGB(50,50,60)
 	plAvatarFrame.BorderSizePixel = 0
 	Instance.new("UICorner", plAvatarFrame).CornerRadius = UDim.new(1,0)
@@ -2040,7 +2097,7 @@ do
 
 	local plNameLbl = Instance.new("TextLabel", plInfoFrame)
 	plNameLbl.Size = UDim2.new(1,-20,0,20)
-	plNameLbl.Position = UDim2.new(0,10,0,135)
+	plNameLbl.Position = UDim2.new(0,10,0,118)
 	plNameLbl.BackgroundTransparency = 1
 	plNameLbl.Text = "No player selected"
 	plNameLbl.TextColor3 = Color3.new(1,1,1)
@@ -2049,8 +2106,8 @@ do
 	plNameLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 	local plUsernameLbl = Instance.new("TextLabel", plInfoFrame)
-	plUsernameLbl.Size = UDim2.new(1,-20,0,18)
-	plUsernameLbl.Position = UDim2.new(0,10,0,157)
+	plUsernameLbl.Size = UDim2.new(1,-20,0,16)
+	plUsernameLbl.Position = UDim2.new(0,10,0,138)
 	plUsernameLbl.BackgroundTransparency = 1
 	plUsernameLbl.Text = ""
 	plUsernameLbl.TextColor3 = Color3.fromRGB(150,150,160)
@@ -2059,8 +2116,8 @@ do
 	plUsernameLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 	local plIdLbl = Instance.new("TextLabel", plInfoFrame)
-	plIdLbl.Size = UDim2.new(1,-20,0,18)
-	plIdLbl.Position = UDim2.new(0,10,0,178)
+	plIdLbl.Size = UDim2.new(1,-20,0,16)
+	plIdLbl.Position = UDim2.new(0,10,0,155)
 	plIdLbl.BackgroundTransparency = 1
 	plIdLbl.Text = ""
 	plIdLbl.TextColor3 = Color3.fromRGB(150,150,160)
@@ -2068,38 +2125,78 @@ do
 	plIdLbl.TextSize = 12
 	plIdLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-	local plActionsFrame = Instance.new("Frame", plInfoFrame)
-	plActionsFrame.Size = UDim2.new(1,-20,0,90)
-	plActionsFrame.Position = UDim2.new(0,10,0,210)
-	plActionsFrame.BackgroundTransparency = 1
+	-- ROW 1: Spectate + Unspectate (obok siebie)
+	local row1 = Instance.new("Frame", plInfoFrame)
+	row1.Size = UDim2.new(1,-20,0,30)
+	row1.Position = UDim2.new(0,10,0,180)
+	row1.BackgroundTransparency = 1
 
-	local plActionsLayout = Instance.new("UIListLayout", plActionsFrame)
-	plActionsLayout.Padding = UDim.new(0,6)
-	plActionsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-	local plSpectateBtn = Instance.new("TextButton", plActionsFrame)
-	plSpectateBtn.Size = UDim2.new(1,0,0,34)
+	local plSpectateBtn = Instance.new("TextButton", row1)
+	plSpectateBtn.Size = UDim2.new(0.5,-3,1,0)
+	plSpectateBtn.Position = UDim2.new(0,0,0,0)
 	plSpectateBtn.BackgroundColor3 = PURPLE
 	plSpectateBtn.BorderSizePixel = 0
 	plSpectateBtn.Text = "Spectate"
 	plSpectateBtn.TextColor3 = Color3.new(1,1,1)
 	plSpectateBtn.Font = Enum.Font.GothamBold
-	plSpectateBtn.TextSize = 14
+	plSpectateBtn.TextSize = 13
 	plSpectateBtn.AutoButtonColor = false
-	plSpectateBtn.LayoutOrder = 1
 	Instance.new("UICorner", plSpectateBtn).CornerRadius = UDim.new(0,6)
 
-	local plUnspectateBtn = Instance.new("TextButton", plActionsFrame)
-	plUnspectateBtn.Size = UDim2.new(1,0,0,34)
+	local plUnspectateBtn = Instance.new("TextButton", row1)
+	plUnspectateBtn.Size = UDim2.new(0.5,-3,1,0)
+	plUnspectateBtn.Position = UDim2.new(0.5,3,0,0)
 	plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
 	plUnspectateBtn.BorderSizePixel = 0
 	plUnspectateBtn.Text = "Unspectate"
 	plUnspectateBtn.TextColor3 = Color3.new(1,1,1)
 	plUnspectateBtn.Font = Enum.Font.GothamBold
-	plUnspectateBtn.TextSize = 14
+	plUnspectateBtn.TextSize = 13
 	plUnspectateBtn.AutoButtonColor = false
-	plUnspectateBtn.LayoutOrder = 2
 	Instance.new("UICorner", plUnspectateBtn).CornerRadius = UDim.new(0,6)
+
+	-- ROW 2: Teleport + Bring (obok siebie)
+	local row2 = Instance.new("Frame", plInfoFrame)
+	row2.Size = UDim2.new(1,-20,0,30)
+	row2.Position = UDim2.new(0,10,0,215)
+	row2.BackgroundTransparency = 1
+
+	local plTeleportBtn = Instance.new("TextButton", row2)
+	plTeleportBtn.Size = UDim2.new(0.5,-3,1,0)
+	plTeleportBtn.Position = UDim2.new(0,0,0,0)
+	plTeleportBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
+	plTeleportBtn.BorderSizePixel = 0
+	plTeleportBtn.Text = "Teleport"
+	plTeleportBtn.TextColor3 = Color3.new(1,1,1)
+	plTeleportBtn.Font = Enum.Font.GothamBold
+	plTeleportBtn.TextSize = 13
+	plTeleportBtn.AutoButtonColor = false
+	Instance.new("UICorner", plTeleportBtn).CornerRadius = UDim.new(0,6)
+
+	local plBringBtn = Instance.new("TextButton", row2)
+	plBringBtn.Size = UDim2.new(0.5,-3,1,0)
+	plBringBtn.Position = UDim2.new(0.5,3,0,0)
+	plBringBtn.BackgroundColor3 = Color3.fromRGB(80, 180, 100)
+	plBringBtn.BorderSizePixel = 0
+	plBringBtn.Text = "Bring"
+	plBringBtn.TextColor3 = Color3.new(1,1,1)
+	plBringBtn.Font = Enum.Font.GothamBold
+	plBringBtn.TextSize = 13
+	plBringBtn.AutoButtonColor = false
+	Instance.new("UICorner", plBringBtn).CornerRadius = UDim.new(0,6)
+
+	-- ROW 3: Switch (pełna szerokość)
+	local plSwitchBtn = Instance.new("TextButton", plInfoFrame)
+	plSwitchBtn.Size = UDim2.new(1,-20,0,30)
+	plSwitchBtn.Position = UDim2.new(0,10,0,250)
+	plSwitchBtn.BackgroundColor3 = Color3.fromRGB(220, 150, 50)
+	plSwitchBtn.BorderSizePixel = 0
+	plSwitchBtn.Text = "Switch Places"
+	plSwitchBtn.TextColor3 = Color3.new(1,1,1)
+	plSwitchBtn.Font = Enum.Font.GothamBold
+	plSwitchBtn.TextSize = 13
+	plSwitchBtn.AutoButtonColor = false
+	Instance.new("UICorner", plSwitchBtn).CornerRadius = UDim.new(0,6)
 
 	local plStatusLbl = Instance.new("TextLabel", plInfoFrame)
 	plStatusLbl.Size = UDim2.new(1,-20,0,20)
@@ -2114,6 +2211,19 @@ do
 	local selectedPlayer = nil
 	local playerButtons = {}
 
+	local function showStatus(text, color, duration)
+		plStatusLbl.Text = text
+		plStatusLbl.TextColor3 = color or Color3.fromRGB(100, 200, 100)
+		if duration then
+			task.spawn(function()
+				task.wait(duration)
+				if plStatusLbl.Text == text then
+					plStatusLbl.Text = ""
+				end
+			end)
+		end
+	end
+
 	local function updateSelectedPlayerInfo()
 		if selectedPlayer and selectedPlayer.Parent then
 			plNameLbl.Text = selectedPlayer.DisplayName or selectedPlayer.Name
@@ -2126,8 +2236,6 @@ do
 			if SPECTATE.Active and SPECTATE.Target == selectedPlayer then
 				plStatusLbl.Text = "SPECTATING"
 				plStatusLbl.TextColor3 = Color3.fromRGB(100, 200, 100)
-			else
-				plStatusLbl.Text = ""
 			end
 		else
 			plNameLbl.Text = "No player selected"
@@ -2286,6 +2394,7 @@ do
 		end
 	end)
 
+	-- SPECTATE
 	plSpectateBtn.MouseEnter:Connect(function()
 		plSpectateBtn.BackgroundColor3 = Color3.fromRGB(120, 90, 220)
 	end)
@@ -2296,20 +2405,13 @@ do
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
 			startSpectate(selectedPlayer)
-			plStatusLbl.Text = "SPECTATING"
-			plStatusLbl.TextColor3 = Color3.fromRGB(100, 200, 100)
+			showStatus("SPECTATING", Color3.fromRGB(100, 200, 100))
 		else
-			plStatusLbl.Text = "Select a player first!"
-			plStatusLbl.TextColor3 = Color3.fromRGB(255, 100, 100)
-			task.spawn(function()
-				task.wait(2)
-				if plStatusLbl.Text == "Select a player first!" then
-					plStatusLbl.Text = ""
-				end
-			end)
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
 		end
 	end)
 
+	-- UNSPECTATE
 	plUnspectateBtn.MouseEnter:Connect(function()
 		plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(210, 80, 80)
 	end)
@@ -2319,14 +2421,70 @@ do
 	plUnspectateBtn.MouseButton1Click:Connect(function()
 		playClick()
 		stopSpectate()
-		plStatusLbl.Text = "Stopped spectating"
-		plStatusLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
-		task.spawn(function()
-			task.wait(1.5)
-			if plStatusLbl.Text == "Stopped spectating" then
-				plStatusLbl.Text = ""
+		showStatus("Stopped spectating", Color3.fromRGB(150, 150, 160), 1.5)
+	end)
+
+	-- TELEPORT
+	plTeleportBtn.MouseEnter:Connect(function()
+		plTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 160, 240)
+	end)
+	plTeleportBtn.MouseLeave:Connect(function()
+		plTeleportBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
+	end)
+	plTeleportBtn.MouseButton1Click:Connect(function()
+		playClick()
+		if selectedPlayer and selectedPlayer.Parent then
+			local ok, msg = teleportTo(selectedPlayer)
+			if ok then
+				showStatus(msg, Color3.fromRGB(100, 200, 255), 2)
+			else
+				showStatus(msg or "Teleport failed", Color3.fromRGB(255, 100, 100), 2)
 			end
-		end)
+		else
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
+		end
+	end)
+
+	-- BRING
+	plBringBtn.MouseEnter:Connect(function()
+		plBringBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 120)
+	end)
+	plBringBtn.MouseLeave:Connect(function()
+		plBringBtn.BackgroundColor3 = Color3.fromRGB(80, 180, 100)
+	end)
+	plBringBtn.MouseButton1Click:Connect(function()
+		playClick()
+		if selectedPlayer and selectedPlayer.Parent then
+			local ok, msg = bringPlayer(selectedPlayer)
+			if ok then
+				showStatus(msg, Color3.fromRGB(120, 220, 130), 2)
+			else
+				showStatus(msg or "Bring failed", Color3.fromRGB(255, 100, 100), 2)
+			end
+		else
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
+		end
+	end)
+
+	-- SWITCH
+	plSwitchBtn.MouseEnter:Connect(function()
+		plSwitchBtn.BackgroundColor3 = Color3.fromRGB(240, 170, 70)
+	end)
+	plSwitchBtn.MouseLeave:Connect(function()
+		plSwitchBtn.BackgroundColor3 = Color3.fromRGB(220, 150, 50)
+	end)
+	plSwitchBtn.MouseButton1Click:Connect(function()
+		playClick()
+		if selectedPlayer and selectedPlayer.Parent then
+			local ok, msg = switchPlaces(selectedPlayer)
+			if ok then
+				showStatus(msg, Color3.fromRGB(255, 180, 80), 2)
+			else
+				showStatus(msg or "Switch failed", Color3.fromRGB(255, 100, 100), 2)
+			end
+		else
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
+		end
 	end)
 
 	local settingsPage = createPage("Settings")
@@ -2341,7 +2499,7 @@ do
 end
 
 --============================================================
--- BLOK 10: TABS + MINIMIZE/DRAG (WSZYSTKO W GLOWNYM SCOPE!)
+-- BLOK 10: TABS + MINIMIZE/DRAG
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
 local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Players"},{"Settings"}}
