@@ -1,4 +1,8 @@
-```lua
+-- BearHub | South Bronx: The Trenches
+-- GitHub: franek107/BearHub
+
+local success, err = pcall(function()
+
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
@@ -57,6 +61,13 @@ local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = fal
 local SPECTATE = {Target = nil, Active = false}
 
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
+
+-- Usun stare GUI jesli istnieje
+pcall(function()
+	if playerGui:FindFirstChild("BearHub") then playerGui.BearHub:Destroy() end
+	if playerGui:FindFirstChild("BearHub_ESP") then playerGui.BearHub_ESP:Destroy() end
+	if playerGui:FindFirstChild("BearHub_FOV") then playerGui.BearHub_FOV:Destroy() end
+end)
 
 local espGui = Instance.new("ScreenGui")
 espGui.Name = "BearHub_ESP"
@@ -164,7 +175,7 @@ local startDragSound = _G.BearHub_startDragSound
 local stopDragSound = _G.BearHub_stopDragSound
 
 --============================================================
--- BLOK 2: SPECTATE + TELEPORT/BRING/SWITCH + SILENT KILL + CRASH
+-- BLOK 2: SPECTATE + TELEPORT + SILENT KILL + CRASH
 --============================================================
 do
 	local function getRoot(char)
@@ -296,9 +307,7 @@ do
 		return true, "Switched with " .. (target.DisplayName or target.Name)
 	end
 
-	-- ============================================
-	-- SILENT KILL - nie rusza gracza, nie psuje kursora
-	-- ============================================
+	-- SILENT KILL - nie rusza gracza, tylko obraca kamere na moment
 	local skActive = false
 	local skStopSignal = false
 
@@ -312,60 +321,65 @@ do
 
 		task.spawn(function()
 			while skActive and not skStopSignal do
-				-- Sprawdz czy target istnieje i zyje
-				if not target or not target.Parent then break end
+				local shouldSkip = false
+
+				if not target or not target.Parent then
+					break
+				end
+
 				local targetChar = target.Character
 				if not targetChar then
 					task.wait(0.1)
-					continue
-				end
-				local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
-				if not targetHum or targetHum.Health <= 0 then
-					break
-				end
-				local targetHead = targetChar:FindFirstChild("Head")
-				if not targetHead then
-					task.wait(0.05)
-					continue
+					shouldSkip = true
 				end
 
-				-- Zapisz stan kamery
-				local savedCamCFrame = Camera.CFrame
-				local savedCamType = Camera.CameraType
+				if not shouldSkip then
+					local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+					if not targetHum or targetHum.Health <= 0 then
+						break
+					end
 
-				-- Tymczasowo celuj w glowe targeta
-				pcall(function()
-					Camera.CameraType = Enum.CameraType.Scriptable
-					Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetHead.Position)
-				end)
+					local targetHead = targetChar:FindFirstChild("Head")
+					if not targetHead then
+						task.wait(0.05)
+						shouldSkip = true
+					end
 
-				-- Strzal przez VIM
-				pcall(function()
-					VIM:SendMouseButtonEvent(
-						Camera.ViewportSize.X / 2,
-						Camera.ViewportSize.Y / 2,
-						0, true, game, 0
-					)
-				end)
-				task.wait(0.02)
-				pcall(function()
-					VIM:SendMouseButtonEvent(
-						Camera.ViewportSize.X / 2,
-						Camera.ViewportSize.Y / 2,
-						0, false, game, 0
-					)
-				end)
+					if not shouldSkip then
+						local savedCamCFrame = Camera.CFrame
+						local savedCamType = Camera.CameraType
 
-				-- Natychmiast przywroc kamere
-				pcall(function()
-					Camera.CameraType = savedCamType
-					Camera.CFrame = savedCamCFrame
-				end)
+						pcall(function()
+							Camera.CameraType = Enum.CameraType.Scriptable
+							Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetHead.Position)
+						end)
 
-				task.wait(0.15)
+						pcall(function()
+							VIM:SendMouseButtonEvent(
+								Camera.ViewportSize.X / 2,
+								Camera.ViewportSize.Y / 2,
+								0, true, game, 0
+							)
+						end)
+						task.wait(0.02)
+						pcall(function()
+							VIM:SendMouseButtonEvent(
+								Camera.ViewportSize.X / 2,
+								Camera.ViewportSize.Y / 2,
+								0, false, game, 0
+							)
+						end)
+
+						pcall(function()
+							Camera.CameraType = savedCamType
+							Camera.CFrame = savedCamCFrame
+						end)
+
+						task.wait(0.15)
+					end
+				end
 			end
 
-			-- Cleanup
 			skActive = false
 			skStopSignal = false
 			pcall(function()
@@ -391,15 +405,12 @@ do
 		return skActive
 	end
 
-	-- ============================================
 	-- CRASH PLAYER
-	-- ============================================
 	_G.BearHub_crashPlayer = function(target)
 		if not target then return false, "No target" end
 		if target == player then return false, "Cannot crash yourself" end
 
 		task.spawn(function()
-			-- Metoda 1: Spam Parts w workspace (przeciaza replikacje sieci)
 			pcall(function()
 				local spamFolder = Instance.new("Folder")
 				spamFolder.Name = "BH_" .. target.Name
@@ -423,7 +434,6 @@ do
 				pcall(function() spamFolder:Destroy() end)
 			end)
 
-			-- Metoda 2: Spam animacji (przeciaza engine animacji klienta)
 			pcall(function()
 				local targetChar = target.Character
 				if not targetChar then return end
@@ -441,7 +451,6 @@ do
 				end
 			end)
 
-			-- Metoda 3: Spam Sound (przeciaza audio engine klienta)
 			pcall(function()
 				local targetChar = target.Character
 				if not targetChar then return end
@@ -465,7 +474,6 @@ do
 				end
 			end)
 
-			-- Metoda 4: RemoteEvent flood
 			pcall(function()
 				local remotes = {}
 				local function findRemotes(parent, depth)
@@ -501,7 +509,6 @@ do
 		return true, "Crashing " .. (target.DisplayName or target.Name) .. "..."
 	end
 
-	-- Spectate loop
 	task.spawn(function()
 		while true do
 			task.wait(0.5)
@@ -556,7 +563,7 @@ UIS.InputEnded:Connect(function(inp)
 end)
 
 --============================================================
--- BLOK 3: ESP + FOV CIRCLES
+-- BLOK 3: ESP
 --============================================================
 do
 	local fovCircle = Instance.new("Frame")
@@ -1992,7 +1999,7 @@ do
 end
 
 --============================================================
--- BLOK 8: STRONY GUI (Visualization, AimAssistance)
+-- BLOK 8: STRONY GUI
 --============================================================
 do
 	local vizPage = createPage("Visualization")
@@ -2218,7 +2225,7 @@ do
 end
 
 --============================================================
--- BLOK 9: MISC PAGE + PLAYERS PAGE + SETTINGS
+-- BLOK 9: MISC + PLAYERS + SETTINGS
 --============================================================
 do
 	local miscPage = createPage("Miscellaneous")
@@ -2260,9 +2267,6 @@ do
 	mkSection(mR, "Options", 1)
 	mkButton(mR, "Heal", healPlayer, 2)
 
-	-- ============================================================
-	-- PLAYERS PAGE
-	-- ============================================================
 	local playersPage = createPage("Players")
 
 	local plListFrame = Instance.new("Frame", playersPage)
@@ -2306,7 +2310,6 @@ do
 	plScrollLayout.Padding = UDim.new(0,4)
 	plScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-	-- INFO PANEL
 	local plInfoFrame = Instance.new("Frame", playersPage)
 	plInfoFrame.Size = UDim2.new(0.55,0,1,-10)
 	plInfoFrame.Position = UDim2.new(0.44,5,0,5)
@@ -2378,7 +2381,6 @@ do
 	plDistLbl.TextSize = 11
 	plDistLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-	-- ROW 1: Spectate + Unspectate
 	local row1 = Instance.new("Frame", plInfoFrame)
 	row1.Size = UDim2.new(1,-20,0,26)
 	row1.Position = UDim2.new(0,10,0,157)
@@ -2408,7 +2410,6 @@ do
 	plUnspectateBtn.AutoButtonColor = false
 	Instance.new("UICorner", plUnspectateBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 2: Teleport + Bring
 	local row2 = Instance.new("Frame", plInfoFrame)
 	row2.Size = UDim2.new(1,-20,0,26)
 	row2.Position = UDim2.new(0,10,0,187)
@@ -2438,7 +2439,6 @@ do
 	plBringBtn.AutoButtonColor = false
 	Instance.new("UICorner", plBringBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 3: Switch + Crash
 	local row3 = Instance.new("Frame", plInfoFrame)
 	row3.Size = UDim2.new(1,-20,0,26)
 	row3.Position = UDim2.new(0,10,0,217)
@@ -2468,7 +2468,6 @@ do
 	plCrashBtn.AutoButtonColor = false
 	Instance.new("UICorner", plCrashBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 4: Silent Kill + Stop SK
 	local row4 = Instance.new("Frame", plInfoFrame)
 	row4.Size = UDim2.new(1,-20,0,26)
 	row4.Position = UDim2.new(0,10,0,247)
@@ -2498,7 +2497,6 @@ do
 	plStopSKBtn.AutoButtonColor = false
 	Instance.new("UICorner", plStopSKBtn).CornerRadius = UDim.new(0,6)
 
-	-- STATUS
 	local plStatusLbl = Instance.new("TextLabel", plInfoFrame)
 	plStatusLbl.Size = UDim2.new(1,-20,0,20)
 	plStatusLbl.Position = UDim2.new(0,10,1,-28)
@@ -2556,7 +2554,6 @@ do
 		end
 	end
 
-	-- Auto-update distance + SK status
 	task.spawn(function()
 		while true do
 			task.wait(0.5)
@@ -2564,8 +2561,6 @@ do
 				local dist = getDistanceToPlayer(selectedPlayer)
 				plDistLbl.Text = dist and ("Distance: " .. dist .. "m") or "Distance: N/A"
 			end
-
-			-- Update SK button visual state
 			local skRunning = _G.BearHub_isSKActive and _G.BearHub_isSKActive()
 			if skRunning then
 				plSilentKillBtn.Text = "SK Active"
@@ -2574,8 +2569,6 @@ do
 				plSilentKillBtn.Text = "Silent Kill"
 				plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
 			end
-
-			-- Check if SK finished (target died)
 			if _G.BearHub_skDone then
 				_G.BearHub_skDone = false
 				showStatus("Target eliminated!", Color3.fromRGB(100, 255, 100), 3)
@@ -2706,7 +2699,6 @@ do
 		while true do task.wait(3); pcall(refreshPlayerList) end
 	end)
 
-	-- SPECTATE
 	plSpectateBtn.MouseEnter:Connect(function() plSpectateBtn.BackgroundColor3 = Color3.fromRGB(120, 90, 220) end)
 	plSpectateBtn.MouseLeave:Connect(function() plSpectateBtn.BackgroundColor3 = PURPLE end)
 	plSpectateBtn.MouseButton1Click:Connect(function()
@@ -2719,7 +2711,6 @@ do
 		end
 	end)
 
-	-- UNSPECTATE
 	plUnspectateBtn.MouseEnter:Connect(function() plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(210, 80, 80) end)
 	plUnspectateBtn.MouseLeave:Connect(function() plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60) end)
 	plUnspectateBtn.MouseButton1Click:Connect(function()
@@ -2728,7 +2719,6 @@ do
 		showStatus("Stopped spectating", Color3.fromRGB(150, 150, 160), 1.5)
 	end)
 
-	-- TELEPORT
 	plTeleportBtn.MouseEnter:Connect(function() plTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 160, 240) end)
 	plTeleportBtn.MouseLeave:Connect(function() plTeleportBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220) end)
 	plTeleportBtn.MouseButton1Click:Connect(function()
@@ -2741,7 +2731,6 @@ do
 		end
 	end)
 
-	-- BRING
 	plBringBtn.MouseEnter:Connect(function() plBringBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 120) end)
 	plBringBtn.MouseLeave:Connect(function() plBringBtn.BackgroundColor3 = Color3.fromRGB(80, 180, 100) end)
 	plBringBtn.MouseButton1Click:Connect(function()
@@ -2754,7 +2743,6 @@ do
 		end
 	end)
 
-	-- SWITCH
 	plSwitchBtn.MouseEnter:Connect(function() plSwitchBtn.BackgroundColor3 = Color3.fromRGB(240, 170, 70) end)
 	plSwitchBtn.MouseLeave:Connect(function() plSwitchBtn.BackgroundColor3 = Color3.fromRGB(220, 150, 50) end)
 	plSwitchBtn.MouseButton1Click:Connect(function()
@@ -2767,7 +2755,6 @@ do
 		end
 	end)
 
-	-- CRASH
 	plCrashBtn.MouseEnter:Connect(function() plCrashBtn.BackgroundColor3 = Color3.fromRGB(210, 50, 50) end)
 	plCrashBtn.MouseLeave:Connect(function() plCrashBtn.BackgroundColor3 = Color3.fromRGB(180, 30, 30) end)
 	plCrashBtn.MouseButton1Click:Connect(function()
@@ -2784,7 +2771,6 @@ do
 		end
 	end)
 
-	-- SILENT KILL
 	plSilentKillBtn.MouseEnter:Connect(function()
 		if not (_G.BearHub_isSKActive and _G.BearHub_isSKActive()) then
 			plSilentKillBtn.BackgroundColor3 = Color3.fromRGB(230, 60, 60)
@@ -2798,7 +2784,6 @@ do
 	plSilentKillBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if _G.BearHub_isSKActive and _G.BearHub_isSKActive() then
-			-- Zatrzymaj SK
 			if _G.BearHub_stopSilentKill then _G.BearHub_stopSilentKill() end
 			showStatus("Silent Kill stopped", Color3.fromRGB(150, 150, 160), 2)
 		else
@@ -2815,7 +2800,6 @@ do
 		end
 	end)
 
-	-- STOP SK
 	plStopSKBtn.MouseEnter:Connect(function() plStopSKBtn.BackgroundColor3 = Color3.fromRGB(130, 40, 40) end)
 	plStopSKBtn.MouseLeave:Connect(function() plStopSKBtn.BackgroundColor3 = Color3.fromRGB(100, 30, 30) end)
 	plStopSKBtn.MouseButton1Click:Connect(function()
@@ -2831,10 +2815,21 @@ do
 	sLbl.Size = UDim2.new(1,-20,0,40)
 	sLbl.Position = UDim2.new(0,10,0,10)
 	sLbl.BackgroundTransparency = 1
-	sLbl.Text = "Settings - Coming Soon"
-	sLbl.TextColor3 = Color3.fromRGB(100,100,110)
+	sLbl.Text = "BearHub v1.0 | South Bronx: The Trenches"
+	sLbl.TextColor3 = Color3.fromRGB(150,150,160)
 	sLbl.Font = Enum.Font.Gotham
-	sLbl.TextSize = 16
+	sLbl.TextSize = 14
+	sLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+	local sLbl2 = Instance.new("TextLabel", settingsPage)
+	sLbl2.Size = UDim2.new(1,-20,0,20)
+	sLbl2.Position = UDim2.new(0,10,0,50)
+	sLbl2.BackgroundTransparency = 1
+	sLbl2.Text = "Press RightShift to hide/show GUI"
+	sLbl2.TextColor3 = Color3.fromRGB(100,100,110)
+	sLbl2.Font = Enum.Font.Gotham
+	sLbl2.TextSize = 12
+	sLbl2.TextXAlignment = Enum.TextXAlignment.Left
 end
 
 --============================================================
@@ -3060,4 +3055,11 @@ UIS.InputEnded:Connect(function(inp)
 		end
 	end
 end)
-```
+
+print("[BearHub] Loaded successfully! Press RightShift to hide/show.")
+
+end)
+
+if not success then
+	warn("[BearHub] Load Error: " .. tostring(err))
+end
