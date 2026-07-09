@@ -6,6 +6,7 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Camera = workspace.CurrentCamera
 local SoundService = game:GetService("SoundService")
+local VIM = game:GetService("VirtualInputManager")
 
 local CLICK_SOUND_ID = "rbxassetid://6895079853"
 local SLIDER_SOUND_ID = "rbxassetid://5765856907"
@@ -24,6 +25,36 @@ end
 
 local function playClick() playSound(CLICK_SOUND_ID, 0.25, 1.2) end
 local function playSlider() playSound(SLIDER_SOUND_ID, 0.15, 1.5) end
+
+local function doClick()
+	local success = false
+	
+	pcall(function()
+		if mouse1click then mouse1click(); success = true end
+	end)
+	
+	if not success then
+		pcall(function()
+			if mouse1press and mouse1release then
+				mouse1press()
+				task.wait(0.03)
+				mouse1release()
+				success = true
+			end
+		end)
+	end
+	
+	if not success then
+		pcall(function()
+			VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+			task.wait(0.03)
+			VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+			success = true
+		end)
+	end
+	
+	return success
+end
 
 local dragSoundObj = nil
 local dragSoundPlaying = false
@@ -520,11 +551,7 @@ RunService.Heartbeat:Connect(function()
 			local t = getTriggerTarget()
 			if t then
 				lastShot = now
-				pcall(function()
-					mouse1press()
-					task.wait(0.03)
-					mouse1release()
-				end)
+				pcall(doClick)
 			end
 		end
 	end
@@ -603,11 +630,8 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-local hitboxOriginalSizes = {}
-local hitboxOriginalTransparency = {}
-local hitboxOriginalCanCollide = {}
-local hitboxOriginalMaterial = {}
-local hitboxOriginalColor = {}
+local hitboxProxies = {}
+local hitboxHighlights = {}
 
 local HITBOX_SCALE = 0.15
 
@@ -629,118 +653,167 @@ local function getHitboxParts(char)
 	return parts
 end
 
-local function saveOriginal(part)
-	if not hitboxOriginalSizes[part] then
-		hitboxOriginalSizes[part] = part.Size
-		hitboxOriginalTransparency[part] = part.Transparency
-		hitboxOriginalCanCollide[part] = part.CanCollide
-		hitboxOriginalMaterial[part] = part.Material
-		hitboxOriginalColor[part] = part.Color
+local function createProxy(originalPart)
+	if hitboxProxies[originalPart] and hitboxProxies[originalPart].Parent then
+		return hitboxProxies[originalPart]
+	end
+
+	local char = originalPart.Parent
+	if not char then return nil end
+
+	local oldName = "BearHub_Proxy_" .. originalPart.Name
+	local old = char:FindFirstChild(oldName)
+	if old then old:Destroy() end
+
+	local proxy = Instance.new("Part")
+	proxy.Name = oldName
+	proxy.Anchored = false
+	proxy.CanCollide = false
+	proxy.CanQuery = true
+	proxy.CanTouch = false
+	proxy.Massless = true
+	proxy.Transparency = 0.7
+	proxy.Material = Enum.Material.ForceField
+	proxy.Color = Color3.fromRGB(255, 80, 80)
+	proxy.Size = originalPart.Size
+	proxy.CFrame = originalPart.CFrame
+	proxy.Parent = char
+
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = originalPart
+	weld.Part1 = proxy
+	weld.Parent = proxy
+
+	hitboxProxies[originalPart] = proxy
+	return proxy
+end
+
+local function updateProxyPart(originalPart)
+	if not originalPart or not originalPart.Parent then return end
+
+	if HITBOX.Enabled and HITBOX.Size > 0 then
+		local proxy = createProxy(originalPart)
+		if proxy then
+			local expand = HITBOX.Size * HITBOX_SCALE
+			local origSize = originalPart.Size
+			pcall(function()
+				proxy.Size = Vector3.new(
+					origSize.X + expand,
+					origSize.Y + expand,
+					origSize.Z + expand
+				)
+				proxy.Transparency = 0.7
+				proxy.Material = Enum.Material.ForceField
+				proxy.Color = Color3.fromRGB(255, 80, 80)
+			end)
+		end
+	else
+		local proxy = hitboxProxies[originalPart]
+		if proxy and proxy.Parent then
+			pcall(function()
+				proxy.Transparency = 1
+				proxy.Size = originalPart.Size
+			end)
+		end
 	end
 end
 
-local function restorePart(part)
-	if hitboxOriginalSizes[part] then
-		pcall(function()
-			part.Size = hitboxOriginalSizes[part]
-			part.Transparency = hitboxOriginalTransparency[part]
-			part.CanCollide = hitboxOriginalCanCollide[part]
-			part.Material = hitboxOriginalMaterial[part]
-			part.Color = hitboxOriginalColor[part]
-		end)
-		hitboxOriginalSizes[part] = nil
-		hitboxOriginalTransparency[part] = nil
-		hitboxOriginalCanCollide[part] = nil
-		hitboxOriginalMaterial[part] = nil
-		hitboxOriginalColor[part] = nil
+local function removeProxy(originalPart)
+	if hitboxProxies[originalPart] then
+		pcall(function() hitboxProxies[originalPart]:Destroy() end)
+		hitboxProxies[originalPart] = nil
 	end
 end
 
-local function expandPart(part)
-	if not part or not part.Parent then return end
-	saveOriginal(part)
-	local origSize = hitboxOriginalSizes[part]
-	local expand = HITBOX.Size * HITBOX_SCALE
-	pcall(function()
-		part.Size = Vector3.new(origSize.X + expand, origSize.Y + expand, origSize.Z + expand)
-		part.Transparency = 0.6
-		part.CanCollide = false
-		part.Massless = true
-		part.Material = Enum.Material.ForceField
-		part.Color = Color3.fromRGB(255, 80, 80)
-	end)
-end
-
-local function restoreAllForChar(char)
+local function removeAllProxiesForChar(char)
 	if not char then return end
-	for _, part in ipairs(char:GetChildren()) do
-		if part:IsA("BasePart") and hitboxOriginalSizes[part] then restorePart(part) end
-	end
-end
-
-local function cleanupDead()
 	local toRemove = {}
-	for part in pairs(hitboxOriginalSizes) do
-		if not part or not part.Parent then table.insert(toRemove, part) end
+	for origPart, proxy in pairs(hitboxProxies) do
+		if origPart.Parent == char or (proxy and proxy.Parent == char) then
+			table.insert(toRemove, origPart)
+		end
 	end
 	for _, part in ipairs(toRemove) do
-		hitboxOriginalSizes[part] = nil
-		hitboxOriginalTransparency[part] = nil
-		hitboxOriginalCanCollide[part] = nil
-		hitboxOriginalMaterial[part] = nil
-		hitboxOriginalColor[part] = nil
+		removeProxy(part)
+	end
+	for _, child in ipairs(char:GetChildren()) do
+		if child.Name:find("BearHub_Proxy_") then
+			pcall(function() child:Destroy() end)
+		end
+	end
+end
+
+local function cleanupDeadProxies()
+	local toRemove = {}
+	for part in pairs(hitboxProxies) do
+		if not part or not part.Parent then
+			table.insert(toRemove, part)
+		end
+	end
+	for _, part in ipairs(toRemove) do
+		removeProxy(part)
 	end
 end
 
 local lastHitboxBone = "Head"
-local lastHitboxEnabled = false
 
 RunService.Heartbeat:Connect(function()
 	local boneChanged = (lastHitboxBone ~= HITBOX.Bone)
-	local enabledChanged = (lastHitboxEnabled ~= HITBOX.Enabled)
 	lastHitboxBone = HITBOX.Bone
-	lastHitboxEnabled = HITBOX.Enabled
 
 	for _, plr in ipairs(Players:GetPlayers()) do
 		if plr ~= player then
 			local char = plr.Character
 			if char then
 				if HITBOX.Enabled and HITBOX.Size > 0 then
-					if boneChanged then restoreAllForChar(char) end
+					if boneChanged then
+						removeAllProxiesForChar(char)
+					end
 					local targetParts = getHitboxParts(char)
 					local targetSet = {}
 					for _, p in ipairs(targetParts) do targetSet[p] = true end
-					for _, part in ipairs(char:GetChildren()) do
-						if part:IsA("BasePart") and hitboxOriginalSizes[part] and not targetSet[part] then
-							restorePart(part)
+					
+					for origPart, proxy in pairs(hitboxProxies) do
+						if origPart and origPart.Parent == char and not targetSet[origPart] then
+							removeProxy(origPart)
 						end
 					end
+					
 					for _, part in ipairs(targetParts) do
-						pcall(function() expandPart(part) end)
+						pcall(function() updateProxyPart(part) end)
 					end
 				else
-					if enabledChanged then restoreAllForChar(char) end
+					for origPart, proxy in pairs(hitboxProxies) do
+						if origPart and origPart.Parent == char then
+							pcall(function()
+								if proxy and proxy.Parent then
+									proxy.Transparency = 1
+									proxy.Size = origPart.Size
+								end
+							end)
+						end
+					end
 				end
 			end
 		end
 	end
-	cleanupDead()
+	cleanupDeadProxies()
 end)
 
 Players.PlayerAdded:Connect(function(p)
-	p.CharacterAdded:Connect(function() task.wait(0.5); cleanupDead() end)
+	p.CharacterAdded:Connect(function() task.wait(0.5); cleanupDeadProxies() end)
 	p.CharacterRemoving:Connect(function()
 		local char = p.Character
-		if char then restoreAllForChar(char) end
+		if char then removeAllProxiesForChar(char) end
 	end)
 end)
 
 for _, p in ipairs(Players:GetPlayers()) do
 	if p ~= player then
-		p.CharacterAdded:Connect(function() task.wait(0.5); cleanupDead() end)
+		p.CharacterAdded:Connect(function() task.wait(0.5); cleanupDeadProxies() end)
 		p.CharacterRemoving:Connect(function()
 			local char = p.Character
-			if char then restoreAllForChar(char) end
+			if char then removeAllProxiesForChar(char) end
 		end)
 	end
 end
@@ -822,6 +895,83 @@ local function healPlayer()
 	local hum = char:FindFirstChildOfClass("Humanoid")
 	if hum then pcall(function() hum.Health = hum.MaxHealth end) end
 end
+
+task.spawn(function()
+	local success = pcall(function()
+		if not hookmetamethod then return end
+		local oldNamecall
+		oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+			local method = getnamecallmethod()
+			if HITBOX.Enabled and self == workspace and method == "Raycast" then
+				local result = oldNamecall(self, ...)
+				if result and result.Instance then
+					local hitPart = result.Instance
+					if hitPart.Name:find("BearHub_Proxy_") then
+						local realName = hitPart.Name:gsub("BearHub_Proxy_", "")
+						local char = hitPart.Parent
+						if char then
+							local realPart = char:FindFirstChild(realName)
+							if realPart then
+								local newResult = {
+									Instance = realPart,
+									Position = result.Position,
+									Normal = result.Normal,
+									Material = result.Material,
+									Distance = result.Distance
+								}
+								local mt = getmetatable(result)
+								if mt then return setmetatable(newResult, mt) end
+								return newResult
+							end
+						end
+					end
+				end
+				return result
+			end
+			return oldNamecall(self, ...)
+		end)
+	end)
+	if not success then warn("BearHub: Silent Aim nie dziala w tym executorze") end
+end)
+
+task.spawn(function()
+	pcall(function()
+		if not hookfunction then return end
+		local oldFindPart = workspace.FindPartOnRay
+		if oldFindPart then
+			hookfunction(oldFindPart, function(self, ...)
+				local hit, pos, normal, material = oldFindPart(self, ...)
+				if HITBOX.Enabled and hit and hit.Name:find("BearHub_Proxy_") then
+					local realName = hit.Name:gsub("BearHub_Proxy_", "")
+					local char = hit.Parent
+					if char then
+						local realPart = char:FindFirstChild(realName)
+						if realPart then return realPart, pos, normal, material end
+					end
+				end
+				return hit, pos, normal, material
+			end)
+		end
+	end)
+	pcall(function()
+		if not hookfunction then return end
+		local oldFindPart = workspace.FindPartOnRayWithIgnoreList
+		if oldFindPart then
+			hookfunction(oldFindPart, function(self, ...)
+				local hit, pos, normal, material = oldFindPart(self, ...)
+				if HITBOX.Enabled and hit and hit.Name:find("BearHub_Proxy_") then
+					local realName = hit.Name:gsub("BearHub_Proxy_", "")
+					local char = hit.Parent
+					if char then
+						local realPart = char:FindFirstChild(realName)
+						if realPart then return realPart, pos, normal, material end
+					end
+				end
+				return hit, pos, normal, material
+			end)
+		end
+	end)
+end)
 
 local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
 
