@@ -3059,6 +3059,9 @@ end)
 print("[BearHub] Loaded successfully! Press RightShift to hide/show.")
 
 end)
+if not success then
+	warn("[BearHub] Load Error: " .. tostring(err))
+end
 
 if not success then
 	warn("[BearHub] Load Error: " .. tostring(err))
