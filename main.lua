@@ -163,12 +163,37 @@ local startDragSound = _G.BearHub_startDragSound
 local stopDragSound = _G.BearHub_stopDragSound
 
 --============================================================
--- BLOK 2: SPECTATE + TELEPORT FUNCTIONS
+-- BLOK 2: SPECTATE + TELEPORT/BRING/SWITCH (naprawione!)
 --============================================================
 do
 	local function getRoot(char)
 		if not char then return nil end
 		return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+	end
+
+	local function getAllParts(char)
+		local parts = {}
+		if not char then return parts end
+		for _, p in ipairs(char:GetDescendants()) do
+			if p:IsA("BasePart") then
+				table.insert(parts, p)
+			end
+		end
+		return parts
+	end
+
+	local function zeroVelocity(char)
+		if not char then return end
+		for _, p in ipairs(char:GetDescendants()) do
+			if p:IsA("BasePart") then
+				pcall(function()
+					p.Velocity = Vector3.new(0,0,0)
+					p.AssemblyLinearVelocity = Vector3.new(0,0,0)
+					p.AssemblyAngularVelocity = Vector3.new(0,0,0)
+					p.RotVelocity = Vector3.new(0,0,0)
+				end)
+			end
+		end
 	end
 
 	local function startSpectate(target)
@@ -198,51 +223,104 @@ do
 	_G.BearHub_startSpectate = startSpectate
 	_G.BearHub_stopSpectate = stopSpectate
 
-	-- TELEPORT: przenosi mnie do wybranej osoby
+	-- TELEPORT: Ja -> Do wybranej osoby
+	-- Naprawa: spam pozycji przez 0.5s aby ominac anti-cheat
 	_G.BearHub_teleportTo = function(target)
 		if not target or not target.Character then return false, "Player has no character" end
 		local myChar = player.Character
 		if not myChar then return false, "You have no character" end
 		local myRoot = getRoot(myChar)
-		local targetRoot = getRoot(target.Character)
 		if not myRoot then return false, "You have no root part" end
+		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
-		pcall(function()
-			myRoot.CFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
+		
+		task.spawn(function()
+			local targetCFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
+			local startTime = tick()
+			-- Spam teleport przez 0.5 sekundy aby ominac anti-cheat
+			while tick() - startTime < 0.5 do
+				if not myChar.Parent or not myRoot.Parent then break end
+				if not target.Character then break end
+				local currentTargetRoot = getRoot(target.Character)
+				if currentTargetRoot then
+					targetCFrame = currentTargetRoot.CFrame + Vector3.new(0, 3, 0)
+				end
+				pcall(function()
+					myRoot.CFrame = targetCFrame
+					zeroVelocity(myChar)
+				end)
+				RunService.Heartbeat:Wait()
+			end
 		end)
 		return true, "Teleported to " .. (target.DisplayName or target.Name)
 	end
 
-	-- BRING: przenosi wybraną osobę do mnie
+	-- BRING: Wybrana osoba -> Do mnie
+	-- Naprawa: jeden mocny teleport bez spamu zeby gracz mogl sie ruszac
 	_G.BearHub_bringPlayer = function(target)
 		if not target or not target.Character then return false, "Player has no character" end
 		local myChar = player.Character
 		if not myChar then return false, "You have no character" end
 		local myRoot = getRoot(myChar)
-		local targetRoot = getRoot(target.Character)
 		if not myRoot then return false, "You have no root part" end
+		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
-		pcall(function()
-			targetRoot.CFrame = myRoot.CFrame + Vector3.new(0, 3, 0)
+		
+		task.spawn(function()
+			-- Kilka szybkich teleportow (3x) zeby anti-cheat nie cofnal
+			-- Ale nie w petli - dzieki temu gracz moze sie ruszac
+			for i = 1, 5 do
+				if not target.Character then break end
+				local currentRoot = getRoot(target.Character)
+				if not currentRoot or not currentRoot.Parent then break end
+				local myCurrentRoot = getRoot(myChar)
+				if not myCurrentRoot then break end
+				
+				pcall(function()
+					local destination = myCurrentRoot.CFrame * CFrame.new(0, 0, -3) + Vector3.new(0, 2, 0)
+					currentRoot.CFrame = destination
+					zeroVelocity(target.Character)
+				end)
+				task.wait(0.05)
+			end
 		end)
 		return true, "Brought " .. (target.DisplayName or target.Name)
 	end
 
-	-- SWITCH: zamienia miejscami mnie z wybraną osobą
+	-- SWITCH: Zamiana miejscami
+	-- Naprawa: zapisujemy CFrame PRZED zmiana, spam obu pozycji
 	_G.BearHub_switchPlaces = function(target)
 		if not target or not target.Character then return false, "Player has no character" end
 		local myChar = player.Character
 		if not myChar then return false, "You have no character" end
 		local myRoot = getRoot(myChar)
-		local targetRoot = getRoot(target.Character)
 		if not myRoot then return false, "You have no root part" end
+		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
-		pcall(function()
-			local myCFrame = myRoot.CFrame
-			local targetCFrame = targetRoot.CFrame
-			myRoot.CFrame = targetCFrame + Vector3.new(0, 3, 0)
-			task.wait(0.05)
-			targetRoot.CFrame = myCFrame + Vector3.new(0, 3, 0)
+		
+		task.spawn(function()
+			-- Zapisz obie pozycje NA POCZATKU
+			local myOriginalCFrame = myRoot.CFrame
+			local targetOriginalCFrame = targetRoot.CFrame
+			
+			-- Spam obu pozycji przez 0.5s aby oba omijac anti-cheat
+			local startTime = tick()
+			while tick() - startTime < 0.5 do
+				if not myChar.Parent or not myRoot.Parent then break end
+				if not target.Character then break end
+				local currentTargetRoot = getRoot(target.Character)
+				if not currentTargetRoot then break end
+				
+				pcall(function()
+					-- Ja ide na miejsce gdzie byl target
+					myRoot.CFrame = targetOriginalCFrame + Vector3.new(0, 2, 0)
+					zeroVelocity(myChar)
+					-- Target idzie na moje pierwotne miejsce
+					currentTargetRoot.CFrame = myOriginalCFrame + Vector3.new(0, 2, 0)
+					zeroVelocity(target.Character)
+				end)
+				RunService.Heartbeat:Wait()
+			end
 		end)
 		return true, "Switched with " .. (target.DisplayName or target.Name)
 	end
@@ -1753,7 +1831,7 @@ do
 end
 
 --============================================================
--- BLOK 8: STRONY GUI
+-- BLOK 8: STRONY GUI (Visualization, AimAssistance)
 --============================================================
 do
 	local vizPage = createPage("Visualization")
@@ -2072,8 +2150,8 @@ do
 	Instance.new("UICorner", plInfoFrame).CornerRadius = UDim.new(0,8)
 
 	local plInfoTitle = Instance.new("TextLabel", plInfoFrame)
-	plInfoTitle.Size = UDim2.new(1,-20,0,25)
-	plInfoTitle.Position = UDim2.new(0,10,0,10)
+	plInfoTitle.Size = UDim2.new(1,-20,0,22)
+	plInfoTitle.Position = UDim2.new(0,10,0,8)
 	plInfoTitle.BackgroundTransparency = 1
 	plInfoTitle.Text = "Selected Player"
 	plInfoTitle.TextColor3 = Color3.fromRGB(160,160,170)
@@ -2082,8 +2160,8 @@ do
 	plInfoTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 	local plAvatarFrame = Instance.new("Frame", plInfoFrame)
-	plAvatarFrame.Size = UDim2.new(0,70,0,70)
-	plAvatarFrame.Position = UDim2.new(0.5,-35,0,40)
+	plAvatarFrame.Size = UDim2.new(0,60,0,60)
+	plAvatarFrame.Position = UDim2.new(0.5,-30,0,35)
 	plAvatarFrame.BackgroundColor3 = Color3.fromRGB(50,50,60)
 	plAvatarFrame.BorderSizePixel = 0
 	Instance.new("UICorner", plAvatarFrame).CornerRadius = UDim.new(1,0)
@@ -2096,39 +2174,49 @@ do
 	Instance.new("UICorner", plAvatar).CornerRadius = UDim.new(1,0)
 
 	local plNameLbl = Instance.new("TextLabel", plInfoFrame)
-	plNameLbl.Size = UDim2.new(1,-20,0,20)
-	plNameLbl.Position = UDim2.new(0,10,0,118)
+	plNameLbl.Size = UDim2.new(1,-20,0,18)
+	plNameLbl.Position = UDim2.new(0,10,0,100)
 	plNameLbl.BackgroundTransparency = 1
 	plNameLbl.Text = "No player selected"
 	plNameLbl.TextColor3 = Color3.new(1,1,1)
 	plNameLbl.Font = Enum.Font.GothamBold
-	plNameLbl.TextSize = 15
+	plNameLbl.TextSize = 14
 	plNameLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 	local plUsernameLbl = Instance.new("TextLabel", plInfoFrame)
-	plUsernameLbl.Size = UDim2.new(1,-20,0,16)
-	plUsernameLbl.Position = UDim2.new(0,10,0,138)
+	plUsernameLbl.Size = UDim2.new(1,-20,0,15)
+	plUsernameLbl.Position = UDim2.new(0,10,0,119)
 	plUsernameLbl.BackgroundTransparency = 1
 	plUsernameLbl.Text = ""
 	plUsernameLbl.TextColor3 = Color3.fromRGB(150,150,160)
 	plUsernameLbl.Font = Enum.Font.Gotham
-	plUsernameLbl.TextSize = 12
+	plUsernameLbl.TextSize = 11
 	plUsernameLbl.TextXAlignment = Enum.TextXAlignment.Center
 
 	local plIdLbl = Instance.new("TextLabel", plInfoFrame)
-	plIdLbl.Size = UDim2.new(1,-20,0,16)
-	plIdLbl.Position = UDim2.new(0,10,0,155)
+	plIdLbl.Size = UDim2.new(0.5,-15,0,15)
+	plIdLbl.Position = UDim2.new(0,10,0,136)
 	plIdLbl.BackgroundTransparency = 1
 	plIdLbl.Text = ""
 	plIdLbl.TextColor3 = Color3.fromRGB(150,150,160)
 	plIdLbl.Font = Enum.Font.Gotham
-	plIdLbl.TextSize = 12
+	plIdLbl.TextSize = 11
 	plIdLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-	-- ROW 1: Spectate + Unspectate (obok siebie)
+	local plDistLbl = Instance.new("TextLabel", plInfoFrame)
+	plDistLbl.Size = UDim2.new(0.5,-15,0,15)
+	plDistLbl.Position = UDim2.new(0.5,5,0,136)
+	plDistLbl.BackgroundTransparency = 1
+	plDistLbl.Text = ""
+	plDistLbl.TextColor3 = Color3.fromRGB(100, 200, 255)
+	plDistLbl.Font = Enum.Font.GothamBold
+	plDistLbl.TextSize = 11
+	plDistLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+	-- ROW 1: Spectate + Unspectate
 	local row1 = Instance.new("Frame", plInfoFrame)
-	row1.Size = UDim2.new(1,-20,0,30)
-	row1.Position = UDim2.new(0,10,0,180)
+	row1.Size = UDim2.new(1,-20,0,28)
+	row1.Position = UDim2.new(0,10,0,160)
 	row1.BackgroundTransparency = 1
 
 	local plSpectateBtn = Instance.new("TextButton", row1)
@@ -2155,10 +2243,10 @@ do
 	plUnspectateBtn.AutoButtonColor = false
 	Instance.new("UICorner", plUnspectateBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 2: Teleport + Bring (obok siebie)
+	-- ROW 2: Teleport + Bring
 	local row2 = Instance.new("Frame", plInfoFrame)
-	row2.Size = UDim2.new(1,-20,0,30)
-	row2.Position = UDim2.new(0,10,0,215)
+	row2.Size = UDim2.new(1,-20,0,28)
+	row2.Position = UDim2.new(0,10,0,193)
 	row2.BackgroundTransparency = 1
 
 	local plTeleportBtn = Instance.new("TextButton", row2)
@@ -2185,10 +2273,10 @@ do
 	plBringBtn.AutoButtonColor = false
 	Instance.new("UICorner", plBringBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 3: Switch (pełna szerokość)
+	-- ROW 3: Switch
 	local plSwitchBtn = Instance.new("TextButton", plInfoFrame)
-	plSwitchBtn.Size = UDim2.new(1,-20,0,30)
-	plSwitchBtn.Position = UDim2.new(0,10,0,250)
+	plSwitchBtn.Size = UDim2.new(1,-20,0,28)
+	plSwitchBtn.Position = UDim2.new(0,10,0,226)
 	plSwitchBtn.BackgroundColor3 = Color3.fromRGB(220, 150, 50)
 	plSwitchBtn.BorderSizePixel = 0
 	plSwitchBtn.Text = "Switch Places"
@@ -2224,11 +2312,27 @@ do
 		end
 	end
 
+	local function getDistanceToPlayer(target)
+		if not target or not target.Character then return nil end
+		local myChar = player.Character
+		if not myChar then return nil end
+		local myRoot = myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso")
+		local targetRoot = target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso")
+		if not myRoot or not targetRoot then return nil end
+		return math.floor((myRoot.Position - targetRoot.Position).Magnitude)
+	end
+
 	local function updateSelectedPlayerInfo()
 		if selectedPlayer and selectedPlayer.Parent then
 			plNameLbl.Text = selectedPlayer.DisplayName or selectedPlayer.Name
 			plUsernameLbl.Text = "@" .. selectedPlayer.Name
 			plIdLbl.Text = "ID: " .. selectedPlayer.UserId
+			local dist = getDistanceToPlayer(selectedPlayer)
+			if dist then
+				plDistLbl.Text = "Distance: " .. dist .. "m"
+			else
+				plDistLbl.Text = "Distance: N/A"
+			end
 			pcall(function()
 				local content = Players:GetUserThumbnailAsync(selectedPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
 				plAvatar.Image = content
@@ -2241,10 +2345,26 @@ do
 			plNameLbl.Text = "No player selected"
 			plUsernameLbl.Text = ""
 			plIdLbl.Text = ""
+			plDistLbl.Text = ""
 			plAvatar.Image = ""
 			plStatusLbl.Text = ""
 		end
 	end
+
+	-- Auto-update distance co 0.5s
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			if selectedPlayer and selectedPlayer.Parent then
+				local dist = getDistanceToPlayer(selectedPlayer)
+				if dist then
+					plDistLbl.Text = "Distance: " .. dist .. "m"
+				else
+					plDistLbl.Text = "Distance: N/A"
+				end
+			end
+		end
+	end)
 
 	local function selectPlayer(plr)
 		selectedPlayer = plr
@@ -2390,7 +2510,6 @@ do
 		while true do
 			task.wait(3)
 			pcall(refreshPlayerList)
-			pcall(updateSelectedPlayerInfo)
 		end
 	end)
 
