@@ -3052,6 +3052,7 @@ UIS.InputEnded:Connect(function(inp)
 					lastClickTime = now
 				end
 			end
+					end
 		end
 	end
 end)
@@ -3059,9 +3060,6 @@ end)
 print("[BearHub] Loaded successfully! Press RightShift to hide/show.")
 
 end)
-if not success then
-	warn("[BearHub] Load Error: " .. tostring(err))
-end
 
 if not success then
 	warn("[BearHub] Load Error: " .. tostring(err))
