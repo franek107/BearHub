@@ -27,29 +27,44 @@ local function playClick() playSound(CLICK_SOUND_ID, 0.25, 1.2) end
 local function playSlider() playSound(SLIDER_SOUND_ID, 0.15, 1.5) end
 
 local function doClick()
-	local success = false
+	local ok = false
+	
 	pcall(function()
-		if mouse1click then mouse1click(); success = true end
+		VIM:SendMouseButtonEvent(
+			Camera.ViewportSize.X / 2,
+			Camera.ViewportSize.Y / 2,
+			0, true, game, 0
+		)
+		task.wait()
+		VIM:SendMouseButtonEvent(
+			Camera.ViewportSize.X / 2,
+			Camera.ViewportSize.Y / 2,
+			0, false, game, 0
+		)
+		ok = true
 	end)
-	if not success then
+	
+	if not ok then
 		pcall(function()
-			if mouse1press and mouse1release then
-				mouse1press()
-				task.wait(0.03)
-				mouse1release()
-				success = true
+			if mouse1click then
+				mouse1click()
+				ok = true
 			end
 		end)
 	end
-	if not success then
+	
+	if not ok then
 		pcall(function()
-			VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-			task.wait(0.03)
-			VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-			success = true
+			if mouse1press and mouse1release then
+				mouse1press()
+				task.wait(0.02)
+				mouse1release()
+				ok = true
+			end
 		end)
 	end
-	return success
+	
+	return ok
 end
 
 local dragSoundObj = nil
@@ -498,9 +513,6 @@ end
 
 local function getTriggerTarget()
 	if not TRIGGERBOT.Enabled then return nil end
-	local fp = isFirstPerson()
-	if TRIGGERBOT.Type == "First Person" and not fp then return nil end
-	if TRIGGERBOT.Type == "Third Person" and fp then return nil end
 	local vc = Camera.ViewportSize / 2
 	local fr = TRIGGERBOT.FOV * FOV_SCALE_TRIGGER
 	local best, bestD = nil, math.huge
@@ -540,14 +552,17 @@ local function getTriggerTarget()
 	return best
 end
 
-RunService.Heartbeat:Connect(function()
-	if TRIGGERBOT.Enabled and TRIGGERBOT.KeybindCheck and TRIGGERBOT.KeybindCheck() then
-		local now = tick()
-		if now - lastShot >= (TRIGGERBOT.ShotDelay / 1000) then
-			local t = getTriggerTarget()
-			if t then
-				lastShot = now
-				pcall(doClick)
+task.spawn(function()
+	while true do
+		task.wait(0.05)
+		if TRIGGERBOT.Enabled and TRIGGERBOT.KeybindCheck and TRIGGERBOT.KeybindCheck() then
+			local now = tick()
+			if now - lastShot >= (TRIGGERBOT.ShotDelay / 1000 + 0.05) then
+				local t = getTriggerTarget()
+				if t then
+					lastShot = now
+					pcall(doClick)
+				end
 			end
 		end
 	end
@@ -626,14 +641,9 @@ RunService.RenderStepped:Connect(function()
 	end
 end)
 
-local hitboxOriginalSizes = {}
-local hitboxOriginalTransparency = {}
-local hitboxOriginalCanCollide = {}
-local hitboxOriginalMassless = {}
-local hitboxOriginalMaterial = {}
-local hitboxOriginalColor = {}
-
-local HITBOX_SCALE = 0.2
+local savedMeshScales = {}
+local savedMeshOffsets = {}
+local hitboxHighlights = {}
 
 local HITBOX_BONE_MAP = {
 	Head = {R15 = {"Head"}, R6 = {"Head"}},
@@ -653,70 +663,123 @@ local function getHitboxParts(char)
 	return parts
 end
 
-local function saveOriginal(part)
-	if not hitboxOriginalSizes[part] then
-		hitboxOriginalSizes[part] = part.Size
-		hitboxOriginalTransparency[part] = part.Transparency
-		hitboxOriginalCanCollide[part] = part.CanCollide
-		hitboxOriginalMassless[part] = part.Massless
-		hitboxOriginalMaterial[part] = part.Material
-		hitboxOriginalColor[part] = part.Color
+local function findMesh(part)
+	local mesh = part:FindFirstChildOfClass("SpecialMesh") or part:FindFirstChildOfClass("BlockMesh") or part:FindFirstChildOfClass("CylinderMesh") or part:FindFirstChildOfClass("FileMesh")
+	return mesh
+end
+
+local function saveMeshData(part)
+	local mesh = findMesh(part)
+	if mesh and not savedMeshScales[mesh] then
+		savedMeshScales[mesh] = mesh.Scale
+		if mesh:IsA("SpecialMesh") then
+			savedMeshOffsets[mesh] = mesh.Offset
+		end
 	end
 end
 
-local function restorePart(part)
-	if hitboxOriginalSizes[part] then
+local function restoreMesh(part)
+	local mesh = findMesh(part)
+	if mesh and savedMeshScales[mesh] then
 		pcall(function()
-			part.Size = hitboxOriginalSizes[part]
-			part.Transparency = hitboxOriginalTransparency[part]
-			part.CanCollide = hitboxOriginalCanCollide[part]
-			part.Massless = hitboxOriginalMassless[part]
-			part.Material = hitboxOriginalMaterial[part]
-			part.Color = hitboxOriginalColor[part]
+			mesh.Scale = savedMeshScales[mesh]
+			if mesh:IsA("SpecialMesh") and savedMeshOffsets[mesh] then
+				mesh.Offset = savedMeshOffsets[mesh]
+			end
 		end)
-		hitboxOriginalSizes[part] = nil
-		hitboxOriginalTransparency[part] = nil
-		hitboxOriginalCanCollide[part] = nil
-		hitboxOriginalMassless[part] = nil
-		hitboxOriginalMaterial[part] = nil
-		hitboxOriginalColor[part] = nil
+		savedMeshScales[mesh] = nil
+		savedMeshOffsets[mesh] = nil
+	end
+end
+
+local function createHighlight(part)
+	if hitboxHighlights[part] and hitboxHighlights[part].Parent then
+		return hitboxHighlights[part]
+	end
+	local char = part.Parent
+	if not char then return nil end
+	
+	local hlName = "BearHub_HL_" .. part.Name
+	local existing = char:FindFirstChild(hlName)
+	if existing then existing:Destroy() end
+	
+	local sphere = Instance.new("SelectionSphere")
+	sphere.Name = hlName
+	sphere.Adornee = part
+	sphere.Color3 = Color3.fromRGB(255, 60, 60)
+	sphere.SurfaceColor3 = Color3.fromRGB(255, 60, 60)
+	sphere.SurfaceTransparency = 0.7
+	sphere.Transparency = 0.5
+	sphere.Parent = char
+	hitboxHighlights[part] = sphere
+	return sphere
+end
+
+local function removeHighlight(part)
+	if hitboxHighlights[part] then
+		pcall(function() hitboxHighlights[part]:Destroy() end)
+		hitboxHighlights[part] = nil
 	end
 end
 
 local function expandPart(part)
 	if not part or not part.Parent then return end
-	saveOriginal(part)
-	local origSize = hitboxOriginalSizes[part]
-	local expand = HITBOX.Size * HITBOX_SCALE
-	pcall(function()
-		part.Size = Vector3.new(origSize.X + expand, origSize.Y + expand, origSize.Z + expand)
-		part.Transparency = 0.5
-		part.CanCollide = false
-		part.Massless = true
-		part.Material = Enum.Material.ForceField
-		part.Color = Color3.fromRGB(255, 60, 60)
-	end)
+	
+	local scale = 1 + (HITBOX.Size * 0.15)
+	
+	local mesh = findMesh(part)
+	if mesh then
+		saveMeshData(part)
+		pcall(function()
+			mesh.Scale = savedMeshScales[mesh] * scale
+		end)
+	end
+	
+	local hl = createHighlight(part)
+	if hl then
+		local baseSize = part.Size.Magnitude
+		local expandSize = baseSize * (scale - 1) * 0.5
+		hl.Adornee = part
+		hl.Transparency = 0.5
+		hl.SurfaceTransparency = 0.7
+	end
+end
+
+local function restorePart(part)
+	if not part or not part.Parent then return end
+	restoreMesh(part)
+	removeHighlight(part)
 end
 
 local function restoreAllForChar(char)
 	if not char then return end
 	for _, part in ipairs(char:GetChildren()) do
-		if part:IsA("BasePart") and hitboxOriginalSizes[part] then restorePart(part) end
+		if part:IsA("BasePart") then
+			restorePart(part)
+		end
+	end
+	for _, child in ipairs(char:GetChildren()) do
+		if child.Name:find("BearHub_HL_") then
+			pcall(function() child:Destroy() end)
+		end
 	end
 end
 
 local function cleanupDead()
-	local toRemove = {}
-	for part in pairs(hitboxOriginalSizes) do
-		if not part or not part.Parent then table.insert(toRemove, part) end
+	local toRemoveMesh = {}
+	for mesh in pairs(savedMeshScales) do
+		if not mesh or not mesh.Parent then table.insert(toRemoveMesh, mesh) end
 	end
-	for _, part in ipairs(toRemove) do
-		hitboxOriginalSizes[part] = nil
-		hitboxOriginalTransparency[part] = nil
-		hitboxOriginalCanCollide[part] = nil
-		hitboxOriginalMassless[part] = nil
-		hitboxOriginalMaterial[part] = nil
-		hitboxOriginalColor[part] = nil
+	for _, mesh in ipairs(toRemoveMesh) do
+		savedMeshScales[mesh] = nil
+		savedMeshOffsets[mesh] = nil
+	end
+	local toRemoveHL = {}
+	for part in pairs(hitboxHighlights) do
+		if not part or not part.Parent then table.insert(toRemoveHL, part) end
+	end
+	for _, part in ipairs(toRemoveHL) do
+		hitboxHighlights[part] = nil
 	end
 end
 
@@ -727,7 +790,6 @@ local lastHitboxSize = 0
 RunService.Heartbeat:Connect(function()
 	local boneChanged = (lastHitboxBone ~= HITBOX.Bone)
 	local enabledChanged = (lastHitboxEnabled ~= HITBOX.Enabled)
-	local sizeChanged = (lastHitboxSize ~= HITBOX.Size)
 	lastHitboxBone = HITBOX.Bone
 	lastHitboxEnabled = HITBOX.Enabled
 	lastHitboxSize = HITBOX.Size
@@ -742,7 +804,7 @@ RunService.Heartbeat:Connect(function()
 					local targetSet = {}
 					for _, p in ipairs(targetParts) do targetSet[p] = true end
 					for _, part in ipairs(char:GetChildren()) do
-						if part:IsA("BasePart") and hitboxOriginalSizes[part] and not targetSet[part] then
+						if part:IsA("BasePart") and hitboxHighlights[part] and not targetSet[part] then
 							restorePart(part)
 						end
 					end
@@ -1632,7 +1694,7 @@ mkSection(tbR, "Options", 1)
 mkCheck(tbR, "Exclude Dead", TRIGGERBOT, "ExcludeDead", 2)
 mkCheck(tbR, "Visible Only", TRIGGERBOT, "VisibleOnly", 3)
 mkSlider(tbR, "Max Distance", 0, 500, 250, "m", TRIGGERBOT, "MaxDistance", 4)
-mkSlider(tbR, "Shot Delay", 0, 1000, 0, "ms", TRIGGERBOT, "ShotDelay", 5)
+mkSlider(tbR, "Shot Delay", 0, 1000, 100, "ms", TRIGGERBOT, "ShotDelay", 5)
 
 local abPage = Instance.new("Frame", subPagesFrame)
 abPage.Size = UDim2.new(1,0,1,0)
