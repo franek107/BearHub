@@ -675,14 +675,11 @@ RunService.RenderStepped:Connect(function()
 end)
 
 ------------------------------------------------------------
--- HITBOX EXPANDER (NAPRAWIONY - proxy parts zamiast zmiany Size)
+-- HITBOX EXPANDER + SILENT AIM (strzały trafiają w powiększone hitboxy)
 ------------------------------------------------------------
--- Zamiast zmieniać Size oryginalnych części (co powoduje crash),
--- tworzymy osobne przezroczyste "proxy" części które są weldowane
--- do oryginałów. Oryginalne części NIE SĄ modyfikowane.
-
-local hitboxProxies = {} -- [originalPart] = proxyPart
-local hitboxHighlights = {} -- [originalPart] = SelectionSphere
+local hitboxProxies = {}
+local hitboxHighlights = {}
+local proxyToOriginal = {}
 
 local HITBOX_SCALE = 0.15
 
@@ -724,7 +721,6 @@ local function createProxy(originalPart)
 	local char = originalPart.Parent
 	if not char then return nil end
 
-	-- Usuń stary proxy jeśli istnieje
 	local oldName = "BearHub_Proxy_" .. originalPart.Name
 	local old = char:FindFirstChild(oldName)
 	if old then old:Destroy() end
@@ -733,21 +729,21 @@ local function createProxy(originalPart)
 	proxy.Name = oldName
 	proxy.Anchored = false
 	proxy.CanCollide = false
-	proxy.CanQuery = true -- Ważne: pozwala na raycast hit
+	proxy.CanQuery = true
 	proxy.CanTouch = false
 	proxy.Massless = true
-	proxy.Transparency = 1 -- Całkowicie niewidoczny
+	proxy.Transparency = 1
 	proxy.Size = originalPart.Size
 	proxy.CFrame = originalPart.CFrame
 	proxy.Parent = char
 
-	-- Weld proxy do oryginalnej części - będzie się poruszać razem z nią
 	local weld = Instance.new("WeldConstraint")
 	weld.Part0 = originalPart
 	weld.Part1 = proxy
 	weld.Parent = proxy
 
 	hitboxProxies[originalPart] = proxy
+	proxyToOriginal[proxy] = originalPart
 	return proxy
 end
 
@@ -803,7 +799,6 @@ local function updateHitboxPart(originalPart)
 			end
 		end
 	else
-		-- Wyłączone - ukryj wszystko
 		local proxy = hitboxProxies[originalPart]
 		if proxy and proxy.Parent then
 			proxy.Transparency = 1
@@ -820,6 +815,10 @@ end
 
 local function removeProxyForPart(originalPart)
 	if hitboxProxies[originalPart] then
+		local proxy = hitboxProxies[originalPart]
+		if proxy then
+			proxyToOriginal[proxy] = nil
+		end
 		pcall(function() hitboxProxies[originalPart]:Destroy() end)
 		hitboxProxies[originalPart] = nil
 	end
@@ -831,7 +830,6 @@ end
 
 local function removeAllProxiesForChar(char)
 	if not char then return end
-	-- Usuń proxy i highlight przez tracking
 	local toRemove = {}
 	for origPart, proxy in pairs(hitboxProxies) do
 		if origPart.Parent == char or (proxy and proxy.Parent == char) then
@@ -841,7 +839,6 @@ local function removeAllProxiesForChar(char)
 	for _, part in ipairs(toRemove) do
 		removeProxyForPart(part)
 	end
-	-- Cleanup wszelkich pozostałości w charze
 	for _, child in ipairs(char:GetChildren()) do
 		if child.Name:find("BearHub_Proxy_") or child.Name:find("BearHubHL_") then
 			pcall(function() child:Destroy() end)
@@ -882,7 +879,6 @@ RunService.Heartbeat:Connect(function()
 						end)
 					end
 				else
-					-- Wyłączone - ukryj proxy ale nie usuwaj od razu (żeby nie spamować tworzeniem)
 					for origPart, proxy in pairs(hitboxProxies) do
 						if origPart and origPart.Parent == char then
 							pcall(function()
@@ -922,6 +918,106 @@ for _, p in ipairs(Players:GetPlayers()) do
 			if char then removeAllProxiesForChar(char) end
 		end)
 	end
+end
+
+------------------------------------------------------------
+-- SILENT AIM - przekierowuje strzały z proxy na oryginalną część
+------------------------------------------------------------
+local getPropertyValue = function(inst, prop)
+	local ok, val = pcall(function() return inst[prop] end)
+	if ok then return val end
+	return nil
+end
+
+-- Hook Raycast (nowa metoda)
+if hookmetamethod then
+	local oldNamecall
+	oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+		local method = getnamecallmethod()
+		local args = {...}
+		
+		if HITBOX.Enabled and self == workspace and (method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist") then
+			if method == "Raycast" then
+				local result = oldNamecall(self, ...)
+				if result and result.Instance and proxyToOriginal[result.Instance] then
+					local original = proxyToOriginal[result.Instance]
+					if original and original.Parent then
+						local newResult = {}
+						newResult.Instance = original
+						newResult.Position = result.Position
+						newResult.Normal = result.Normal
+						newResult.Material = result.Material
+						newResult.Distance = result.Distance
+						local mt = getmetatable(result)
+						if mt then
+							return setmetatable(newResult, mt)
+						end
+						return newResult
+					end
+				end
+				return result
+			else
+				local hit, pos, normal, material = oldNamecall(self, ...)
+				if hit and proxyToOriginal[hit] then
+					local original = proxyToOriginal[hit]
+					if original and original.Parent then
+						return original, pos, normal, material
+					end
+				end
+				return hit, pos, normal, material
+			end
+		end
+		
+		return oldNamecall(self, ...)
+	end)
+else
+	warn("BearHub: Executor nie wspiera hookmetamethod - silent aim moze nie dzialac w niektorych grach")
+end
+
+-- Hook FindPartOnRay (stara metoda)
+if hookfunction then
+	pcall(function()
+		local oldFindPart = workspace.FindPartOnRay
+		local newFindPart
+		newFindPart = hookfunction(oldFindPart, function(self, ...)
+			local hit, pos, normal, material = oldFindPart(self, ...)
+			if HITBOX.Enabled and hit and proxyToOriginal[hit] then
+				local original = proxyToOriginal[hit]
+				if original and original.Parent then
+					return original, pos, normal, material
+				end
+			end
+			return hit, pos, normal, material
+		end)
+	end)
+	
+	pcall(function()
+		local oldFindPart2 = workspace.FindPartOnRayWithIgnoreList
+		hookfunction(oldFindPart2, function(self, ...)
+			local hit, pos, normal, material = oldFindPart2(self, ...)
+			if HITBOX.Enabled and hit and proxyToOriginal[hit] then
+				local original = proxyToOriginal[hit]
+				if original and original.Parent then
+					return original, pos, normal, material
+				end
+			end
+			return hit, pos, normal, material
+		end)
+	end)
+	
+	pcall(function()
+		local oldFindPart3 = workspace.FindPartOnRayWithWhitelist
+		hookfunction(oldFindPart3, function(self, ...)
+			local hit, pos, normal, material = oldFindPart3(self, ...)
+			if HITBOX.Enabled and hit and proxyToOriginal[hit] then
+				local original = proxyToOriginal[hit]
+				if original and original.Parent then
+					return original, pos, normal, material
+				end
+			end
+			return hit, pos, normal, material
+		end)
+	end)
 end
 
 ------------------------------------------------------------
@@ -1952,9 +2048,6 @@ selSub = s1
 s1.btn.TextColor3 = Color3.new(1,1,1)
 s1.ul.Visible = true
 
-------------------------------------------------------------
--- MISCELLANEOUS PAGE
-------------------------------------------------------------
 local miscPage = createPage("Miscellaneous")
 
 local mL = Instance.new("Frame", miscPage)
@@ -1996,9 +2089,6 @@ mrp.PaddingRight = UDim.new(0,5)
 mkSection(mR, "Options", 1)
 mkButton(mR, "Heal", healPlayer, 2)
 
-------------------------------------------------------------
--- OTHER TABS
-------------------------------------------------------------
 local placeholders = {"Players","Settings"}
 for _, name in ipairs(placeholders) do
 	local p = createPage(name)
