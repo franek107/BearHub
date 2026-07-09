@@ -923,31 +923,26 @@ end
 ------------------------------------------------------------
 -- SILENT AIM - przekierowuje strzały z proxy na oryginalną część
 ------------------------------------------------------------
-local getPropertyValue = function(inst, prop)
-	local ok, val = pcall(function() return inst[prop] end)
-	if ok then return val end
-	return nil
-end
-
--- Hook Raycast (nowa metoda)
-if hookmetamethod then
-	local oldNamecall
-	oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-		local method = getnamecallmethod()
-		local args = {...}
+task.spawn(function()
+	local success = pcall(function()
+		if not hookmetamethod then return end
 		
-		if HITBOX.Enabled and self == workspace and (method == "Raycast" or method == "FindPartOnRay" or method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRayWithWhitelist") then
-			if method == "Raycast" then
+		local oldNamecall
+		oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+			local method = getnamecallmethod()
+			
+			if HITBOX.Enabled and self == workspace and method == "Raycast" then
 				local result = oldNamecall(self, ...)
 				if result and result.Instance and proxyToOriginal[result.Instance] then
 					local original = proxyToOriginal[result.Instance]
 					if original and original.Parent then
-						local newResult = {}
-						newResult.Instance = original
-						newResult.Position = result.Position
-						newResult.Normal = result.Normal
-						newResult.Material = result.Material
-						newResult.Distance = result.Distance
+						local newResult = {
+							Instance = original,
+							Position = result.Position,
+							Normal = result.Normal,
+							Material = result.Material,
+							Distance = result.Distance
+						}
 						local mt = getmetatable(result)
 						if mt then
 							return setmetatable(newResult, mt)
@@ -956,69 +951,54 @@ if hookmetamethod then
 					end
 				end
 				return result
-			else
-				local hit, pos, normal, material = oldNamecall(self, ...)
-				if hit and proxyToOriginal[hit] then
+			end
+			
+			return oldNamecall(self, ...)
+		end)
+	end)
+	
+	if not success then
+		warn("BearHub: Silent Aim (hookmetamethod) nie dziala w tym executorze")
+	end
+end)
+
+task.spawn(function()
+	pcall(function()
+		if not hookfunction then return end
+		
+		local oldFindPart = workspace.FindPartOnRay
+		if oldFindPart then
+			hookfunction(oldFindPart, function(self, ...)
+				local hit, pos, normal, material = oldFindPart(self, ...)
+				if HITBOX.Enabled and hit and proxyToOriginal[hit] then
 					local original = proxyToOriginal[hit]
 					if original and original.Parent then
 						return original, pos, normal, material
 					end
 				end
 				return hit, pos, normal, material
-			end
+			end)
 		end
+	end)
+	
+	pcall(function()
+		if not hookfunction then return end
 		
-		return oldNamecall(self, ...)
-	end)
-else
-	warn("BearHub: Executor nie wspiera hookmetamethod - silent aim moze nie dzialac w niektorych grach")
-end
-
--- Hook FindPartOnRay (stara metoda)
-if hookfunction then
-	pcall(function()
-		local oldFindPart = workspace.FindPartOnRay
-		local newFindPart
-		newFindPart = hookfunction(oldFindPart, function(self, ...)
-			local hit, pos, normal, material = oldFindPart(self, ...)
-			if HITBOX.Enabled and hit and proxyToOriginal[hit] then
-				local original = proxyToOriginal[hit]
-				if original and original.Parent then
-					return original, pos, normal, material
+		local oldFindPart = workspace.FindPartOnRayWithIgnoreList
+		if oldFindPart then
+			hookfunction(oldFindPart, function(self, ...)
+				local hit, pos, normal, material = oldFindPart(self, ...)
+				if HITBOX.Enabled and hit and proxyToOriginal[hit] then
+					local original = proxyToOriginal[hit]
+					if original and original.Parent then
+						return original, pos, normal, material
+					end
 				end
-			end
-			return hit, pos, normal, material
-		end)
+				return hit, pos, normal, material
+			end)
+		end
 	end)
-	
-	pcall(function()
-		local oldFindPart2 = workspace.FindPartOnRayWithIgnoreList
-		hookfunction(oldFindPart2, function(self, ...)
-			local hit, pos, normal, material = oldFindPart2(self, ...)
-			if HITBOX.Enabled and hit and proxyToOriginal[hit] then
-				local original = proxyToOriginal[hit]
-				if original and original.Parent then
-					return original, pos, normal, material
-				end
-			end
-			return hit, pos, normal, material
-		end)
-	end)
-	
-	pcall(function()
-		local oldFindPart3 = workspace.FindPartOnRayWithWhitelist
-		hookfunction(oldFindPart3, function(self, ...)
-			local hit, pos, normal, material = oldFindPart3(self, ...)
-			if HITBOX.Enabled and hit and proxyToOriginal[hit] then
-				local original = proxyToOriginal[hit]
-				if original and original.Parent then
-					return original, pos, normal, material
-				end
-			end
-			return hit, pos, normal, material
-		end)
-	end)
-end
+end)
 
 ------------------------------------------------------------
 -- MISCELLANEOUS FEATURES
