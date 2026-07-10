@@ -55,20 +55,12 @@ local AIMBOT = {
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 local MISC = {
-	SemiGod = false,
-	NoRecoil = false,
-	NoSpread = false,
-	InfAmmo = false,
-	NoClip = false,
-	NoClipSpeed = 30,
-	SuperPunch = false,
-	PunchMultiplier = 100,
-	RapidFire = false,
-	RapidFireLevel = 20,
-	WalkSpeedEnabled = false,
-	WalkSpeedValue = 16,
-	JumpPowerEnabled = false,
-	JumpPowerValue = 50,
+	SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false,
+	NoClip = false, NoClipSpeed = 30,
+	SuperPunch = false, PunchMultiplier = 100,
+	RapidFire = false, RapidFireLevel = 20,
+	WalkSpeedEnabled = false, WalkSpeed = 16,
+	JumpPowerEnabled = false, JumpPower = 50,
 }
 local SPECTATE = {Target = nil, Active = false}
 
@@ -129,6 +121,21 @@ do
 			)
 			ok = true
 		end)
+		if not ok then
+			pcall(function()
+				if mouse1click then mouse1click(); ok = true end
+			end)
+		end
+		if not ok then
+			pcall(function()
+				if mouse1press and mouse1release then
+					mouse1press()
+					task.wait(0.02)
+					mouse1release()
+					ok = true
+				end
+			end)
+		end
 		return ok
 	end
 
@@ -165,7 +172,7 @@ local startDragSound = _G.BearHub_startDragSound
 local stopDragSound = _G.BearHub_stopDragSound
 
 --============================================================
--- BLOK 2: SPECTATE + TELEPORT
+-- BLOK 2: SPECTATE + TELEPORT/BRING/SWITCH
 --============================================================
 do
 	local function getRoot(char)
@@ -222,18 +229,21 @@ do
 		if not myRoot then return false, "You have no root part" end
 		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
+		
 		task.spawn(function()
+			local targetCFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
 			local startTime = tick()
 			while tick() - startTime < 0.5 do
 				if not myChar.Parent or not myRoot.Parent then break end
 				if not target.Character then break end
 				local currentTargetRoot = getRoot(target.Character)
 				if currentTargetRoot then
-					pcall(function()
-						myRoot.CFrame = currentTargetRoot.CFrame + Vector3.new(0, 3, 0)
-						zeroVelocity(myChar)
-					end)
+					targetCFrame = currentTargetRoot.CFrame + Vector3.new(0, 3, 0)
 				end
+				pcall(function()
+					myRoot.CFrame = targetCFrame
+					zeroVelocity(myChar)
+				end)
 				RunService.Heartbeat:Wait()
 			end
 		end)
@@ -248,6 +258,7 @@ do
 		if not myRoot then return false, "You have no root part" end
 		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
+		
 		task.spawn(function()
 			for i = 1, 5 do
 				if not target.Character then break end
@@ -255,6 +266,7 @@ do
 				if not currentRoot or not currentRoot.Parent then break end
 				local myCurrentRoot = getRoot(myChar)
 				if not myCurrentRoot then break end
+				
 				pcall(function()
 					local destination = myCurrentRoot.CFrame * CFrame.new(0, 0, -3) + Vector3.new(0, 2, 0)
 					currentRoot.CFrame = destination
@@ -274,15 +286,18 @@ do
 		if not myRoot then return false, "You have no root part" end
 		local targetRoot = getRoot(target.Character)
 		if not targetRoot then return false, "Target has no root part" end
+		
 		task.spawn(function()
 			local myOriginalCFrame = myRoot.CFrame
 			local targetOriginalCFrame = targetRoot.CFrame
+			
 			local startTime = tick()
 			while tick() - startTime < 0.5 do
 				if not myChar.Parent or not myRoot.Parent then break end
 				if not target.Character then break end
 				local currentTargetRoot = getRoot(target.Character)
 				if not currentTargetRoot then break end
+				
 				pcall(function()
 					myRoot.CFrame = targetOriginalCFrame + Vector3.new(0, 2, 0)
 					zeroVelocity(myChar)
@@ -323,24 +338,29 @@ local bringPlayer = _G.BearHub_bringPlayer
 local switchPlaces = _G.BearHub_switchPlaces
 
 --============================================================
--- MOUSE INPUT
+-- MOUSE INPUT - Fixed to not interfere with GUI
 --============================================================
-UIS.InputBegan:Connect(function(inp)
+UIS.InputBegan:Connect(function(inp, gameProcessed)
+	if gameProcessed then return end
 	local uit = inp.UserInputType
 	if uit == Enum.UserInputType.MouseButton1 then mbHeld[1] = true
 	elseif uit == Enum.UserInputType.MouseButton2 then mbHeld[2] = true
-	elseif uit == Enum.UserInputType.MouseButton3 then mbHeld[3] = true end
+	elseif uit == Enum.UserInputType.MouseButton3 then mbHeld[3] = true
+	elseif uit == Enum.UserInputType.MouseButton4 then mbHeld[4] = true
+	elseif uit == Enum.UserInputType.MouseButton5 then mbHeld[5] = true end
 end)
 
 UIS.InputEnded:Connect(function(inp)
 	local uit = inp.UserInputType
 	if uit == Enum.UserInputType.MouseButton1 then mbHeld[1] = false
 	elseif uit == Enum.UserInputType.MouseButton2 then mbHeld[2] = false
-	elseif uit == Enum.UserInputType.MouseButton3 then mbHeld[3] = false end
+	elseif uit == Enum.UserInputType.MouseButton3 then mbHeld[3] = false
+	elseif uit == Enum.UserInputType.MouseButton4 then mbHeld[4] = false
+	elseif uit == Enum.UserInputType.MouseButton5 then mbHeld[5] = false end
 end)
 
 --============================================================
--- BLOK 3: ESP + FOV CIRCLES + INVENTORY
+-- BLOK 3: ESP + FOV CIRCLES
 --============================================================
 do
 	local fovCircle = Instance.new("Frame")
@@ -385,30 +405,6 @@ do
 	end
 
 	local espObjects = {}
-	local inventoryCache = {}
-	local lastCacheTick = {}
-
-	local function getPlayerInventory(plr)
-		local now = tick()
-		if lastCacheTick[plr] and (now - lastCacheTick[plr]) < 1.0 then
-			return inventoryCache[plr] or {}
-		end
-		local items = {}
-		if plr.Character then
-			for _, child in ipairs(plr.Character:GetChildren()) do
-				if child:IsA("Tool") then table.insert(items, child.Name) end
-			end
-		end
-		local bp = plr:FindFirstChildOfClass("Backpack")
-		if bp then
-			for _, child in ipairs(bp:GetChildren()) do
-				if child:IsA("Tool") then table.insert(items, child.Name) end
-			end
-		end
-		inventoryCache[plr] = items
-		lastCacheTick[plr] = now
-		return items
-	end
 
 	local function makeLine(parent)
 		local f = Instance.new("Frame", parent)
@@ -440,6 +436,26 @@ do
 		f.Position = UDim2.new(0, (p1.X+p2.X)/2, 0, (p1.Y+p2.Y)/2)
 		f.Size = UDim2.new(0, len, 0, th or 1)
 		f.Rotation = math.deg(math.atan2(dy, dx))
+	end
+
+	local function getPlayerInventory(plr)
+		local items = {}
+		if plr.Character then
+			for _, child in ipairs(plr.Character:GetChildren()) do
+				if child:IsA("Tool") then
+					table.insert(items, child.Name)
+				end
+			end
+		end
+		local bp = plr:FindFirstChildOfClass("Backpack")
+		if bp then
+			for _, child in ipairs(bp:GetChildren()) do
+				if child:IsA("Tool") then
+					table.insert(items, child.Name)
+				end
+			end
+		end
+		return items
 	end
 
 	local function createESPData(plr)
@@ -475,8 +491,6 @@ do
 			pcall(function() espObjects[plr].holder:Destroy() end)
 			espObjects[plr] = nil
 		end
-		inventoryCache[plr] = nil
-		lastCacheTick[plr] = nil
 	end
 
 	local function fullRefresh()
@@ -524,157 +538,19 @@ do
 		{"Torso","Left Leg"},{"Torso","Right Leg"},
 	}
 
-	local function processPlayer(plr)
-		local d = espObjects[plr]
-		
-		if plr == player and not ESP.ShowLocalPlayer then
-			if d then hideAll(d) end
-			return
-		end
-		
-		local char = plr.Character
-		if not char or not char.Parent then
-			if d then hideAll(d) end
-			return
-		end
-		
-		local hum = char:FindFirstChildOfClass("Humanoid")
-		local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
-		local head = char:FindFirstChild("Head")
-		
-		if not hum or not root or not head or hum.Health <= 0 then
-			if d then hideAll(d) end
-			return
-		end
-		
-		local myChar = player.Character
-		local mr = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso"))
-		local dist = mr and (mr.Position - root.Position).Magnitude or (Camera.CFrame.Position - root.Position).Magnitude
-		
-		if dist > ESP.MaxDistance then
-			if d then hideAll(d) end
-			return
-		end
-		
-		local sp, on, dep = w2s(root.Position)
-		if not on or dep <= 0 then
-			if d then hideAll(d) end
-			return
-		end
-		
-		if ESP.VisibleOnly and plr ~= player then
-			if not visCheck(root.Position, char) then
-				if d then hideAll(d) end
-				return
-			end
-		end
-		
-		if not d then d = createESPData(plr) end
-		
-		local hp = w2s(head.Position + Vector3.new(0,0.5,0))
-		local lp = w2s(root.Position - Vector3.new(0,3,0))
-		local bH = math.clamp(math.abs(lp.Y - hp.Y), 20, 800)
-		local bW = bH * 0.55
-		local tY, bY = hp.Y, lp.Y
-		local lX, rX = sp.X - bW/2, sp.X + bW/2
-		
-		if ESP.Box.Enabled then
-			drawLine(d.boxTop, Vector2.new(lX,tY), Vector2.new(rX,tY), 1)
-			drawLine(d.boxBot, Vector2.new(lX,bY), Vector2.new(rX,bY), 1)
-			drawLine(d.boxLeft, Vector2.new(lX,tY), Vector2.new(lX,bY), 1)
-			drawLine(d.boxRight, Vector2.new(rX,tY), Vector2.new(rX,bY), 1)
-			for _, f in pairs({d.boxTop,d.boxBot,d.boxLeft,d.boxRight}) do
-				f.BackgroundColor3 = ESP.Box.Color
-				f.Visible = true
-			end
-		else
-			for _, f in pairs({d.boxTop,d.boxBot,d.boxLeft,d.boxRight}) do f.Visible = false end
-		end
-		
-		if ESP.Name.Enabled then
-			d.name.Text = plr.DisplayName or plr.Name
-			d.name.Position = UDim2.new(0, sp.X, 0, tY - 15)
-			d.name.TextColor3 = ESP.Name.Color
-			d.name.Visible = true
-		else d.name.Visible = false end
-		
-		if ESP.ID.Enabled then
-			d.id.Text = "ID: " .. plr.UserId
-			d.id.Position = UDim2.new(0, sp.X, 0, tY - (ESP.Name.Enabled and 30 or 15))
-			d.id.TextColor3 = ESP.ID.Color
-			d.id.Visible = true
-		else d.id.Visible = false end
+	local inventoryCache = {}
+	local inventoryCacheTick = {}
+	local INVENTORY_CACHE_TIME = 1.0
 
-		local bottomOffset = 0
-		if ESP.Distance.Enabled then
-			d.distance.Text = math.floor(dist) .. "m"
-			d.distance.Position = UDim2.new(0, sp.X, 0, bY + 12 + bottomOffset)
-			d.distance.TextColor3 = ESP.Distance.Color
-			d.distance.Visible = true
-			bottomOffset = bottomOffset + 16
-		else d.distance.Visible = false end
-
-		if ESP.Inventory.Enabled then
-			local items = getPlayerInventory(plr)
-			if #items > 0 then
-				local invText = table.concat(items, ", ")
-				if #invText > 40 then invText = string.sub(invText, 1, 37) .. "..." end
-				d.inventory.Text = "[" .. invText .. "]"
-			else
-				d.inventory.Text = "[Empty]"
-			end
-			d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bottomOffset)
-			d.inventory.TextColor3 = ESP.Inventory.Color
-			d.inventory.Size = UDim2.new(0, 300, 0, 20)
-			d.inventory.Visible = true
-			bottomOffset = bottomOffset + 16
-		else d.inventory.Visible = false end
-
-		if ESP.HealthBar.Enabled then
-			local bx = lX - 6
-			local hp2 = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-			local ft = bY - (bY - tY) * hp2
-			drawLine(d.healthBg, Vector2.new(bx,tY), Vector2.new(bx,bY), 4)
-			d.healthBg.BackgroundColor3 = Color3.fromRGB(40,40,40)
-			d.healthBg.Visible = true
-			drawLine(d.healthFill, Vector2.new(bx,ft), Vector2.new(bx,bY), 3)
-			d.healthFill.BackgroundColor3 = Color3.fromRGB(math.floor(255*(1-hp2)), math.floor(255*hp2), 0)
-			d.healthFill.Visible = true
-		else
-			d.healthBg.Visible = false
-			d.healthFill.Visible = false
+	local function getCachedInventory(plr)
+		local now = tick()
+		if inventoryCache[plr] and inventoryCacheTick[plr] and (now - inventoryCacheTick[plr]) < INVENTORY_CACHE_TIME then
+			return inventoryCache[plr]
 		end
-		
-		if ESP.Snaplines.Enabled then
-			drawLine(d.snapline, Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y), Vector2.new(sp.X, bY), 1)
-			d.snapline.BackgroundColor3 = ESP.Snaplines.Color
-			d.snapline.Visible = true
-		else d.snapline.Visible = false end
-		
-		if ESP.Skeleton.Enabled then
-			local bones = char:FindFirstChild("UpperTorso") and R15 or R6
-			for i = 1, 12 do
-				if d.skeleton[i] then
-					if i <= #bones then
-						local a = getPos(char, bones[i][1])
-						local b = getPos(char, bones[i][2])
-						if a and b then
-							local s1, o1, d1 = w2s(a)
-							local s2, o2, d2 = w2s(b)
-							if o1 and o2 and d1 > 0 and d2 > 0 then
-								drawLine(d.skeleton[i], s1, s2, 2)
-								d.skeleton[i].BackgroundColor3 = ESP.Skeleton.Color
-								d.skeleton[i].Visible = true
-							else d.skeleton[i].Visible = false end
-						else d.skeleton[i].Visible = false end
-					else d.skeleton[i].Visible = false end
-				end
-			end
-		else
-			for i = 1, 12 do
-				if d.skeleton[i] then d.skeleton[i].Visible = false end
-			end
-		end
+		local items = getPlayerInventory(plr)
+		inventoryCache[plr] = items
+		inventoryCacheTick[plr] = now
+		return items
 	end
 
 	local function updateESP()
@@ -685,12 +561,174 @@ do
 		for plr in pairs(espObjects) do
 			if not cur[plr] then clearESP(plr) end
 		end
+		for plr in pairs(inventoryCache) do
+			if not cur[plr] then
+				inventoryCache[plr] = nil
+				inventoryCacheTick[plr] = nil
+			end
+		end
 		if not ESP.Enabled then
 			for _, d in pairs(espObjects) do hideAll(d) end
 			return
 		end
 		for _, plr in ipairs(Players:GetPlayers()) do
-			pcall(processPlayer, plr)
+			local d = espObjects[plr]
+			local skip = false
+			if plr == player and not ESP.ShowLocalPlayer then
+				if d then hideAll(d) end
+				skip = true
+			end
+			if not skip then
+				local char = plr.Character
+				if not char or not char.Parent then
+					if d then hideAll(d) end
+					skip = true
+				end
+				if not skip then
+					local hum = char:FindFirstChildOfClass("Humanoid")
+					local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+					local head = char:FindFirstChild("Head")
+					if not hum or not root or not head or hum.Health <= 0 then
+						if d then hideAll(d) end
+						skip = true
+					end
+					if not skip then
+						local myChar = player.Character
+						local mr = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso"))
+						local dist = mr and (mr.Position - root.Position).Magnitude or (Camera.CFrame.Position - root.Position).Magnitude
+						if dist > ESP.MaxDistance then
+							if d then hideAll(d) end
+							skip = true
+						end
+						if not skip then
+							local sp, on, dep = w2s(root.Position)
+							if not on or dep <= 0 then
+								if d then hideAll(d) end
+								skip = true
+							end
+							if not skip then
+								if ESP.VisibleOnly and plr ~= player then
+									if not visCheck(root.Position, char) then
+										if d then hideAll(d) end
+										skip = true
+									end
+								end
+								if not skip then
+									if not d then d = createESPData(plr) end
+									local hp = w2s(head.Position + Vector3.new(0,0.5,0))
+									local lp = w2s(root.Position - Vector3.new(0,3,0))
+									local bH = math.clamp(math.abs(lp.Y - hp.Y), 20, 800)
+									local bW = bH * 0.55
+									local tY, bY = hp.Y, lp.Y
+									local lX, rX = sp.X - bW/2, sp.X + bW/2
+									if ESP.Box.Enabled then
+										drawLine(d.boxTop, Vector2.new(lX,tY), Vector2.new(rX,tY), 1)
+										drawLine(d.boxBot, Vector2.new(lX,bY), Vector2.new(rX,bY), 1)
+										drawLine(d.boxLeft, Vector2.new(lX,tY), Vector2.new(lX,bY), 1)
+										drawLine(d.boxRight, Vector2.new(rX,tY), Vector2.new(rX,bY), 1)
+										for _, f in pairs({d.boxTop,d.boxBot,d.boxLeft,d.boxRight}) do
+											f.BackgroundColor3 = ESP.Box.Color
+											f.Visible = true
+										end
+									else
+										for _, f in pairs({d.boxTop,d.boxBot,d.boxLeft,d.boxRight}) do f.Visible = false end
+									end
+
+									local bottomOffset = 0
+
+									if ESP.Name.Enabled then
+										d.name.Text = plr.DisplayName or plr.Name
+										d.name.Position = UDim2.new(0, sp.X, 0, tY - 15)
+										d.name.TextColor3 = ESP.Name.Color
+										d.name.Visible = true
+									else d.name.Visible = false end
+									if ESP.ID.Enabled then
+										d.id.Text = "ID: " .. plr.UserId
+										d.id.Position = UDim2.new(0, sp.X, 0, tY - (ESP.Name.Enabled and 30 or 15))
+										d.id.TextColor3 = ESP.ID.Color
+										d.id.Visible = true
+									else d.id.Visible = false end
+
+									if ESP.Distance.Enabled then
+										d.distance.Text = math.floor(dist) .. "m"
+										d.distance.Position = UDim2.new(0, sp.X, 0, bY + 12 + bottomOffset)
+										d.distance.TextColor3 = ESP.Distance.Color
+										d.distance.Visible = true
+										bottomOffset = bottomOffset + 16
+									else d.distance.Visible = false end
+
+									if ESP.Inventory.Enabled then
+										local items = getCachedInventory(plr)
+										if #items > 0 then
+											local invText = table.concat(items, ", ")
+											if #invText > 40 then
+												invText = string.sub(invText, 1, 37) .. "..."
+											end
+											d.inventory.Text = "[" .. invText .. "]"
+											d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bottomOffset)
+											d.inventory.TextColor3 = ESP.Inventory.Color
+											d.inventory.Size = UDim2.new(0, 300, 0, 20)
+											d.inventory.Visible = true
+											bottomOffset = bottomOffset + 16
+										else
+											d.inventory.Text = "[Empty]"
+											d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bottomOffset)
+											d.inventory.TextColor3 = Color3.fromRGB(120, 120, 130)
+											d.inventory.Size = UDim2.new(0, 300, 0, 20)
+											d.inventory.Visible = true
+											bottomOffset = bottomOffset + 16
+										end
+									else d.inventory.Visible = false end
+
+									if ESP.HealthBar.Enabled then
+										local bx = lX - 6
+										local hp2 = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+										local ft = bY - (bY - tY) * hp2
+										drawLine(d.healthBg, Vector2.new(bx,tY), Vector2.new(bx,bY), 4)
+										d.healthBg.BackgroundColor3 = Color3.fromRGB(40,40,40)
+										d.healthBg.Visible = true
+										drawLine(d.healthFill, Vector2.new(bx,ft), Vector2.new(bx,bY), 3)
+										d.healthFill.BackgroundColor3 = Color3.fromRGB(math.floor(255*(1-hp2)), math.floor(255*hp2), 0)
+										d.healthFill.Visible = true
+									else
+										d.healthBg.Visible = false
+										d.healthFill.Visible = false
+									end
+									if ESP.Snaplines.Enabled then
+										drawLine(d.snapline, Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y), Vector2.new(sp.X, bY), 1)
+										d.snapline.BackgroundColor3 = ESP.Snaplines.Color
+										d.snapline.Visible = true
+									else d.snapline.Visible = false end
+									if ESP.Skeleton.Enabled then
+										local bones = char:FindFirstChild("UpperTorso") and R15 or R6
+										for i = 1, 12 do
+											if d.skeleton[i] then
+												if i <= #bones then
+													local a = getPos(char, bones[i][1])
+													local b = getPos(char, bones[i][2])
+													if a and b then
+														local s1, o1, d1 = w2s(a)
+														local s2, o2, d2 = w2s(b)
+														if o1 and o2 and d1 > 0 and d2 > 0 then
+															drawLine(d.skeleton[i], s1, s2, 2)
+															d.skeleton[i].BackgroundColor3 = ESP.Skeleton.Color
+															d.skeleton[i].Visible = true
+														else d.skeleton[i].Visible = false end
+													else d.skeleton[i].Visible = false end
+												else d.skeleton[i].Visible = false end
+											end
+										end
+									else
+										for i = 1, 12 do
+											if d.skeleton[i] then d.skeleton[i].Visible = false end
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+			end
 		end
 	end
 
@@ -700,20 +738,25 @@ do
 	end)
 
 	task.spawn(function() while true do task.wait(5); pcall(fullRefresh) end end)
+
 	player.CharacterAdded:Connect(function() task.wait(0.5); pcall(fullRefresh) end)
+
 	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 		Camera = workspace.CurrentCamera; pcall(fullRefresh)
 	end)
+
 	Players.PlayerAdded:Connect(function(p)
 		p.CharacterAdded:Connect(function() task.wait(0.3); clearESP(p) end)
 		p.CharacterRemoving:Connect(function() clearESP(p) end)
 	end)
+
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= player then
 			p.CharacterAdded:Connect(function() task.wait(0.3); clearESP(p) end)
 			p.CharacterRemoving:Connect(function() clearESP(p) end)
 		end
 	end
+
 	Players.PlayerRemoving:Connect(function(p) clearESP(p) end)
 end
 
@@ -775,7 +818,10 @@ do
 				local now = tick()
 				if now - lastShot >= (TRIGGERBOT.ShotDelay / 1000 + 0.05) then
 					local t = getTriggerTarget()
-					if t then lastShot = now; pcall(doClick) end
+					if t then
+						lastShot = now
+						pcall(doClick)
+					end
 				end
 			end
 		end
@@ -884,7 +930,9 @@ do
 		local mesh = findMesh(part)
 		if mesh and not savedMeshScales[mesh] then
 			savedMeshScales[mesh] = mesh.Scale
-			if mesh:IsA("SpecialMesh") then savedMeshOffsets[mesh] = mesh.Offset end
+			if mesh:IsA("SpecialMesh") then
+				savedMeshOffsets[mesh] = mesh.Offset
+			end
 		end
 	end
 
@@ -903,7 +951,9 @@ do
 	end
 
 	local function createHighlight(part)
-		if hitboxHighlights[part] and hitboxHighlights[part].Parent then return hitboxHighlights[part] end
+		if hitboxHighlights[part] and hitboxHighlights[part].Parent then
+			return hitboxHighlights[part]
+		end
 		local char = part.Parent
 		if not char then return nil end
 		local hlName = "BearHub_HL_" .. part.Name
@@ -937,7 +987,11 @@ do
 			pcall(function() mesh.Scale = savedMeshScales[mesh] * scale end)
 		end
 		local hl = createHighlight(part)
-		if hl then hl.Adornee = part; hl.Transparency = 0.5; hl.SurfaceTransparency = 0.7 end
+		if hl then
+			hl.Adornee = part
+			hl.Transparency = 0.5
+			hl.SurfaceTransparency = 0.7
+		end
 	end
 
 	local function restorePart(part)
@@ -952,7 +1006,9 @@ do
 			if part:IsA("BasePart") then restorePart(part) end
 		end
 		for _, child in ipairs(char:GetChildren()) do
-			if child.Name:find("BearHub_HL_") then pcall(function() child:Destroy() end) end
+			if child.Name:find("BearHub_HL_") then
+				pcall(function() child:Destroy() end)
+			end
 		end
 	end
 
@@ -961,12 +1017,17 @@ do
 		for mesh in pairs(savedMeshScales) do
 			if not mesh or not mesh.Parent then table.insert(toRemoveMesh, mesh) end
 		end
-		for _, mesh in ipairs(toRemoveMesh) do savedMeshScales[mesh] = nil; savedMeshOffsets[mesh] = nil end
+		for _, mesh in ipairs(toRemoveMesh) do
+			savedMeshScales[mesh] = nil
+			savedMeshOffsets[mesh] = nil
+		end
 		local toRemoveHL = {}
 		for part in pairs(hitboxHighlights) do
 			if not part or not part.Parent then table.insert(toRemoveHL, part) end
 		end
-		for _, part in ipairs(toRemoveHL) do hitboxHighlights[part] = nil end
+		for _, part in ipairs(toRemoveHL) do
+			hitboxHighlights[part] = nil
+		end
 	end
 
 	local lastHitboxBone = "Head"
@@ -977,6 +1038,7 @@ do
 		local enabledChanged = (lastHitboxEnabled ~= HITBOX.Enabled)
 		lastHitboxBone = HITBOX.Bone
 		lastHitboxEnabled = HITBOX.Enabled
+
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= player then
 				local char = plr.Character
@@ -991,7 +1053,9 @@ do
 								restorePart(part)
 							end
 						end
-						for _, part in ipairs(targetParts) do pcall(function() expandPart(part) end) end
+						for _, part in ipairs(targetParts) do
+							pcall(function() expandPart(part) end)
+						end
 					else
 						if enabledChanged then restoreAllForChar(char) end
 					end
@@ -1000,12 +1064,31 @@ do
 		end
 		cleanupDead()
 	end)
+
+	Players.PlayerAdded:Connect(function(p)
+		p.CharacterAdded:Connect(function(char) task.wait(1); cleanupDead() end)
+		p.CharacterRemoving:Connect(function()
+			local char = p.Character
+			if char then restoreAllForChar(char) end
+		end)
+	end)
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= player then
+			p.CharacterAdded:Connect(function(char) task.wait(1); cleanupDead() end)
+			p.CharacterRemoving:Connect(function()
+				local char = p.Character
+				if char then restoreAllForChar(char) end
+			end)
+		end
+	end
 end
 
 --============================================================
--- BLOK 5: MISC + WALKSPEED + JUMPPOWER + RAPID FIRE
+-- BLOK 5: MISC + TOOLS + NOCLIP + SUPER PUNCH + RAPID FIRE + WALKSPEED + JUMPPOWER
 --============================================================
 do
+	-- SEMI GOD MOD
 	task.spawn(function()
 		while true do
 			task.wait(0.1)
@@ -1014,7 +1097,10 @@ do
 				if char then
 					local hum = char:FindFirstChildOfClass("Humanoid")
 					if hum and hum.Health > 0 then
-						pcall(function() hum.MaxHealth = math.huge; hum.Health = math.huge end)
+						pcall(function()
+							hum.MaxHealth = math.huge
+							hum.Health = math.huge
+						end)
 					end
 				end
 			end
@@ -1025,45 +1111,73 @@ do
 		if not char then return end
 		local hum = char:FindFirstChildOfClass("Humanoid")
 		if not hum then return end
-		hum.HealthChanged:Connect(function()
+		hum.HealthChanged:Connect(function(hp)
 			if MISC.SemiGod then
-				pcall(function() hum.MaxHealth = math.huge; hum.Health = math.huge end)
+				pcall(function()
+					hum.MaxHealth = math.huge
+					hum.Health = math.huge
+				end)
 			end
 		end)
 	end
 
 	if player.Character then hookHumanoid(player.Character) end
-	player.CharacterAdded:Connect(function(c) task.wait(0.5); hookHumanoid(c) end)
+	player.CharacterAdded:Connect(function(c)
+		task.wait(0.5)
+		hookHumanoid(c)
+	end)
 
+	-- HEAL
 	_G.BearHub_healPlayer = function()
-		local char = player.Character
-		if char then
-			local hum = char:FindFirstChildOfClass("Humanoid")
-			if hum then pcall(function() hum.Health = hum.MaxHealth end) end
-		end
-	end
-
-	RunService.Heartbeat:Connect(function()
 		local char = player.Character
 		if not char then return end
 		local hum = char:FindFirstChildOfClass("Humanoid")
-		if not hum then return end
-		if MISC.WalkSpeedEnabled then
-			pcall(function() hum.WalkSpeed = MISC.WalkSpeedValue end)
+		if hum then
+			pcall(function()
+				hum.Health = hum.MaxHealth
+			end)
 		end
-		if MISC.JumpPowerEnabled then
-			pcall(function() hum.JumpPower = MISC.JumpPowerValue end)
+	end
+
+	-- WALK SPEED + JUMP POWER
+	task.spawn(function()
+		while true do
+			task.wait(0.1)
+			local char = player.Character
+			if char then
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				if hum then
+					if MISC.WalkSpeedEnabled then
+						pcall(function()
+							hum.WalkSpeed = MISC.WalkSpeed
+						end)
+					end
+					if MISC.JumpPowerEnabled then
+						pcall(function()
+							hum.UseJumpPower = true
+							hum.JumpPower = MISC.JumpPower
+						end)
+					end
+				end
+			end
 		end
 	end)
 
+	-- NOCLIP + FLY
 	local flyBodyVelocity = nil
 	local flyBodyGyro = nil
 	local flying = false
 
 	local function stopFly()
 		flying = false
-		if flyBodyVelocity then pcall(function() flyBodyVelocity:Destroy() end); flyBodyVelocity = nil end
-		if flyBodyGyro then pcall(function() flyBodyGyro:Destroy() end); flyBodyGyro = nil end
+		if flyBodyVelocity then
+			pcall(function() flyBodyVelocity:Destroy() end)
+			flyBodyVelocity = nil
+		end
+		if flyBodyGyro then
+			pcall(function() flyBodyGyro:Destroy() end)
+			flyBodyGyro = nil
+		end
 	end
 
 	local function startFly()
@@ -1071,37 +1185,58 @@ do
 		if not char then return end
 		local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
 		if not root then return end
+
 		stopFly()
 		flying = true
+
 		flyBodyVelocity = Instance.new("BodyVelocity")
 		flyBodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
 		flyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
 		flyBodyVelocity.Parent = root
+
 		flyBodyGyro = Instance.new("BodyGyro")
 		flyBodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
 		flyBodyGyro.P = 9000
 		flyBodyGyro.D = 500
 		flyBodyGyro.Parent = root
+
 		task.spawn(function()
 			while flying and MISC.NoClip do
 				RunService.RenderStepped:Wait()
 				if not char.Parent then break end
 				local currentRoot = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
 				if not currentRoot then break end
+
 				local speed = MISC.NoClipSpeed or 30
-				local forward, right, up = 0, 0, 0
+
+				local forward = 0
+				local right = 0
+				local up = 0
+
 				if UIS:IsKeyDown(Enum.KeyCode.W) then forward = forward + 1 end
 				if UIS:IsKeyDown(Enum.KeyCode.S) then forward = forward - 1 end
 				if UIS:IsKeyDown(Enum.KeyCode.A) then right = right - 1 end
 				if UIS:IsKeyDown(Enum.KeyCode.D) then right = right + 1 end
 				if UIS:IsKeyDown(Enum.KeyCode.Space) then up = up + 1 end
 				if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then up = up - 1 end
+
 				local camCFrame = Camera.CFrame
-				local moveVec = (camCFrame.LookVector * forward + camCFrame.RightVector * right + Vector3.new(0, up, 0))
-				if moveVec.Magnitude > 0 then moveVec = moveVec.Unit * speed end
+				local camForward = camCFrame.LookVector
+				local camRight = camCFrame.RightVector
+
+				local moveVec = (camForward * forward + camRight * right + Vector3.new(0, up, 0))
+
+				if moveVec.Magnitude > 0 then
+					moveVec = moveVec.Unit * speed
+				end
+
 				pcall(function()
-					if flyBodyVelocity and flyBodyVelocity.Parent then flyBodyVelocity.Velocity = moveVec end
-					if flyBodyGyro and flyBodyGyro.Parent then flyBodyGyro.CFrame = camCFrame end
+					if flyBodyVelocity and flyBodyVelocity.Parent then
+						flyBodyVelocity.Velocity = moveVec
+					end
+					if flyBodyGyro and flyBodyGyro.Parent then
+						flyBodyGyro.CFrame = camCFrame
+					end
 				end)
 			end
 			stopFly()
@@ -1113,9 +1248,15 @@ do
 			local char = player.Character
 			if char then
 				for _, part in ipairs(char:GetDescendants()) do
-					if part:IsA("BasePart") then pcall(function() part.CanCollide = false end) end
+					if part:IsA("BasePart") then
+						pcall(function()
+							part.CanCollide = false
+						end)
+					end
 				end
-				if not flying then startFly() end
+				if not flying then
+					startFly()
+				end
 			end
 		else
 			if flying then
@@ -1124,7 +1265,9 @@ do
 				if char then
 					for _, part in ipairs(char:GetDescendants()) do
 						if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-							pcall(function() part.CanCollide = true end)
+							pcall(function()
+								part.CanCollide = true
+							end)
 						end
 					end
 				end
@@ -1132,37 +1275,135 @@ do
 		end
 	end)
 
-	player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
+	player.CharacterAdded:Connect(function()
+		task.wait(0.5)
+		stopFly()
+	end)
 
+	-- TOOLS HOOK (includes Rapid Fire)
 	local hookedTools = {}
+
 	local function hookTool(tool)
 		if not tool or not tool:IsA("Tool") then return end
 		if hookedTools[tool] then return end
 		hookedTools[tool] = true
+
 		task.spawn(function()
 			while tool.Parent do
 				task.wait(0.05)
-				if MISC.NoRecoil or MISC.NoSpread or MISC.InfAmmo then
+
+				if MISC.NoRecoil or MISC.NoSpread or MISC.InfAmmo or MISC.RapidFire then
 					pcall(function()
 						for _, v in ipairs(tool:GetDescendants()) do
 							if v:IsA("NumberValue") or v:IsA("IntValue") then
 								local n = v.Name:lower()
+
 								if MISC.NoRecoil then
-									if n:find("recoil") or n:find("kick") or n:find("shake") then v.Value = 0 end
+									if n:find("recoil") or n:find("kick") or n:find("camerashake") or n:find("shake") then
+										v.Value = 0
+									end
 								end
+
 								if MISC.NoSpread then
-									if n:find("spread") or n:find("bulletspread") then v.Value = 0 end
-									if n:find("accuracy") then v.Value = 1 end
+									if n:find("spread") or n:find("bulletspread") or n:find("firerandom") then
+										v.Value = 0
+									end
+									if n:find("accuracy") then
+										v.Value = 1
+									end
 								end
+
 								if MISC.InfAmmo then
-									if n == "ammo" or n == "currentammo" or n == "bullets" or n:find("magazine") or n:find("clip") then
+									if n == "ammo" or n == "currentammo" or n == "bullets" or n == "storedammo" 
+										or n:find("magazine") or n:find("clip") or n:find("mag") 
+										or n == "maxammo" or n == "reserveammo" or n == "totalammo" then
 										v.Value = 999
 									end
 								end
+
+								if MISC.RapidFire then
+									local rfLevel = MISC.RapidFireLevel or 20
+									local rfMultiplier = rfLevel / 20
+
+									if n:find("firerate") or n:find("fire_rate") or n:find("rateof") then
+										if rfMultiplier > 0 then
+											if v.Value < 9000 then
+												v.Value = v.Value / math.max(rfMultiplier, 0.01)
+											end
+										else
+											v.Value = 99999
+										end
+									end
+
+									if n:find("firedelay") or n:find("fire_delay") or n:find("delay") 
+										or n:find("cooldown") or n:find("cool_down") or n:find("firecooldown")
+										or n:find("shotcooldown") or n:find("shotdelay") or n:find("shot_delay")
+										or n:find("fireinterval") or n:find("interval") or n:find("timebetween")
+										or n:find("attackspeed") or n:find("attackcooldown") or n:find("attackdelay")
+										or n:find("shootdelay") or n:find("shootcooldown") then
+										v.Value = v.Value * rfMultiplier
+									end
+
+									if n:find("automatic") or n:find("auto") or n:find("isautomatic") then
+										if v.Value == 0 then
+											v.Value = 1
+										end
+									end
+								end
 							end
+
 							if v:IsA("BoolValue") then
 								local n = v.Name:lower()
-								if MISC.InfAmmo and (n:find("reloading") or n:find("isreloading")) then v.Value = false end
+								if MISC.InfAmmo then
+									if n:find("reloading") or n:find("isreloading") then
+										v.Value = false
+									end
+								end
+								if MISC.RapidFire then
+									if n:find("canfire") or n:find("canshoot") or n:find("ready") then
+										v.Value = true
+									end
+									if n:find("cooling") or n:find("oncooldown") then
+										v.Value = false
+									end
+								end
+							end
+						end
+
+						local attrs = tool:GetAttributes()
+						for name, val in pairs(attrs) do
+							local n = name:lower()
+							if type(val) == "number" then
+								if MISC.NoRecoil and (n:find("recoil") or n:find("kick")) then
+									tool:SetAttribute(name, 0)
+								end
+								if MISC.NoSpread and (n:find("spread") or n:find("accuracy")) then
+									tool:SetAttribute(name, 0)
+								end
+								if MISC.InfAmmo and (n == "ammo" or n:find("magazine") or n:find("clip")) then
+									tool:SetAttribute(name, 999)
+								end
+								if MISC.RapidFire then
+									local rfLevel = MISC.RapidFireLevel or 20
+									local rfMultiplier = rfLevel / 20
+									if n:find("firedelay") or n:find("cooldown") or n:find("firerate") 
+										or n:find("delay") or n:find("interval") or n:find("shotdelay") then
+										if n:find("rate") then
+											if rfMultiplier > 0 then
+												tool:SetAttribute(name, val / math.max(rfMultiplier, 0.01))
+											else
+												tool:SetAttribute(name, 99999)
+											end
+										else
+											tool:SetAttribute(name, val * rfMultiplier)
+										end
+									end
+								end
+							end
+							if type(val) == "boolean" and MISC.RapidFire then
+								if n:find("canfire") or n:find("canshoot") or n:find("ready") then
+									tool:SetAttribute(name, true)
+								end
 							end
 						end
 					end)
@@ -1177,7 +1418,9 @@ do
 		for _, t in ipairs(char:GetChildren()) do
 			if t:IsA("Tool") then hookTool(t) end
 		end
-		char.ChildAdded:Connect(function(c) if c:IsA("Tool") then hookTool(c) end end)
+		char.ChildAdded:Connect(function(c)
+			if c:IsA("Tool") then hookTool(c) end
+		end)
 	end
 
 	local function scanBackpack()
@@ -1186,12 +1429,18 @@ do
 		for _, t in ipairs(bp:GetChildren()) do
 			if t:IsA("Tool") then hookTool(t) end
 		end
-		bp.ChildAdded:Connect(function(c) if c:IsA("Tool") then hookTool(c) end end)
+		bp.ChildAdded:Connect(function(c)
+			if c:IsA("Tool") then hookTool(c) end
+		end)
 	end
 
 	if player.Character then scanTools(player.Character) end
-	player.CharacterAdded:Connect(function(c) task.wait(0.3); scanTools(c) end)
+	player.CharacterAdded:Connect(function(c)
+		task.wait(0.3)
+		scanTools(c)
+	end)
 	task.spawn(function() task.wait(1); pcall(scanBackpack) end)
+
 	task.spawn(function()
 		while true do
 			task.wait(3)
@@ -1200,59 +1449,11 @@ do
 		end
 	end)
 
-	local rapidFireConnections = {}
-	local function connectRapidFire(tool)
-		if not tool or not tool:IsA("Tool") then return end
-		if rapidFireConnections[tool] then return end
-		local conn = tool.Activated:Connect(function()
-			if not MISC.RapidFire then return end
-			local rfLevel = MISC.RapidFireLevel or 20
-			if rfLevel >= 20 then return end
-			local delay = math.max((rfLevel / 20) * 0.08, 0.005)
-			local clicks = math.max(1, math.floor((1 - rfLevel/20) * 6))
-			task.spawn(function()
-				for i = 1, clicks do
-					if not MISC.RapidFire then break end
-					pcall(function()
-						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
-						task.wait(0.005)
-						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
-					end)
-					if i < clicks then task.wait(delay) end
-				end
-			end)
-		end)
-		rapidFireConnections[tool] = conn
-		tool.AncestryChanged:Connect(function()
-			if not tool.Parent then
-				if rapidFireConnections[tool] then
-					rapidFireConnections[tool]:Disconnect()
-					rapidFireConnections[tool] = nil
-				end
-			end
-		end)
-	end
-
-	local function scanRapidFire(char)
-		if not char then return end
-		for _, t in ipairs(char:GetChildren()) do connectRapidFire(t) end
-		char.ChildAdded:Connect(function(c) connectRapidFire(c) end)
-	end
-
-	if player.Character then scanRapidFire(player.Character) end
-	player.CharacterAdded:Connect(function(c) task.wait(0.4); scanRapidFire(c) end)
-	task.spawn(function()
-		while true do
-			task.wait(2)
-			if player.Character then pcall(function() scanRapidFire(player.Character) end) end
-			local bp = player:FindFirstChildOfClass("Backpack")
-			if bp then
-				for _, t in ipairs(bp:GetChildren()) do connectRapidFire(t) end
-			end
-		end
-	end)
-
+	-- ============================================
+	-- SUPER PUNCH
+	-- ============================================
 	local punchedTools = {}
+
 	local function isPunchTool(tool)
 		if not tool or not tool:IsA("Tool") then return false end
 		local name = tool.Name:lower()
@@ -1267,7 +1468,10 @@ do
 				for _, v in ipairs(parent:GetChildren()) do
 					if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
 						local n = v.Name:lower()
-						if n:find("damage") or n:find("hit") or n:find("punch") or n:find("attack") or n:find("melee") then
+						if n:find("damage") or n:find("hit") or n:find("punch") or n:find("attack") 
+							or n:find("melee") or n:find("fight") or n:find("combat") or n:find("strike")
+							or n:find("swing") or n:find("weapon") or n:find("fist") or n:find("pi[eę]s?[cć]")
+							or n:find("dmg") or n:find("kill") or n:find("hurt") then
 							table.insert(remotes, v)
 						end
 					end
@@ -1286,59 +1490,80 @@ do
 		if not isPunchTool(tool) then return end
 		if punchedTools[tool] then return end
 		punchedTools[tool] = true
+
 		local activated = tool.Activated:Connect(function()
 			if not MISC.SuperPunch then return end
+
 			local multiplier = MISC.PunchMultiplier or 100
-			local myChar = player.Character
-			if not myChar then return end
-			local myRoot = myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso")
-			if not myRoot then return end
-			local best, bestDist = nil, 15
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= player and plr.Character then
-					local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-					local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
-					if hum and hum.Health > 0 and targetRoot then
-						local dist = (myRoot.Position - targetRoot.Position).Magnitude
-						if dist <= bestDist then
-							local dir = (targetRoot.Position - myRoot.Position).Unit
-							local dot = dir:Dot(myRoot.CFrame.LookVector)
-							if dot > 0.2 then best = plr; bestDist = dist end
+
+			local function getNearestTarget(maxDist)
+				local myChar2 = player.Character
+				if not myChar2 then return nil end
+				local myRoot2 = myChar2:FindFirstChild("HumanoidRootPart") or myChar2:FindFirstChild("Torso")
+				if not myRoot2 then return nil end
+
+				local best, bestDist = nil, maxDist or 15
+				for _, plr in ipairs(Players:GetPlayers()) do
+					if plr ~= player and plr.Character then
+						local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+						local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
+						if hum and hum.Health > 0 and targetRoot then
+							local dist = (myRoot2.Position - targetRoot.Position).Magnitude
+							if dist <= bestDist then
+								local dir = (targetRoot.Position - myRoot2.Position).Unit
+								local dot = dir:Dot(myRoot2.CFrame.LookVector)
+								if dot > 0.2 then
+									best = plr
+									bestDist = dist
+								end
+							end
 						end
 					end
 				end
+				return best
 			end
-			if not best then return end
-			local targetChar = best.Character
+
+			local target = getNearestTarget(15)
+			if not target then return end
+			local targetChar = target.Character
 			if not targetChar then return end
 			local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
 			if not targetHum or targetHum.Health <= 0 then return end
+
 			task.spawn(function()
 				for i = 1, multiplier do
 					if not MISC.SuperPunch then break end
-					if not best.Parent then break end
+					if not target.Parent then break end
 					local tHum = targetChar:FindFirstChildOfClass("Humanoid")
 					if not tHum or tHum.Health <= 0 then break end
-					pcall(function() tool:Activate() end)
+
+					pcall(function()
+						tool:Activate()
+					end)
+
 					pcall(function()
 						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
 						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
 					end)
+
 					local remotes = findAllDamageRemotes()
 					for _, remote in ipairs(remotes) do
 						pcall(function()
 							if remote:IsA("RemoteEvent") then
-								remote:FireServer(best)
-								remote:FireServer(best, targetHum)
+								remote:FireServer(target)
+								remote:FireServer(target, targetHum)
 								remote:FireServer(targetHum)
 								remote:FireServer(targetChar)
+								remote:FireServer(target.Character.HumanoidRootPart)
 							end
 						end)
 					end
+
 					task.wait(0.03)
 				end
 			end)
 		end)
+
 		tool.AncestryChanged:Connect(function()
 			if not tool.Parent then
 				punchedTools[tool] = nil
@@ -1363,17 +1588,78 @@ do
 	end
 
 	scanForPunchTools()
+
 	if player.Character then
-		player.Character.ChildAdded:Connect(function(c) if c:IsA("Tool") then hookPunchTool(c) end end)
+		player.Character.ChildAdded:Connect(function(c)
+			if c:IsA("Tool") then hookPunchTool(c) end
+		end)
 	end
 	player.CharacterAdded:Connect(function(c)
 		task.wait(0.5)
-		c.ChildAdded:Connect(function(ch) if ch:IsA("Tool") then hookPunchTool(ch) end end)
+		c.ChildAdded:Connect(function(ch)
+			if ch:IsA("Tool") then hookPunchTool(ch) end
+		end)
 		scanForPunchTools()
 	end)
+
 	local bp = player:FindFirstChildOfClass("Backpack")
-	if bp then bp.ChildAdded:Connect(function(c) if c:IsA("Tool") then hookPunchTool(c) end end) end
-	task.spawn(function() while true do task.wait(2); pcall(scanForPunchTools) end end)
+	if bp then
+		bp.ChildAdded:Connect(function(c)
+			if c:IsA("Tool") then hookPunchTool(c) end
+		end)
+	end
+
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			pcall(scanForPunchTools)
+		end
+	end)
+
+	-- ============================================
+	-- RAPID FIRE - Fixed: checks if mouse is over GUI to not interfere
+	-- ============================================
+	local function isMouseOverGui()
+		local mousePos = UIS:GetMouseLocation()
+		local guiObjects = playerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
+		for _, obj in ipairs(guiObjects) do
+			-- Check if it belongs to our BearHub GUI
+			local current = obj
+			while current do
+				if current == gui or current.Name == "BearHub" then
+					return true
+				end
+				current = current.Parent
+			end
+		end
+		return false
+	end
+
+	task.spawn(function()
+		while true do
+			if MISC.RapidFire and mbHeld[1] then
+				local rfLevel = MISC.RapidFireLevel or 20
+				if rfLevel < 20 then
+					-- Don't rapid fire if mouse is over GUI
+					if not isMouseOverGui() then
+						local delay2 = (rfLevel / 20) * 0.15
+						pcall(function()
+							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
+							task.wait(0.01)
+							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
+						end)
+						task.wait(math.max(delay2, 0.01))
+					else
+						task.wait(0.05)
+					end
+				else
+					task.wait(0.05)
+				end
+			else
+				task.wait(0.05)
+			end
+		end
+	end)
 end
 
 local healPlayer = _G.BearHub_healPlayer
@@ -1387,6 +1673,7 @@ local cpGrid, hueBar
 
 do
 	local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
+
 	main = Instance.new("Frame", gui)
 	main.Name = "Main"
 	main.Size = ORIGINAL_SIZE
@@ -1409,6 +1696,7 @@ do
 	bearIcon.Position = UDim2.new(0.5, -40, 0, 15)
 	bearIcon.BackgroundTransparency = 1
 	bearIcon.Image = BEAR_ICON
+	bearIcon.ImageColor3 = Color3.new(1, 1, 1)
 	bearIcon.ScaleType = Enum.ScaleType.Fit
 
 	local tabsFrame = Instance.new("Frame", sidebar)
@@ -1508,6 +1796,9 @@ do
 	cpCur.BorderSizePixel = 0
 	cpCur.ZIndex = 105
 	Instance.new("UICorner", cpCur).CornerRadius = UDim.new(1,0)
+	local cpCurStroke = Instance.new("UIStroke", cpCur)
+	cpCurStroke.Color = Color3.new(0,0,0)
+	cpCurStroke.Thickness = 1
 
 	hueBar = Instance.new("Frame", colorPickerGui)
 	hueBar.Size = UDim2.new(1,-20,0,20)
@@ -1735,6 +2026,9 @@ do
 		circle.AutoButtonColor = false
 		circle.BorderSizePixel = 0
 		Instance.new("UICorner", circle).CornerRadius = UDim.new(1,0)
+		local cs = Instance.new("UIStroke", circle)
+		cs.Color = Color3.fromRGB(80,80,90)
+		cs.Thickness = 2
 		circle.MouseButton1Click:Connect(function()
 			playClick()
 			openCP(circle.BackgroundColor3, function(nc)
@@ -1803,6 +2097,8 @@ do
 		hit.Text = ""
 		hit.ZIndex = 3
 		local drag = false
+		local lastSliderSoundTick = 0
+		local lastSliderVal = val
 		local function upd(x)
 			local ap = bg.AbsolutePosition
 			local as = bg.AbsoluteSize
@@ -1812,6 +2108,14 @@ do
 			knob.Position = UDim2.new(rx,-8,0.5,-8)
 			vl.Text = tostring(val) .. (suf or "")
 			if tbl and key then tbl[key] = val end
+			if val ~= lastSliderVal then
+				local now = tick()
+				if now - lastSliderSoundTick > 0.08 then
+					lastSliderSoundTick = now
+					playSlider()
+				end
+				lastSliderVal = val
+			end
 		end
 		hit.InputBegan:Connect(function(i)
 			if i.UserInputType == Enum.UserInputType.MouseButton1 then drag = true; upd(i.Position.X) end
@@ -1868,6 +2172,8 @@ do
 			ob.AutoButtonColor = false
 			ob.ZIndex = 51
 			ob.BorderSizePixel = 0
+			ob.MouseEnter:Connect(function() ob.BackgroundColor3 = Color3.fromRGB(50,50,65) end)
+			ob.MouseLeave:Connect(function() ob.BackgroundColor3 = Color3.fromRGB(35,35,45) end)
 			ob.MouseButton1Click:Connect(function()
 				playClick()
 				tbl[key] = opt
@@ -1882,13 +2188,20 @@ do
 		{"LPM (MB1)", function() return mbHeld[1] end},
 		{"PPM (MB2)", function() return mbHeld[2] end},
 		{"Scroll (MB3)", function() return mbHeld[3] end},
+		{"Side Back (MB4)", function() return mbHeld[4] end},
+		{"Side Front (MB5)", function() return mbHeld[5] end},
 	}
 
 	local KB_KEYS = {
 		Enum.KeyCode.E, Enum.KeyCode.F, Enum.KeyCode.G, Enum.KeyCode.H,
 		Enum.KeyCode.Q, Enum.KeyCode.R, Enum.KeyCode.T, Enum.KeyCode.X,
 		Enum.KeyCode.Z, Enum.KeyCode.C, Enum.KeyCode.V, Enum.KeyCode.B,
-		Enum.KeyCode.LeftAlt, Enum.KeyCode.LeftControl, Enum.KeyCode.LeftShift,
+		Enum.KeyCode.CapsLock, Enum.KeyCode.Tab,
+		Enum.KeyCode.LeftAlt, Enum.KeyCode.RightAlt,
+		Enum.KeyCode.LeftControl, Enum.KeyCode.RightControl,
+		Enum.KeyCode.LeftShift,
+		Enum.KeyCode.F1, Enum.KeyCode.F2, Enum.KeyCode.F3, Enum.KeyCode.F4,
+		Enum.KeyCode.F5, Enum.KeyCode.F6, Enum.KeyCode.F7, Enum.KeyCode.F8,
 	}
 
 	for _, kc in ipairs(KB_KEYS) do
@@ -1947,6 +2260,9 @@ do
 		ddFrame.ZIndex = 200
 		ddFrame.ClipsDescendants = true
 		Instance.new("UICorner", ddFrame).CornerRadius = UDim.new(0,6)
+		local dds = Instance.new("UIStroke", ddFrame)
+		dds.Color = PURPLE
+		dds.Thickness = 1.5
 		local ddScroll = Instance.new("ScrollingFrame", ddFrame)
 		ddScroll.Size = UDim2.new(1,0,1,0)
 		ddScroll.BackgroundTransparency = 1
@@ -1968,6 +2284,8 @@ do
 		noneBtn.ZIndex = 202
 		noneBtn.BorderSizePixel = 0
 		noneBtn.LayoutOrder = 0
+		noneBtn.MouseEnter:Connect(function() noneBtn.BackgroundColor3 = Color3.fromRGB(50,50,65) end)
+		noneBtn.MouseLeave:Connect(function() noneBtn.BackgroundColor3 = Color3.fromRGB(30,30,38) end)
 		noneBtn.MouseButton1Click:Connect(function()
 			playClick()
 			tbl.KeybindName = "NONE"
@@ -1990,6 +2308,8 @@ do
 			ob.ZIndex = 202
 			ob.BorderSizePixel = 0
 			ob.LayoutOrder = i
+			ob.MouseEnter:Connect(function() ob.BackgroundColor3 = Color3.fromRGB(50,50,65) end)
+			ob.MouseLeave:Connect(function() ob.BackgroundColor3 = Color3.fromRGB(30,30,38) end)
 			ob.MouseButton1Click:Connect(function()
 				playClick()
 				tbl.KeybindName = name
@@ -2025,6 +2345,8 @@ do
 		btn.AutoButtonColor = false
 		btn.LayoutOrder = order or 0
 		Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+		btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(120, 90, 220) end)
+		btn.MouseLeave:Connect(function() btn.BackgroundColor3 = PURPLE end)
 		btn.MouseButton1Click:Connect(function()
 			playClick()
 			if callback then pcall(callback) end
@@ -2047,7 +2369,7 @@ do
 end
 
 --============================================================
--- BLOK 8: STRONY GUI
+-- BLOK 8: STRONY GUI (Visualization, AimAssistance)
 --============================================================
 do
 	local vizPage = createPage("Visualization")
@@ -2067,7 +2389,7 @@ do
 	vlp.PaddingRight = UDim.new(0,5)
 
 	local vR = Instance.new("Frame", vizPage)
-	vR.Size = UDim2.new(0.48,0,0,380)
+	vR.Size = UDim2.new(0.48,0,0,360)
 	vR.Position = UDim2.new(0.5,5,0,5)
 	vR.BackgroundColor3 = DARK
 	vR.BorderSizePixel = 0
@@ -2227,6 +2549,7 @@ do
 	mkSlider(hbL, "Size", 0, 30, 0, "", HITBOX, "Size", 4)
 
 	local selSub = nil
+
 	local function switchSub(name)
 		tbPage.Visible = (name == "TriggerBot")
 		abPage.Visible = (name == "Aimbot")
@@ -2252,7 +2575,10 @@ do
 		ul.Visible = false
 		btn.MouseButton1Click:Connect(function()
 			playClick()
-			if selSub then selSub.btn.TextColor3 = Color3.fromRGB(120,120,130); selSub.ul.Visible = false end
+			if selSub then
+				selSub.btn.TextColor3 = Color3.fromRGB(120,120,130)
+				selSub.ul.Visible = false
+			end
 			selSub = {btn = btn, ul = ul}
 			btn.TextColor3 = Color3.new(1,1,1)
 			ul.Visible = true
@@ -2261,18 +2587,22 @@ do
 		return {btn = btn, ul = ul}
 	end
 
-	local s1 = mkSB("TriggerBot", 1); mkSB("Aimbot", 2); mkSB("Hitbox", 3)
-	selSub = s1; s1.btn.TextColor3 = Color3.new(1,1,1); s1.ul.Visible = true
+	local s1 = mkSB("TriggerBot", 1)
+	mkSB("Aimbot", 2)
+	mkSB("Hitbox", 3)
+	selSub = s1
+	s1.btn.TextColor3 = Color3.new(1,1,1)
+	s1.ul.Visible = true
 end
 
 --============================================================
--- BLOK 9: MISC PAGE + PLAYERS PAGE
+-- BLOK 9: MISC PAGE + PLAYERS PAGE + SETTINGS
 --============================================================
 do
 	local miscPage = createPage("Miscellaneous")
 
 	local mL = Instance.new("Frame", miscPage)
-	mL.Size = UDim2.new(0.48,0,0,680)
+	mL.Size = UDim2.new(0.48,0,0,700)
 	mL.Position = UDim2.new(0,10,0,5)
 	mL.BackgroundColor3 = DARK
 	mL.BorderSizePixel = 0
@@ -2292,14 +2622,14 @@ do
 	mkCheck(mL, "Infinity Ammo", MISC, "InfAmmo", 5)
 
 	mkSection(mL, "Movement", 6)
-	mkCheck(mL, "NoClip (Fly)", MISC, "NoClip", 7)
+	mkCheck(mL, "NoClip (Fly + No Collision)", MISC, "NoClip", 7)
 	mkSlider(mL, "NoClip Fly Speed", 1, 100, 30, " m/s", MISC, "NoClipSpeed", 8)
-	mkCheck(mL, "WalkSpeed", MISC, "WalkSpeedEnabled", 9)
-	mkSlider(mL, "WalkSpeed Value", 0, 50, 16, "", MISC, "WalkSpeedValue", 10)
-	mkCheck(mL, "JumpPower", MISC, "JumpPowerEnabled", 11)
-	mkSlider(mL, "JumpPower", 1, 100, 50, "", MISC, "JumpPowerValue", 12)
+	mkCheck(mL, "Walk Speed", MISC, "WalkSpeedEnabled", 9)
+	mkSlider(mL, "Walk Speed Value", 0, 250, 16, " m/s", MISC, "WalkSpeed", 10)
+	mkCheck(mL, "Jump Power", MISC, "JumpPowerEnabled", 11)
+	mkSlider(mL, "Jump Power Value", 1, 500, 50, " m", MISC, "JumpPower", 12)
 
-	mkSection(mL, "Super Punch", 13)
+	mkSection(mL, "Super Punch (Fist)", 13)
 	mkCheck(mL, "Enable Super Punch", MISC, "SuperPunch", 14)
 	mkSlider(mL, "Punch Multiplier", 1, 200, 100, "x", MISC, "PunchMultiplier", 15)
 
@@ -2362,6 +2692,7 @@ do
 	plScroll.CanvasSize = UDim2.new(0,0,0,0)
 	plScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	plScroll.BorderSizePixel = 0
+
 	local plScrollLayout = Instance.new("UIListLayout", plScroll)
 	plScrollLayout.Padding = UDim.new(0,4)
 	plScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -2383,9 +2714,23 @@ do
 	plInfoTitle.TextSize = 14
 	plInfoTitle.TextXAlignment = Enum.TextXAlignment.Left
 
+	local plAvatarFrame = Instance.new("Frame", plInfoFrame)
+	plAvatarFrame.Size = UDim2.new(0,60,0,60)
+	plAvatarFrame.Position = UDim2.new(0.5,-30,0,35)
+	plAvatarFrame.BackgroundColor3 = Color3.fromRGB(50,50,60)
+	plAvatarFrame.BorderSizePixel = 0
+	Instance.new("UICorner", plAvatarFrame).CornerRadius = UDim.new(1,0)
+
+	local plAvatar = Instance.new("ImageLabel", plAvatarFrame)
+	plAvatar.Size = UDim2.new(1,0,1,0)
+	plAvatar.BackgroundTransparency = 1
+	plAvatar.Image = ""
+	plAvatar.ScaleType = Enum.ScaleType.Crop
+	Instance.new("UICorner", plAvatar).CornerRadius = UDim.new(1,0)
+
 	local plNameLbl = Instance.new("TextLabel", plInfoFrame)
 	plNameLbl.Size = UDim2.new(1,-20,0,18)
-	plNameLbl.Position = UDim2.new(0,10,0,40)
+	plNameLbl.Position = UDim2.new(0,10,0,100)
 	plNameLbl.BackgroundTransparency = 1
 	plNameLbl.Text = "No player selected"
 	plNameLbl.TextColor3 = Color3.new(1,1,1)
@@ -2395,7 +2740,7 @@ do
 
 	local plUsernameLbl = Instance.new("TextLabel", plInfoFrame)
 	plUsernameLbl.Size = UDim2.new(1,-20,0,15)
-	plUsernameLbl.Position = UDim2.new(0,10,0,60)
+	plUsernameLbl.Position = UDim2.new(0,10,0,119)
 	plUsernameLbl.BackgroundTransparency = 1
 	plUsernameLbl.Text = ""
 	plUsernameLbl.TextColor3 = Color3.fromRGB(150,150,160)
@@ -2403,13 +2748,34 @@ do
 	plUsernameLbl.TextSize = 11
 	plUsernameLbl.TextXAlignment = Enum.TextXAlignment.Center
 
+	local plIdLbl = Instance.new("TextLabel", plInfoFrame)
+	plIdLbl.Size = UDim2.new(0.5,-15,0,15)
+	plIdLbl.Position = UDim2.new(0,10,0,136)
+	plIdLbl.BackgroundTransparency = 1
+	plIdLbl.Text = ""
+	plIdLbl.TextColor3 = Color3.fromRGB(150,150,160)
+	plIdLbl.Font = Enum.Font.Gotham
+	plIdLbl.TextSize = 11
+	plIdLbl.TextXAlignment = Enum.TextXAlignment.Center
+
+	local plDistLbl = Instance.new("TextLabel", plInfoFrame)
+	plDistLbl.Size = UDim2.new(0.5,-15,0,15)
+	plDistLbl.Position = UDim2.new(0.5,5,0,136)
+	plDistLbl.BackgroundTransparency = 1
+	plDistLbl.Text = ""
+	plDistLbl.TextColor3 = Color3.fromRGB(100, 200, 255)
+	plDistLbl.Font = Enum.Font.GothamBold
+	plDistLbl.TextSize = 11
+	plDistLbl.TextXAlignment = Enum.TextXAlignment.Center
+
 	local row1 = Instance.new("Frame", plInfoFrame)
 	row1.Size = UDim2.new(1,-20,0,28)
-	row1.Position = UDim2.new(0,10,0,90)
+	row1.Position = UDim2.new(0,10,0,160)
 	row1.BackgroundTransparency = 1
 
 	local plSpectateBtn = Instance.new("TextButton", row1)
 	plSpectateBtn.Size = UDim2.new(0.5,-3,1,0)
+	plSpectateBtn.Position = UDim2.new(0,0,0,0)
 	plSpectateBtn.BackgroundColor3 = PURPLE
 	plSpectateBtn.BorderSizePixel = 0
 	plSpectateBtn.Text = "Spectate"
@@ -2433,11 +2799,12 @@ do
 
 	local row2 = Instance.new("Frame", plInfoFrame)
 	row2.Size = UDim2.new(1,-20,0,28)
-	row2.Position = UDim2.new(0,10,0,125)
+	row2.Position = UDim2.new(0,10,0,193)
 	row2.BackgroundTransparency = 1
 
 	local plTeleportBtn = Instance.new("TextButton", row2)
 	plTeleportBtn.Size = UDim2.new(0.5,-3,1,0)
+	plTeleportBtn.Position = UDim2.new(0,0,0,0)
 	plTeleportBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
 	plTeleportBtn.BorderSizePixel = 0
 	plTeleportBtn.Text = "Teleport"
@@ -2461,7 +2828,7 @@ do
 
 	local plSwitchBtn = Instance.new("TextButton", plInfoFrame)
 	plSwitchBtn.Size = UDim2.new(1,-20,0,28)
-	plSwitchBtn.Position = UDim2.new(0,10,0,160)
+	plSwitchBtn.Position = UDim2.new(0,10,0,226)
 	plSwitchBtn.BackgroundColor3 = Color3.fromRGB(220, 150, 50)
 	plSwitchBtn.BorderSizePixel = 0
 	plSwitchBtn.Text = "Switch Places"
@@ -2490,26 +2857,74 @@ do
 		if duration then
 			task.spawn(function()
 				task.wait(duration)
-				if plStatusLbl.Text == text then plStatusLbl.Text = "" end
+				if plStatusLbl.Text == text then
+					plStatusLbl.Text = ""
+				end
 			end)
 		end
+	end
+
+	local function getDistanceToPlayer(target)
+		if not target or not target.Character then return nil end
+		local myChar = player.Character
+		if not myChar then return nil end
+		local myRoot = myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso")
+		local targetRoot = target.Character:FindFirstChild("HumanoidRootPart") or target.Character:FindFirstChild("Torso")
+		if not myRoot or not targetRoot then return nil end
+		return math.floor((myRoot.Position - targetRoot.Position).Magnitude)
 	end
 
 	local function updateSelectedPlayerInfo()
 		if selectedPlayer and selectedPlayer.Parent then
 			plNameLbl.Text = selectedPlayer.DisplayName or selectedPlayer.Name
 			plUsernameLbl.Text = "@" .. selectedPlayer.Name
+			plIdLbl.Text = "ID: " .. selectedPlayer.UserId
+			local dist = getDistanceToPlayer(selectedPlayer)
+			if dist then
+				plDistLbl.Text = "Distance: " .. dist .. "m"
+			else
+				plDistLbl.Text = "Distance: N/A"
+			end
+			pcall(function()
+				local content = Players:GetUserThumbnailAsync(selectedPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+				plAvatar.Image = content
+			end)
+			if SPECTATE.Active and SPECTATE.Target == selectedPlayer then
+				plStatusLbl.Text = "SPECTATING"
+				plStatusLbl.TextColor3 = Color3.fromRGB(100, 200, 100)
+			end
 		else
 			plNameLbl.Text = "No player selected"
 			plUsernameLbl.Text = ""
+			plIdLbl.Text = ""
+			plDistLbl.Text = ""
+			plAvatar.Image = ""
 			plStatusLbl.Text = ""
 		end
 	end
 
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			if selectedPlayer and selectedPlayer.Parent then
+				local dist = getDistanceToPlayer(selectedPlayer)
+				if dist then
+					plDistLbl.Text = "Distance: " .. dist .. "m"
+				else
+					plDistLbl.Text = "Distance: N/A"
+				end
+			end
+		end
+	end)
+
 	local function selectPlayer(plr)
 		selectedPlayer = plr
 		for p, data in pairs(playerButtons) do
-			data.btn.BackgroundColor3 = (p == plr) and Color3.fromRGB(70, 50, 140) or Color3.fromRGB(40,40,50)
+			if p == plr then
+				data.btn.BackgroundColor3 = Color3.fromRGB(70, 50, 140)
+			else
+				data.btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+			end
 		end
 		updateSelectedPlayerInfo()
 	end
@@ -2525,27 +2940,67 @@ do
 		btn.LayoutOrder = plr.UserId
 		Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
 
+		local avatarFrame = Instance.new("Frame", btn)
+		avatarFrame.Size = UDim2.new(0,32,0,32)
+		avatarFrame.Position = UDim2.new(0,5,0.5,-16)
+		avatarFrame.BackgroundColor3 = Color3.fromRGB(50,50,60)
+		avatarFrame.BorderSizePixel = 0
+		Instance.new("UICorner", avatarFrame).CornerRadius = UDim.new(1,0)
+
+		local avatar = Instance.new("ImageLabel", avatarFrame)
+		avatar.Size = UDim2.new(1,0,1,0)
+		avatar.BackgroundTransparency = 1
+		avatar.Image = ""
+		avatar.ScaleType = Enum.ScaleType.Crop
+		Instance.new("UICorner", avatar).CornerRadius = UDim.new(1,0)
+
+		task.spawn(function()
+			pcall(function()
+				local content = Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size48x48)
+				if avatar and avatar.Parent then
+					avatar.Image = content
+				end
+			end)
+		end)
+
 		local nameLbl = Instance.new("TextLabel", btn)
-		nameLbl.Size = UDim2.new(1,-10,0,18)
-		nameLbl.Position = UDim2.new(0,5,0,3)
+		nameLbl.Size = UDim2.new(1,-45,0,18)
+		nameLbl.Position = UDim2.new(0,42,0,3)
 		nameLbl.BackgroundTransparency = 1
 		nameLbl.Text = plr.DisplayName or plr.Name
 		nameLbl.TextColor3 = Color3.new(1,1,1)
 		nameLbl.Font = Enum.Font.GothamBold
 		nameLbl.TextSize = 13
 		nameLbl.TextXAlignment = Enum.TextXAlignment.Left
+		nameLbl.TextTruncate = Enum.TextTruncate.AtEnd
 
 		local userLbl = Instance.new("TextLabel", btn)
-		userLbl.Size = UDim2.new(1,-10,0,16)
-		userLbl.Position = UDim2.new(0,5,0,21)
+		userLbl.Size = UDim2.new(1,-45,0,16)
+		userLbl.Position = UDim2.new(0,42,0,21)
 		userLbl.BackgroundTransparency = 1
 		userLbl.Text = "@" .. plr.Name
 		userLbl.TextColor3 = Color3.fromRGB(150,150,160)
 		userLbl.Font = Enum.Font.Gotham
 		userLbl.TextSize = 11
 		userLbl.TextXAlignment = Enum.TextXAlignment.Left
+		userLbl.TextTruncate = Enum.TextTruncate.AtEnd
 
-		btn.MouseButton1Click:Connect(function() playClick(); selectPlayer(plr) end)
+		btn.MouseEnter:Connect(function()
+			if selectedPlayer ~= plr then
+				btn.BackgroundColor3 = Color3.fromRGB(50,50,65)
+			end
+		end)
+		btn.MouseLeave:Connect(function()
+			if selectedPlayer ~= plr then
+				btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+			end
+		end)
+
+		btn.MouseButton1Click:Connect(function()
+			playClick()
+			selectPlayer(plr)
+		end)
+
 		playerButtons[plr] = {btn = btn}
 	end
 
@@ -2554,19 +3009,28 @@ do
 			pcall(function() playerButtons[plr].btn:Destroy() end)
 			playerButtons[plr] = nil
 		end
-		if selectedPlayer == plr then selectedPlayer = nil; updateSelectedPlayerInfo() end
+		if selectedPlayer == plr then
+			selectedPlayer = nil
+			updateSelectedPlayerInfo()
+		end
 	end
 
 	local function refreshPlayerList()
 		local toRemove = {}
 		for plr in pairs(playerButtons) do
-			if not plr or not plr.Parent then table.insert(toRemove, plr) end
+			if not plr or not plr.Parent then
+				table.insert(toRemove, plr)
+			end
 		end
-		for _, plr in ipairs(toRemove) do removePlayerButton(plr) end
+		for _, plr in ipairs(toRemove) do
+			removePlayerButton(plr)
+		end
 		local count = 0
 		for _, plr in ipairs(Players:GetPlayers()) do
 			if plr ~= player then
-				if not playerButtons[plr] then createPlayerButton(plr) end
+				if not playerButtons[plr] then
+					createPlayerButton(plr)
+				end
 				count = count + 1
 			end
 		end
@@ -2577,47 +3041,115 @@ do
 
 	Players.PlayerAdded:Connect(function(plr)
 		task.wait(0.5)
-		if plr ~= player and plr.Parent then pcall(refreshPlayerList) end
+		if plr ~= player and plr.Parent then
+			pcall(refreshPlayerList)
+		end
 	end)
+
 	Players.PlayerRemoving:Connect(function(plr)
 		removePlayerButton(plr)
 		task.wait(0.1)
 		pcall(refreshPlayerList)
 	end)
-	task.spawn(function() task.wait(1); pcall(refreshPlayerList) end)
-	task.spawn(function() while true do task.wait(3); pcall(refreshPlayerList) end end)
 
+	task.spawn(function()
+		task.wait(1)
+		pcall(refreshPlayerList)
+	end)
+
+	task.spawn(function()
+		while true do
+			task.wait(3)
+			pcall(refreshPlayerList)
+		end
+	end)
+
+	plSpectateBtn.MouseEnter:Connect(function()
+		plSpectateBtn.BackgroundColor3 = Color3.fromRGB(120, 90, 220)
+	end)
+	plSpectateBtn.MouseLeave:Connect(function()
+		plSpectateBtn.BackgroundColor3 = PURPLE
+	end)
 	plSpectateBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
 			startSpectate(selectedPlayer)
 			showStatus("SPECTATING", Color3.fromRGB(100, 200, 100))
-		else showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2) end
+		else
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
+		end
+	end)
+
+	plUnspectateBtn.MouseEnter:Connect(function()
+		plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(210, 80, 80)
+	end)
+	plUnspectateBtn.MouseLeave:Connect(function()
+		plUnspectateBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
 	end)
 	plUnspectateBtn.MouseButton1Click:Connect(function()
-		playClick(); stopSpectate()
-		showStatus("Stopped", Color3.fromRGB(150, 150, 160), 1.5)
+		playClick()
+		stopSpectate()
+		showStatus("Stopped spectating", Color3.fromRGB(150, 150, 160), 1.5)
+	end)
+
+	plTeleportBtn.MouseEnter:Connect(function()
+		plTeleportBtn.BackgroundColor3 = Color3.fromRGB(80, 160, 240)
+	end)
+	plTeleportBtn.MouseLeave:Connect(function()
+		plTeleportBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
 	end)
 	plTeleportBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
 			local ok, msg = teleportTo(selectedPlayer)
-			showStatus(msg, ok and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(255, 100, 100), 2)
-		else showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2) end
+			if ok then
+				showStatus(msg, Color3.fromRGB(100, 200, 255), 2)
+			else
+				showStatus(msg or "Teleport failed", Color3.fromRGB(255, 100, 100), 2)
+			end
+		else
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
+		end
+	end)
+
+	plBringBtn.MouseEnter:Connect(function()
+		plBringBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 120)
+	end)
+	plBringBtn.MouseLeave:Connect(function()
+		plBringBtn.BackgroundColor3 = Color3.fromRGB(80, 180, 100)
 	end)
 	plBringBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
 			local ok, msg = bringPlayer(selectedPlayer)
-			showStatus(msg, ok and Color3.fromRGB(120, 220, 130) or Color3.fromRGB(255, 100, 100), 2)
-		else showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2) end
+			if ok then
+				showStatus(msg, Color3.fromRGB(120, 220, 130), 2)
+			else
+				showStatus(msg or "Bring failed", Color3.fromRGB(255, 100, 100), 2)
+			end
+		else
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
+		end
+	end)
+
+	plSwitchBtn.MouseEnter:Connect(function()
+		plSwitchBtn.BackgroundColor3 = Color3.fromRGB(240, 170, 70)
+	end)
+	plSwitchBtn.MouseLeave:Connect(function()
+		plSwitchBtn.BackgroundColor3 = Color3.fromRGB(220, 150, 50)
 	end)
 	plSwitchBtn.MouseButton1Click:Connect(function()
 		playClick()
 		if selectedPlayer and selectedPlayer.Parent then
 			local ok, msg = switchPlaces(selectedPlayer)
-			showStatus(msg, ok and Color3.fromRGB(255, 180, 80) or Color3.fromRGB(255, 100, 100), 2)
-		else showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2) end
+			if ok then
+				showStatus(msg, Color3.fromRGB(255, 180, 80), 2)
+			else
+				showStatus(msg or "Switch failed", Color3.fromRGB(255, 100, 100), 2)
+			end
+		else
+			showStatus("Select a player first!", Color3.fromRGB(255, 100, 100), 2)
+		end
 	end)
 
 	local settingsPage = createPage("Settings")
@@ -2658,9 +3190,18 @@ local function makeTabBtn(name, order)
 	btn.AutoButtonColor = false
 	btn.LayoutOrder = order
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+	btn.MouseEnter:Connect(function()
+		if selTab ~= btn then btn.BackgroundTransparency = 0.7 end
+	end)
+	btn.MouseLeave:Connect(function()
+		if selTab ~= btn then btn.BackgroundTransparency = 1 end
+	end)
 	btn.MouseButton1Click:Connect(function()
 		playClick()
-		if selTab then selTab.BackgroundTransparency = 1; selTab.TextColor3 = Color3.fromRGB(150,150,160) end
+		if selTab then
+			selTab.BackgroundTransparency = 1
+			selTab.TextColor3 = Color3.fromRGB(150,150,160)
+		end
 		selTab = btn
 		btn.BackgroundTransparency = 0.5
 		btn.TextColor3 = Color3.new(1,1,1)
@@ -2688,6 +3229,7 @@ miniBall.Position = UDim2.new(0,40,0.5,-30)
 miniBall.BackgroundColor3 = Color3.fromRGB(30, 25, 30)
 miniBall.BorderSizePixel = 0
 miniBall.Image = BEAR_ICON
+miniBall.ImageColor3 = Color3.new(1, 1, 1)
 miniBall.ScaleType = Enum.ScaleType.Fit
 miniBall.AutoButtonColor = false
 miniBall.Visible = false
@@ -2700,25 +3242,55 @@ local TW = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
 local function minimize()
 	if animating or minimized then return end
-	animating = true; minimized = true; playClick()
-	local ap = main.AbsolutePosition; local as = main.AbsoluteSize
-	local cx = ap.X + as.X/2; local cy = ap.Y + as.Y/2
-	local t = TweenService:Create(main, TW, {Size=UDim2.new(0,0,0,0), Position=UDim2.new(0,cx,0,cy), BackgroundTransparency=1})
+	animating = true
+	minimized = true
+	playClick()
+	local ap = main.AbsolutePosition
+	local as = main.AbsoluteSize
+	local cx = ap.X + as.X/2
+	local cy = ap.Y + as.Y/2
+	local t = TweenService:Create(main, TW, {
+		Size = UDim2.new(0,0,0,0),
+		Position = UDim2.new(0, cx, 0, cy),
+		BackgroundTransparency = 1,
+	})
 	t:Play()
-	miniBall.Position = UDim2.new(0,cx-30,0,cy-30); miniBall.Size = UDim2.new(0,0,0,0); miniBall.Visible = true
-	TweenService:Create(miniBall, TW, {Size=BALL_SIZE}):Play()
-	t.Completed:Connect(function() main.Visible = false; main.BackgroundTransparency = 0; animating = false end)
+	miniBall.Position = UDim2.new(0, cx-30, 0, cy-30)
+	miniBall.Size = UDim2.new(0,0,0,0)
+	miniBall.Visible = true
+	TweenService:Create(miniBall, TW, {Size = BALL_SIZE}):Play()
+	t.Completed:Connect(function()
+		main.Visible = false
+		main.BackgroundTransparency = 0
+		animating = false
+	end)
 end
 
 local function restore()
 	if animating or not minimized then return end
-	animating = true; minimized = false; playClick()
-	local ap = miniBall.AbsolutePosition; local as = miniBall.AbsoluteSize
-	local cx = ap.X + as.X/2; local cy = ap.Y + as.Y/2
-	main.Size = UDim2.new(0,0,0,0); main.Position = UDim2.new(0,cx,0,cy); main.BackgroundTransparency = 1; main.Visible = true
-	TweenService:Create(main, TW, {Size=ORIGINAL_SIZE, Position=UDim2.new(0,cx-350,0,cy-225), BackgroundTransparency=0}):Play()
-	local t2 = TweenService:Create(miniBall, TW, {Size=UDim2.new(0,0,0,0)}); t2:Play()
-	t2.Completed:Connect(function() miniBall.Visible = false; miniBall.Size = BALL_SIZE; animating = false end)
+	animating = true
+	minimized = false
+	playClick()
+	local ap = miniBall.AbsolutePosition
+	local as = miniBall.AbsoluteSize
+	local cx = ap.X + as.X/2
+	local cy = ap.Y + as.Y/2
+	main.Size = UDim2.new(0,0,0,0)
+	main.Position = UDim2.new(0, cx, 0, cy)
+	main.BackgroundTransparency = 1
+	main.Visible = true
+	TweenService:Create(main, TW, {
+		Size = ORIGINAL_SIZE,
+		Position = UDim2.new(0, cx-350, 0, cy-225),
+		BackgroundTransparency = 0,
+	}):Play()
+	local t2 = TweenService:Create(miniBall, TW, {Size = UDim2.new(0,0,0,0)})
+	t2:Play()
+	t2.Completed:Connect(function()
+		miniBall.Visible = false
+		miniBall.Size = BALL_SIZE
+		animating = false
+	end)
 end
 
 UIS.InputBegan:Connect(function(inp, gp)
@@ -2731,11 +3303,14 @@ end)
 local dragging = false
 local dragStart = nil
 local startPos = nil
+local mainDragMoved = false
 
 sidebar.InputBegan:Connect(function(i)
 	if i.UserInputType == Enum.UserInputType.MouseButton1 then
 		dragging = true
-		dragStart = i.Position; startPos = main.Position
+		mainDragMoved = false
+		dragStart = i.Position
+		startPos = main.Position
 	end
 end)
 
@@ -2747,8 +3322,10 @@ local lastClickTime = 0
 
 miniBall.InputBegan:Connect(function(i)
 	if i.UserInputType == Enum.UserInputType.MouseButton1 then
-		ballDrag = true; ballMoved = false
-		ballStart = i.Position; ballPos = miniBall.Position
+		ballDrag = true
+		ballMoved = false
+		ballStart = i.Position
+		ballPos = miniBall.Position
 	end
 end)
 
@@ -2756,15 +3333,30 @@ UIS.InputChanged:Connect(function(inp)
 	if inp.UserInputType == Enum.UserInputType.MouseMovement then
 		if dragging and dragStart and startPos then
 			local d = inp.Position - dragStart
+			if d.Magnitude > 3 then
+				if not mainDragMoved then
+					mainDragMoved = true
+					startDragSound()
+				end
+			end
 			main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
 		end
 		if ballDrag and ballStart and ballPos then
 			local d = inp.Position - ballStart
-			if d.Magnitude > 3 then ballMoved = true end
+			if d.Magnitude > 3 then
+				if not ballMoved then
+					ballMoved = true
+					startDragSound()
+				end
+			end
 			miniBall.Position = UDim2.new(ballPos.X.Scale, ballPos.X.Offset + d.X, ballPos.Y.Scale, ballPos.Y.Offset + d.Y)
 		end
-		if _G.BearHub_canvasDrag then _G.BearHub_updCPValues(inp.Position.X, inp.Position.Y, "canvas") end
-		if _G.BearHub_hueDrag then _G.BearHub_updCPValues(inp.Position.X, inp.Position.Y, "hue") end
+		if _G.BearHub_canvasDrag then
+			_G.BearHub_updCPValues(inp.Position.X, inp.Position.Y, "canvas")
+		end
+		if _G.BearHub_hueDrag then
+			_G.BearHub_updCPValues(inp.Position.X, inp.Position.Y, "hue")
+		end
 		for _, s in ipairs(_G.BearHub_allSliders) do
 			if s.isDragging() then s.update(inp.Position.X) end
 		end
@@ -2773,15 +3365,23 @@ end)
 
 UIS.InputEnded:Connect(function(inp)
 	if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+		if dragging and mainDragMoved then stopDragSound() end
 		dragging = false
-		_G.BearHub_canvasDrag = false; _G.BearHub_hueDrag = false
+		mainDragMoved = false
+		_G.BearHub_canvasDrag = false
+		_G.BearHub_hueDrag = false
 		for _, s in ipairs(_G.BearHub_allSliders) do s.setDrag(false) end
 		if ballDrag then
+			if ballMoved then stopDragSound() end
 			ballDrag = false
 			if not ballMoved then
 				local now = tick()
-				if now - lastClickTime < 0.35 then restore(); lastClickTime = 0
-				else lastClickTime = now end
+				if now - lastClickTime < 0.35 then
+					restore()
+					lastClickTime = 0
+				else
+					lastClickTime = now
+				end
 			end
 		end
 	end
