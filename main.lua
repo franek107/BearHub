@@ -31,6 +31,7 @@ local ESP = {
 	HealthBar = {Enabled=false, Color=Color3.fromRGB(0,255,0)},
 	Distance = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
 	Snaplines = {Enabled=false, Color=Color3.fromRGB(100,70,200)},
+	Inventory = {Enabled=false, Color=Color3.fromRGB(255,200,100)},
 }
 
 local FOV_SCALE_TRIGGER = 1
@@ -53,7 +54,7 @@ local AIMBOT = {
 }
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
-local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false, NoClip = false, NoClipSpeed = 30, SuperPunch = false, PunchMultiplier = 100}
+local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false, NoClip = false, NoClipSpeed = 30, SuperPunch = false, PunchMultiplier = 100, RapidFire = false, RapidFireLevel = 20}
 local SPECTATE = {Target = nil, Active = false}
 
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
@@ -429,6 +430,28 @@ do
 		f.Rotation = math.deg(math.atan2(dy, dx))
 	end
 
+	local function getPlayerInventory(plr)
+		local items = {}
+		-- Check character for equipped tools
+		if plr.Character then
+			for _, child in ipairs(plr.Character:GetChildren()) do
+				if child:IsA("Tool") then
+					table.insert(items, child.Name)
+				end
+			end
+		end
+		-- Check backpack
+		local bp = plr:FindFirstChildOfClass("Backpack")
+		if bp then
+			for _, child in ipairs(bp:GetChildren()) do
+				if child:IsA("Tool") then
+					table.insert(items, child.Name)
+				end
+			end
+		end
+		return items
+	end
+
 	local function createESPData(plr)
 		local h = Instance.new("Folder", espGui)
 		h.Name = plr.Name
@@ -439,6 +462,7 @@ do
 			skeleton = {}, snapline = makeLine(h),
 			healthBg = makeLine(h), healthFill = makeLine(h),
 			name = makeText(h, 14), id = makeText(h, 12), distance = makeText(h, 12),
+			inventory = makeText(h, 11),
 		}
 		for i = 1, 12 do d.skeleton[i] = makeLine(h) end
 		espObjects[plr] = d
@@ -508,6 +532,22 @@ do
 		{"Torso","Left Leg"},{"Torso","Right Leg"},
 	}
 
+	-- Cache inventory to avoid scanning every frame
+	local inventoryCache = {}
+	local inventoryCacheTick = {}
+	local INVENTORY_CACHE_TIME = 1.0
+
+	local function getCachedInventory(plr)
+		local now = tick()
+		if inventoryCache[plr] and inventoryCacheTick[plr] and (now - inventoryCacheTick[plr]) < INVENTORY_CACHE_TIME then
+			return inventoryCache[plr]
+		end
+		local items = getPlayerInventory(plr)
+		inventoryCache[plr] = items
+		inventoryCacheTick[plr] = now
+		return items
+	end
+
 	local function updateESP()
 		Camera = workspace.CurrentCamera
 		if not Camera then return end
@@ -515,6 +555,13 @@ do
 		for _, p in ipairs(Players:GetPlayers()) do cur[p] = true end
 		for plr in pairs(espObjects) do
 			if not cur[plr] then clearESP(plr) end
+		end
+		-- Clean inventory cache for removed players
+		for plr in pairs(inventoryCache) do
+			if not cur[plr] then
+				inventoryCache[plr] = nil
+				inventoryCacheTick[plr] = nil
+			end
 		end
 		if not ESP.Enabled then
 			for _, d in pairs(espObjects) do hideAll(d) end
@@ -582,6 +629,10 @@ do
 									else
 										for _, f in pairs({d.boxTop,d.boxBot,d.boxLeft,d.boxRight}) do f.Visible = false end
 									end
+
+									-- Calculate bottom offset for stacking text below player
+									local bottomOffset = 0
+
 									if ESP.Name.Enabled then
 										d.name.Text = plr.DisplayName or plr.Name
 										d.name.Position = UDim2.new(0, sp.X, 0, tY - 15)
@@ -594,12 +645,40 @@ do
 										d.id.TextColor3 = ESP.ID.Color
 										d.id.Visible = true
 									else d.id.Visible = false end
+
+									-- Distance goes below box
 									if ESP.Distance.Enabled then
 										d.distance.Text = math.floor(dist) .. "m"
-										d.distance.Position = UDim2.new(0, sp.X, 0, bY + 12)
+										d.distance.Position = UDim2.new(0, sp.X, 0, bY + 12 + bottomOffset)
 										d.distance.TextColor3 = ESP.Distance.Color
 										d.distance.Visible = true
+										bottomOffset = bottomOffset + 16
 									else d.distance.Visible = false end
+
+									-- Inventory ESP below distance
+									if ESP.Inventory.Enabled then
+										local items = getCachedInventory(plr)
+										if #items > 0 then
+											local invText = table.concat(items, ", ")
+											if #invText > 40 then
+												invText = string.sub(invText, 1, 37) .. "..."
+											end
+											d.inventory.Text = "[" .. invText .. "]"
+											d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bottomOffset)
+											d.inventory.TextColor3 = ESP.Inventory.Color
+											d.inventory.Size = UDim2.new(0, 300, 0, 20)
+											d.inventory.Visible = true
+											bottomOffset = bottomOffset + 16
+										else
+											d.inventory.Text = "[Empty]"
+											d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bottomOffset)
+											d.inventory.TextColor3 = Color3.fromRGB(120, 120, 130)
+											d.inventory.Size = UDim2.new(0, 300, 0, 20)
+											d.inventory.Visible = true
+											bottomOffset = bottomOffset + 16
+										end
+									else d.inventory.Visible = false end
+
 									if ESP.HealthBar.Enabled then
 										local bx = lX - 6
 										local hp2 = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
@@ -1005,7 +1084,7 @@ do
 end
 
 --============================================================
--- BLOK 5: MISC + TOOLS + NOCLIP + SUPER PUNCH
+-- BLOK 5: MISC + TOOLS + NOCLIP + SUPER PUNCH + RAPID FIRE
 --============================================================
 do
 	-- SEMI GOD MOD
@@ -1176,7 +1255,7 @@ do
 		stopFly()
 	end)
 
-	-- TOOLS HOOK
+	-- TOOLS HOOK (includes Rapid Fire)
 	local hookedTools = {}
 
 	local function hookTool(tool)
@@ -1188,7 +1267,7 @@ do
 			while tool.Parent do
 				task.wait(0.05)
 
-				if MISC.NoRecoil or MISC.NoSpread or MISC.InfAmmo then
+				if MISC.NoRecoil or MISC.NoSpread or MISC.InfAmmo or MISC.RapidFire then
 					pcall(function()
 						for _, v in ipairs(tool:GetDescendants()) do
 							if v:IsA("NumberValue") or v:IsA("IntValue") then
@@ -1216,12 +1295,56 @@ do
 										v.Value = 999
 									end
 								end
+
+								-- RAPID FIRE: reduce fire delay/cooldown
+								if MISC.RapidFire then
+									local rfLevel = MISC.RapidFireLevel or 20
+									-- rfLevel 0 = no delay (multiply by 0), rfLevel 20 = normal (multiply by 1)
+									local rfMultiplier = rfLevel / 20
+
+									if n:find("firerate") or n:find("fire_rate") or n:find("rateof") then
+										-- Higher fire rate = faster, so we increase it
+										if rfMultiplier > 0 then
+											-- Don't modify if already very high
+											if v.Value < 9000 then
+												-- Increase fire rate (inverse of delay)
+												v.Value = v.Value / math.max(rfMultiplier, 0.01)
+											end
+										else
+											v.Value = 99999
+										end
+									end
+
+									if n:find("firedelay") or n:find("fire_delay") or n:find("delay") 
+										or n:find("cooldown") or n:find("cool_down") or n:find("firecooldown")
+										or n:find("shotcooldown") or n:find("shotdelay") or n:find("shot_delay")
+										or n:find("fireinterval") or n:find("interval") or n:find("timebetween")
+										or n:find("attackspeed") or n:find("attackcooldown") or n:find("attackdelay")
+										or n:find("shootdelay") or n:find("shootcooldown") then
+										v.Value = v.Value * rfMultiplier
+									end
+
+									if n:find("automatic") or n:find("auto") or n:find("isautomatic") then
+										-- Some guns use 0/1 for auto mode
+										if v.Value == 0 then
+											v.Value = 1
+										end
+									end
+								end
 							end
 
 							if v:IsA("BoolValue") then
 								local n = v.Name:lower()
 								if MISC.InfAmmo then
 									if n:find("reloading") or n:find("isreloading") then
+										v.Value = false
+									end
+								end
+								if MISC.RapidFire then
+									if n:find("canfire") or n:find("canshoot") or n:find("ready") then
+										v.Value = true
+									end
+									if n:find("cooling") or n:find("oncooldown") then
 										v.Value = false
 									end
 								end
@@ -1240,6 +1363,27 @@ do
 								end
 								if MISC.InfAmmo and (n == "ammo" or n:find("magazine") or n:find("clip")) then
 									tool:SetAttribute(name, 999)
+								end
+								if MISC.RapidFire then
+									local rfLevel = MISC.RapidFireLevel or 20
+									local rfMultiplier = rfLevel / 20
+									if n:find("firedelay") or n:find("cooldown") or n:find("firerate") 
+										or n:find("delay") or n:find("interval") or n:find("shotdelay") then
+										if n:find("rate") then
+											if rfMultiplier > 0 then
+												tool:SetAttribute(name, val / math.max(rfMultiplier, 0.01))
+											else
+												tool:SetAttribute(name, 99999)
+											end
+										else
+											tool:SetAttribute(name, val * rfMultiplier)
+										end
+									end
+								end
+							end
+							if type(val) == "boolean" and MISC.RapidFire then
+								if n:find("canfire") or n:find("canshoot") or n:find("ready") then
+									tool:SetAttribute(name, true)
 								end
 							end
 						end
@@ -1287,19 +1431,16 @@ do
 	end)
 
 	-- ============================================
-	-- SUPER PUNCH - specjalnie dla South Bronx: The Trenches
-	-- Wykrywa broń "Pięść" (po polsku!) i multiplikuje damage
+	-- SUPER PUNCH
 	-- ============================================
 	local punchedTools = {}
 
 	local function isPunchTool(tool)
 		if not tool or not tool:IsA("Tool") then return false end
 		local name = tool.Name:lower()
-		-- Polska "Pieść", "Piesc" i angielskie warianty
 		return name:find("pi[eę]s?[cć]") or name:find("fist") or name:find("punch") or name:find("hand")
 	end
 
-	-- Znajdz wszystkie remote'y w grze zwiazane z damage/hit
 	local function findAllDamageRemotes()
 		local remotes = {}
 		local function scan(parent, depth)
@@ -1326,49 +1467,43 @@ do
 		return remotes
 	end
 
-	-- Hook Tool "Pieść" - monituje jego Activated
 	local function hookPunchTool(tool)
 		if not isPunchTool(tool) then return end
 		if punchedTools[tool] then return end
 		punchedTools[tool] = true
 
-		local myChar = player.Character
-		if not myChar then return end
-		local myRoot = myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso")
-
-		-- Znajdz najblizszego gracza przed toba
-		local function getNearestTarget(maxDist)
-			local myChar2 = player.Character
-			if not myChar2 then return nil end
-			local myRoot2 = myChar2:FindFirstChild("HumanoidRootPart") or myChar2:FindFirstChild("Torso")
-			if not myRoot2 then return nil end
-
-			local best, bestDist = nil, maxDist or 15
-			for _, plr in ipairs(Players:GetPlayers()) do
-				if plr ~= player and plr.Character then
-					local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-					local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
-					if hum and hum.Health > 0 and targetRoot then
-						local dist = (myRoot2.Position - targetRoot.Position).Magnitude
-						if dist <= bestDist then
-							local dir = (targetRoot.Position - myRoot2.Position).Unit
-							local dot = dir:Dot(myRoot2.CFrame.LookVector)
-							if dot > 0.2 then
-								best = plr
-								bestDist = dist
-							end
-						end
-					end
-				end
-			end
-			return best
-		end
-
-		-- Podepnij pod Activated (klikniecie z piescia w reku)
 		local activated = tool.Activated:Connect(function()
 			if not MISC.SuperPunch then return end
 
 			local multiplier = MISC.PunchMultiplier or 100
+
+			local function getNearestTarget(maxDist)
+				local myChar2 = player.Character
+				if not myChar2 then return nil end
+				local myRoot2 = myChar2:FindFirstChild("HumanoidRootPart") or myChar2:FindFirstChild("Torso")
+				if not myRoot2 then return nil end
+
+				local best, bestDist = nil, maxDist or 15
+				for _, plr in ipairs(Players:GetPlayers()) do
+					if plr ~= player and plr.Character then
+						local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+						local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
+						if hum and hum.Health > 0 and targetRoot then
+							local dist = (myRoot2.Position - targetRoot.Position).Magnitude
+							if dist <= bestDist then
+								local dir = (targetRoot.Position - myRoot2.Position).Unit
+								local dot = dir:Dot(myRoot2.CFrame.LookVector)
+								if dot > 0.2 then
+									best = plr
+									bestDist = dist
+								end
+							end
+						end
+					end
+				end
+				return best
+			end
+
 			local target = getNearestTarget(15)
 			if not target then return end
 			local targetChar = target.Character
@@ -1376,8 +1511,6 @@ do
 			local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
 			if not targetHum or targetHum.Health <= 0 then return end
 
-			-- Spam kliknieciami przez VIM - kazde klikniecie = 1 punch = ~7% HP w SBT
-			-- multiplier 100 = 100 klikniec = ~700% HP = instant kill
 			task.spawn(function()
 				for i = 1, multiplier do
 					if not MISC.SuperPunch then break end
@@ -1385,18 +1518,15 @@ do
 					local tHum = targetChar:FindFirstChildOfClass("Humanoid")
 					if not tHum or tHum.Health <= 0 then break end
 
-					-- Metoda 1: Ponowna aktywacja Tool
 					pcall(function()
 						tool:Activate()
 					end)
 
-					-- Metoda 2: VIM click
 					pcall(function()
 						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
 						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
 					end)
 
-					-- Metoda 3: Znajdz wszystkie damage remotes i firuj
 					local remotes = findAllDamageRemotes()
 					for _, remote in ipairs(remotes) do
 						pcall(function()
@@ -1415,7 +1545,6 @@ do
 			end)
 		end)
 
-		-- Cleanup po odpieciu tool
 		tool.AncestryChanged:Connect(function()
 			if not tool.Parent then
 				punchedTools[tool] = nil
@@ -1424,7 +1553,6 @@ do
 		end)
 	end
 
-	-- Skanuj pieści w character i backpacku
 	local function scanForPunchTools()
 		local char = player.Character
 		if char then
@@ -1442,7 +1570,6 @@ do
 
 	scanForPunchTools()
 
-	-- Nasluchuj nowych tooli
 	if player.Character then
 		player.Character.ChildAdded:Connect(function(c)
 			if c:IsA("Tool") then hookPunchTool(c) end
@@ -1467,6 +1594,32 @@ do
 		while true do
 			task.wait(2)
 			pcall(scanForPunchTools)
+		end
+	end)
+
+	-- ============================================
+	-- RAPID FIRE - Additional click spam method
+	-- When RapidFire is enabled and player is holding mouse, spam clicks
+	-- ============================================
+	task.spawn(function()
+		while true do
+			if MISC.RapidFire and mbHeld[1] then
+				local rfLevel = MISC.RapidFireLevel or 20
+				-- rfLevel 0 = spam as fast as possible, rfLevel 20 = do nothing (normal)
+				if rfLevel < 20 then
+					local delay = (rfLevel / 20) * 0.15 -- 0 = 0 delay, 20 = 0.15s (normal)
+					pcall(function()
+						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
+						task.wait(0.01)
+						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
+					end)
+					task.wait(math.max(delay, 0.01))
+				else
+					task.wait(0.05)
+				end
+			else
+				task.wait(0.05)
+			end
 		end
 	end)
 end
@@ -2198,7 +2351,7 @@ do
 	vlp.PaddingRight = UDim.new(0,5)
 
 	local vR = Instance.new("Frame", vizPage)
-	vR.Size = UDim2.new(0.48,0,0,320)
+	vR.Size = UDim2.new(0.48,0,0,360)
 	vR.Position = UDim2.new(0.5,5,0,5)
 	vR.BackgroundColor3 = DARK
 	vR.BorderSizePixel = 0
@@ -2225,6 +2378,7 @@ do
 	mkCheckColor(vR, "Health Bar", nil, "HealthBar", nil, 6)
 	mkCheckColor(vR, "Distance", nil, "Distance", nil, 7)
 	mkCheckColor(vR, "Snaplines", nil, "Snaplines", nil, 8)
+	mkCheckColor(vR, "Inventory", nil, "Inventory", nil, 9)
 
 	local aimPage = createPage("AimAssistance")
 
@@ -2410,7 +2564,7 @@ do
 	local miscPage = createPage("Miscellaneous")
 
 	local mL = Instance.new("Frame", miscPage)
-	mL.Size = UDim2.new(0.48,0,0,500)
+	mL.Size = UDim2.new(0.48,0,0,580)
 	mL.Position = UDim2.new(0,10,0,5)
 	mL.BackgroundColor3 = DARK
 	mL.BorderSizePixel = 0
@@ -2433,9 +2587,13 @@ do
 	mkCheck(mL, "NoClip (Fly + No Collision)", MISC, "NoClip", 7)
 	mkSlider(mL, "NoClip Fly Speed", 1, 100, 30, " m/s", MISC, "NoClipSpeed", 8)
 
-	mkSection(mL, "Super Punch (Piesc)", 9)
+	mkSection(mL, "Super Punch (Fist)", 9)
 	mkCheck(mL, "Enable Super Punch", MISC, "SuperPunch", 10)
 	mkSlider(mL, "Punch Multiplier", 1, 200, 100, "x", MISC, "PunchMultiplier", 11)
+
+	mkSection(mL, "Rapid Fire", 12)
+	mkCheck(mL, "Enable Rapid Fire", MISC, "RapidFire", 13)
+	mkSlider(mL, "Fire Speed", 0, 20, 20, "", MISC, "RapidFireLevel", 14)
 
 	local mR = Instance.new("Frame", miscPage)
 	mR.Size = UDim2.new(0.48,0,0,150)
