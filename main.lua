@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local Camera = workspace.CurrentCamera
 local SoundService = game:GetService("SoundService")
 local VIM = game:GetService("VirtualInputManager")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CLICK_SOUND_ID = "rbxassetid://6895079853"
 local SLIDER_SOUND_ID = "rbxassetid://5765856907"
@@ -52,7 +53,7 @@ local AIMBOT = {
 }
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
-local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false, NoClip = false, NoClipSpeed = 30}
+local MISC = {SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false, NoClip = false, NoClipSpeed = 30, SuperPunch = false, PunchMultiplier = 100}
 local SPECTATE = {Target = nil, Active = false}
 
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
@@ -1004,10 +1005,10 @@ do
 end
 
 --============================================================
--- BLOK 5: MISC + TOOLS + NOCLIP
+-- BLOK 5: MISC + TOOLS + NOCLIP + SUPER PUNCH
 --============================================================
 do
-	-- SEMI GOD MOD - poprawiona wersja
+	-- SEMI GOD MOD
 	task.spawn(function()
 		while true do
 			task.wait(0.1)
@@ -1026,7 +1027,6 @@ do
 		end
 	end)
 
-	-- Listener na HealthChanged
 	local function hookHumanoid(char)
 		if not char then return end
 		local hum = char:FindFirstChildOfClass("Humanoid")
@@ -1139,7 +1139,6 @@ do
 		end)
 	end
 
-	-- NoClip loop
 	RunService.Stepped:Connect(function()
 		if MISC.NoClip then
 			local char = player.Character
@@ -1284,6 +1283,190 @@ do
 			task.wait(3)
 			if player.Character then pcall(function() scanTools(player.Character) end) end
 			pcall(scanBackpack)
+		end
+	end)
+
+	-- ============================================
+	-- SUPER PUNCH - specjalnie dla South Bronx: The Trenches
+	-- Wykrywa broń "Pięść" (po polsku!) i multiplikuje damage
+	-- ============================================
+	local punchedTools = {}
+
+	local function isPunchTool(tool)
+		if not tool or not tool:IsA("Tool") then return false end
+		local name = tool.Name:lower()
+		-- Polska "Pieść", "Piesc" i angielskie warianty
+		return name:find("pi[eę]s?[cć]") or name:find("fist") or name:find("punch") or name:find("hand")
+	end
+
+	-- Znajdz wszystkie remote'y w grze zwiazane z damage/hit
+	local function findAllDamageRemotes()
+		local remotes = {}
+		local function scan(parent, depth)
+			if depth > 6 then return end
+			pcall(function()
+				for _, v in ipairs(parent:GetChildren()) do
+					if v:IsA("RemoteEvent") or v:IsA("RemoteFunction") then
+						local n = v.Name:lower()
+						if n:find("damage") or n:find("hit") or n:find("punch") or n:find("attack") 
+							or n:find("melee") or n:find("fight") or n:find("combat") or n:find("strike")
+							or n:find("swing") or n:find("weapon") or n:find("fist") or n:find("pi[eę]s?[cć]")
+							or n:find("dmg") or n:find("kill") or n:find("hurt") then
+							table.insert(remotes, v)
+						end
+					end
+					if v:IsA("Folder") or v:IsA("Model") or v:IsA("Configuration") then
+						scan(v, depth + 1)
+					end
+				end
+			end)
+		end
+		scan(ReplicatedStorage, 0)
+		scan(workspace, 0)
+		return remotes
+	end
+
+	-- Hook Tool "Pieść" - monituje jego Activated
+	local function hookPunchTool(tool)
+		if not isPunchTool(tool) then return end
+		if punchedTools[tool] then return end
+		punchedTools[tool] = true
+
+		local myChar = player.Character
+		if not myChar then return end
+		local myRoot = myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso")
+
+		-- Znajdz najblizszego gracza przed toba
+		local function getNearestTarget(maxDist)
+			local myChar2 = player.Character
+			if not myChar2 then return nil end
+			local myRoot2 = myChar2:FindFirstChild("HumanoidRootPart") or myChar2:FindFirstChild("Torso")
+			if not myRoot2 then return nil end
+
+			local best, bestDist = nil, maxDist or 15
+			for _, plr in ipairs(Players:GetPlayers()) do
+				if plr ~= player and plr.Character then
+					local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+					local targetRoot = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
+					if hum and hum.Health > 0 and targetRoot then
+						local dist = (myRoot2.Position - targetRoot.Position).Magnitude
+						if dist <= bestDist then
+							local dir = (targetRoot.Position - myRoot2.Position).Unit
+							local dot = dir:Dot(myRoot2.CFrame.LookVector)
+							if dot > 0.2 then
+								best = plr
+								bestDist = dist
+							end
+						end
+					end
+				end
+			end
+			return best
+		end
+
+		-- Podepnij pod Activated (klikniecie z piescia w reku)
+		local activated = tool.Activated:Connect(function()
+			if not MISC.SuperPunch then return end
+
+			local multiplier = MISC.PunchMultiplier or 100
+			local target = getNearestTarget(15)
+			if not target then return end
+			local targetChar = target.Character
+			if not targetChar then return end
+			local targetHum = targetChar:FindFirstChildOfClass("Humanoid")
+			if not targetHum or targetHum.Health <= 0 then return end
+
+			-- Spam kliknieciami przez VIM - kazde klikniecie = 1 punch = ~7% HP w SBT
+			-- multiplier 100 = 100 klikniec = ~700% HP = instant kill
+			task.spawn(function()
+				for i = 1, multiplier do
+					if not MISC.SuperPunch then break end
+					if not target.Parent then break end
+					local tHum = targetChar:FindFirstChildOfClass("Humanoid")
+					if not tHum or tHum.Health <= 0 then break end
+
+					-- Metoda 1: Ponowna aktywacja Tool
+					pcall(function()
+						tool:Activate()
+					end)
+
+					-- Metoda 2: VIM click
+					pcall(function()
+						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
+						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
+					end)
+
+					-- Metoda 3: Znajdz wszystkie damage remotes i firuj
+					local remotes = findAllDamageRemotes()
+					for _, remote in ipairs(remotes) do
+						pcall(function()
+							if remote:IsA("RemoteEvent") then
+								remote:FireServer(target)
+								remote:FireServer(target, targetHum)
+								remote:FireServer(targetHum)
+								remote:FireServer(targetChar)
+								remote:FireServer(target.Character.HumanoidRootPart)
+							end
+						end)
+					end
+
+					task.wait(0.03)
+				end
+			end)
+		end)
+
+		-- Cleanup po odpieciu tool
+		tool.AncestryChanged:Connect(function()
+			if not tool.Parent then
+				punchedTools[tool] = nil
+				if activated then activated:Disconnect() end
+			end
+		end)
+	end
+
+	-- Skanuj pieści w character i backpacku
+	local function scanForPunchTools()
+		local char = player.Character
+		if char then
+			for _, t in ipairs(char:GetChildren()) do
+				if t:IsA("Tool") then hookPunchTool(t) end
+			end
+		end
+		local bp = player:FindFirstChildOfClass("Backpack")
+		if bp then
+			for _, t in ipairs(bp:GetChildren()) do
+				if t:IsA("Tool") then hookPunchTool(t) end
+			end
+		end
+	end
+
+	scanForPunchTools()
+
+	-- Nasluchuj nowych tooli
+	if player.Character then
+		player.Character.ChildAdded:Connect(function(c)
+			if c:IsA("Tool") then hookPunchTool(c) end
+		end)
+	end
+	player.CharacterAdded:Connect(function(c)
+		task.wait(0.5)
+		c.ChildAdded:Connect(function(ch)
+			if ch:IsA("Tool") then hookPunchTool(ch) end
+		end)
+		scanForPunchTools()
+	end)
+
+	local bp = player:FindFirstChildOfClass("Backpack")
+	if bp then
+		bp.ChildAdded:Connect(function(c)
+			if c:IsA("Tool") then hookPunchTool(c) end
+		end)
+	end
+
+	task.spawn(function()
+		while true do
+			task.wait(2)
+			pcall(scanForPunchTools)
 		end
 	end)
 end
@@ -2227,7 +2410,7 @@ do
 	local miscPage = createPage("Miscellaneous")
 
 	local mL = Instance.new("Frame", miscPage)
-	mL.Size = UDim2.new(0.48,0,0,340)
+	mL.Size = UDim2.new(0.48,0,0,500)
 	mL.Position = UDim2.new(0,10,0,5)
 	mL.BackgroundColor3 = DARK
 	mL.BorderSizePixel = 0
@@ -2249,6 +2432,10 @@ do
 	mkSection(mL, "Movement", 6)
 	mkCheck(mL, "NoClip (Fly + No Collision)", MISC, "NoClip", 7)
 	mkSlider(mL, "NoClip Fly Speed", 1, 100, 30, " m/s", MISC, "NoClipSpeed", 8)
+
+	mkSection(mL, "Super Punch (Piesc)", 9)
+	mkCheck(mL, "Enable Super Punch", MISC, "SuperPunch", 10)
+	mkSlider(mL, "Punch Multiplier", 1, 200, 100, "x", MISC, "PunchMultiplier", 11)
 
 	local mR = Instance.new("Frame", miscPage)
 	mR.Size = UDim2.new(0.48,0,0,150)
@@ -2381,7 +2568,6 @@ do
 	plDistLbl.TextSize = 11
 	plDistLbl.TextXAlignment = Enum.TextXAlignment.Center
 
-	-- ROW 1: Spectate + Unspectate
 	local row1 = Instance.new("Frame", plInfoFrame)
 	row1.Size = UDim2.new(1,-20,0,28)
 	row1.Position = UDim2.new(0,10,0,160)
@@ -2411,7 +2597,6 @@ do
 	plUnspectateBtn.AutoButtonColor = false
 	Instance.new("UICorner", plUnspectateBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 2: Teleport + Bring
 	local row2 = Instance.new("Frame", plInfoFrame)
 	row2.Size = UDim2.new(1,-20,0,28)
 	row2.Position = UDim2.new(0,10,0,193)
@@ -2441,7 +2626,6 @@ do
 	plBringBtn.AutoButtonColor = false
 	Instance.new("UICorner", plBringBtn).CornerRadius = UDim.new(0,6)
 
-	-- ROW 3: Switch
 	local plSwitchBtn = Instance.new("TextButton", plInfoFrame)
 	plSwitchBtn.Size = UDim2.new(1,-20,0,28)
 	plSwitchBtn.Position = UDim2.new(0,10,0,226)
