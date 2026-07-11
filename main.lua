@@ -835,7 +835,7 @@ do
 end
 
 --============================================================
--- MISC
+-- MISC + FREECAM
 --============================================================
 do
 	task.spawn(function()
@@ -869,7 +869,6 @@ do
 		if h then pcall(function() h.Health = h.MaxHealth end) end
 	end
 
-	-- Walk Speed + Jump Power (FIXED)
 	local lastWSEnabled, lastJPEnabled = false, false
 	task.spawn(function()
 		while true do
@@ -878,25 +877,17 @@ do
 			if c then
 				local h = c:FindFirstChildOfClass("Humanoid")
 				if h then
-					if MISC.WalkSpeedEnabled then
-						pcall(function() h.WalkSpeed = MISC.WalkSpeed end)
-					elseif lastWSEnabled then
-						pcall(function() h.WalkSpeed = 16 end)
-					end
+					if MISC.WalkSpeedEnabled then pcall(function() h.WalkSpeed = MISC.WalkSpeed end)
+					elseif lastWSEnabled then pcall(function() h.WalkSpeed = 16 end) end
 					lastWSEnabled = MISC.WalkSpeedEnabled
-					if MISC.JumpPowerEnabled then
-						pcall(function() h.UseJumpPower = true; h.JumpPower = MISC.JumpPower end)
-					elseif lastJPEnabled then
-						pcall(function() h.UseJumpPower = true; h.JumpPower = 50 end)
-					end
+					if MISC.JumpPowerEnabled then pcall(function() h.UseJumpPower = true; h.JumpPower = MISC.JumpPower end)
+					elseif lastJPEnabled then pcall(function() h.UseJumpPower = true; h.JumpPower = 50 end) end
 					lastJPEnabled = MISC.JumpPowerEnabled
 				end
 			end
 		end
 	end)
-	player.CharacterAdded:Connect(function()
-		task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false
-	end)
+	player.CharacterAdded:Connect(function() task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false end)
 
 	-- NoClip + Fly
 	local flyBV, flyBG, flying = nil, nil, false
@@ -967,11 +958,59 @@ do
 
 	-- FREECAM
 	local freecamActive = false
-	local freecamCF = nil
+
+	local fcDot = Instance.new("Frame", gui)
+	fcDot.Size = UDim2.new(0, 6, 0, 6)
+	fcDot.AnchorPoint = Vector2.new(0.5, 0.5)
+	fcDot.Position = UDim2.new(0.5, 0, 0.5, 0)
+	fcDot.BackgroundColor3 = Color3.new(1,1,1)
+	fcDot.BorderSizePixel = 0
+	fcDot.Visible = false
+	fcDot.ZIndex = 9998
+	Instance.new("UICorner", fcDot).CornerRadius = UDim.new(1, 0)
+	local fcDotStroke = Instance.new("UIStroke", fcDot)
+	fcDotStroke.Color = Color3.new(0,0,0); fcDotStroke.Thickness = 1
+
+	local fcBar = Instance.new("Frame", gui)
+	fcBar.Size = UDim2.new(0, 300, 0, 40)
+	fcBar.AnchorPoint = Vector2.new(0.5, 1)
+	fcBar.Position = UDim2.new(0.5, 0, 1, -20)
+	fcBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+	fcBar.BorderSizePixel = 0
+	fcBar.Visible = false
+	fcBar.ZIndex = 9998
+	Instance.new("UICorner", fcBar).CornerRadius = UDim.new(0, 10)
+	Instance.new("UIStroke", fcBar).Color = PURPLE
+
+	local fcLabel = Instance.new("TextLabel", fcBar)
+	fcLabel.Size = UDim2.new(0, 140, 1, 0)
+	fcLabel.Position = UDim2.new(0, 10, 0, 0)
+	fcLabel.BackgroundTransparency = 1
+	fcLabel.Text = "FREE CAM"
+	fcLabel.TextColor3 = Color3.fromRGB(180, 140, 255)
+	fcLabel.Font = Enum.Font.GothamBold
+	fcLabel.TextSize = 14
+	fcLabel.TextXAlignment = Enum.TextXAlignment.Left
+	fcLabel.ZIndex = 9999
+
+	local fcTpBtn = Instance.new("TextButton", fcBar)
+	fcTpBtn.Size = UDim2.new(0, 120, 0, 28)
+	fcTpBtn.Position = UDim2.new(1, -130, 0.5, -14)
+	fcTpBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
+	fcTpBtn.BorderSizePixel = 0
+	fcTpBtn.Text = "Teleport (LMB)"
+	fcTpBtn.TextColor3 = Color3.new(1,1,1)
+	fcTpBtn.Font = Enum.Font.GothamBold
+	fcTpBtn.TextSize = 12
+	fcTpBtn.AutoButtonColor = false
+	fcTpBtn.ZIndex = 9999
+	Instance.new("UICorner", fcTpBtn).CornerRadius = UDim.new(0, 6)
 
 	local function stopFreeCam()
 		if not freecamActive then return end
 		freecamActive = false
+		fcDot.Visible = false
+		fcBar.Visible = false
 		pcall(function()
 			Camera.CameraType = Enum.CameraType.Custom
 			local char = player.Character
@@ -984,10 +1023,35 @@ do
 					if bv then bv:Destroy() end
 				end
 				local hum = char:FindFirstChildOfClass("Humanoid")
-				if hum then
-					Camera.CameraSubject = hum
-				end
+				if hum then Camera.CameraSubject = hum end
 			end
+		end)
+	end
+
+	local function freecamTeleport()
+		if not freecamActive or PANIC_TRIGGERED then return end
+		local char = player.Character; if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
+		local camPos = Camera.CFrame.Position
+		local camLook = Camera.CFrame.LookVector
+		local rayParams = RaycastParams.new()
+		rayParams.FilterDescendantsInstances = {char}
+		rayParams.FilterType = Enum.RaycastFilterType.Exclude
+		local result = workspace:Raycast(camPos, camLook * 1000, rayParams)
+		local targetPos
+		if result then
+			targetPos = result.Position + Vector3.new(0, 3, 0)
+		else
+			targetPos = camPos + camLook * 50
+		end
+		local savedCF = CFrame.new(targetPos)
+		stopFreeCam()
+		MISC.FreeCam = false
+		task.wait(0.1)
+		pcall(function()
+			root.CFrame = savedCF
+			root.Velocity = Vector3.zero
+			root.AssemblyLinearVelocity = Vector3.zero
 		end)
 	end
 
@@ -996,9 +1060,9 @@ do
 		local char = player.Character; if not char then return end
 		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
 		freecamActive = true
-		freecamCF = Camera.CFrame
+		fcDot.Visible = true
+		fcBar.Visible = true
 
-		-- Freeze character in place using BodyPosition + BodyGyro
 		local bpos = Instance.new("BodyPosition")
 		bpos.Name = "BearHub_FCanchor"
 		bpos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
@@ -1012,14 +1076,24 @@ do
 		bvel.Velocity = Vector3.zero
 		bvel.Parent = root
 
-		-- Switch camera to scriptable
 		Camera.CameraType = Enum.CameraType.Scriptable
-		Camera.CFrame = freecamCF
+		Camera.CFrame = Camera.CFrame
 
 		task.spawn(function()
+			local lastMousePos = UIS:GetMouseLocation()
+			local sensitivity = 0.3
+
 			while freecamActive and MISC.FreeCam and not PANIC_TRIGGERED do
 				local dt = RunService.RenderStepped:Wait()
 				local spd = MISC.FreeCamSpeed or 30
+
+				local currentMousePos = UIS:GetMouseLocation()
+				local mouseDelta = Vector2.new(0, 0)
+				if UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+					mouseDelta = currentMousePos - lastMousePos
+				end
+				lastMousePos = currentMousePos
+
 				local fw, rt, up = 0, 0, 0
 				if UIS:IsKeyDown(Enum.KeyCode.W) then fw = fw + 1 end
 				if UIS:IsKeyDown(Enum.KeyCode.S) then fw = fw - 1 end
@@ -1027,16 +1101,38 @@ do
 				if UIS:IsKeyDown(Enum.KeyCode.D) then rt = rt + 1 end
 				if UIS:IsKeyDown(Enum.KeyCode.Space) then up = up + 1 end
 				if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then up = up - 1 end
+
+				local cc = Camera.CFrame
+
+				if mouseDelta.Magnitude > 0 then
+					local yaw = -mouseDelta.X * sensitivity * dt * 60
+					local pitch = -mouseDelta.Y * sensitivity * dt * 60
+					cc = cc * CFrame.Angles(math.rad(pitch), math.rad(yaw), 0)
+				end
+
 				if fw ~= 0 or rt ~= 0 or up ~= 0 then
-					local cc = Camera.CFrame
 					local mv = (cc.LookVector * fw + cc.RightVector * rt + Vector3.new(0, up, 0))
 					if mv.Magnitude > 0 then mv = mv.Unit * spd * dt end
-					pcall(function() Camera.CFrame = cc + mv end)
+					cc = cc + mv
 				end
+
+				pcall(function() Camera.CFrame = cc end)
 			end
 			stopFreeCam()
 		end)
 	end
+
+	UIS.InputBegan:Connect(function(inp, gp)
+		if PANIC_TRIGGERED or gp then return end
+		if freecamActive and inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			freecamTeleport()
+		end
+	end)
+
+	fcTpBtn.MouseButton1Click:Connect(function()
+		playClick()
+		freecamTeleport()
+	end)
 
 	task.spawn(function()
 		local wasOn = false
@@ -1683,207 +1779,16 @@ do
 	mkCheck(rfPanel,"Enable Rapid Fire",MISC,"RapidFire",2)
 	mkSlider(rfPanel,"Fire Speed",0,20,20,"",MISC,"RapidFireLevel",3)
 
-		-- FREECAM
-	local freecamActive = false
-
-	local fcDot = Instance.new("Frame", gui)
-	fcDot.Size = UDim2.new(0, 6, 0, 6)
-	fcDot.AnchorPoint = Vector2.new(0.5, 0.5)
-	fcDot.Position = UDim2.new(0.5, 0, 0.5, 0)
-	fcDot.BackgroundColor3 = Color3.new(1,1,1)
-	fcDot.BorderSizePixel = 0
-	fcDot.Visible = false
-	fcDot.ZIndex = 9998
-	Instance.new("UICorner", fcDot).CornerRadius = UDim.new(1, 0)
-
-	local fcBar = Instance.new("Frame", gui)
-	fcBar.Size = UDim2.new(0, 300, 0, 40)
-	fcBar.AnchorPoint = Vector2.new(0.5, 1)
-	fcBar.Position = UDim2.new(0.5, 0, 1, -20)
-	fcBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-	fcBar.BorderSizePixel = 0
-	fcBar.Visible = false
-	fcBar.ZIndex = 9998
-	Instance.new("UICorner", fcBar).CornerRadius = UDim.new(0, 10)
-	Instance.new("UIStroke", fcBar).Color = PURPLE
-
-	local fcLabel = Instance.new("TextLabel", fcBar)
-	fcLabel.Size = UDim2.new(0, 140, 1, 0)
-	fcLabel.Position = UDim2.new(0, 10, 0, 0)
-	fcLabel.BackgroundTransparency = 1
-	fcLabel.Text = "FREE CAM"
-	fcLabel.TextColor3 = Color3.fromRGB(180, 140, 255)
-	fcLabel.Font = Enum.Font.GothamBold
-	fcLabel.TextSize = 14
-	fcLabel.TextXAlignment = Enum.TextXAlignment.Left
-	fcLabel.ZIndex = 9999
-
-	local fcTpBtn = Instance.new("TextButton", fcBar)
-	fcTpBtn.Size = UDim2.new(0, 120, 0, 28)
-	fcTpBtn.Position = UDim2.new(1, -130, 0.5, -14)
-	fcTpBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
-	fcTpBtn.BorderSizePixel = 0
-	fcTpBtn.Text = "Teleport (LMB)"
-	fcTpBtn.TextColor3 = Color3.new(1,1,1)
-	fcTpBtn.Font = Enum.Font.GothamBold
-	fcTpBtn.TextSize = 12
-	fcTpBtn.AutoButtonColor = false
-	fcTpBtn.ZIndex = 9999
-	Instance.new("UICorner", fcTpBtn).CornerRadius = UDim.new(0, 6)
-
-	local function stopFreeCam()
-		if not freecamActive then return end
-		freecamActive = false
-		fcDot.Visible = false
-		fcBar.Visible = false
-		pcall(function()
-			Camera.CameraType = Enum.CameraType.Custom
-			local char = player.Character
-			if char then
-				local root = char:FindFirstChild("HumanoidRootPart")
-				if root then
-					local anchor = root:FindFirstChild("BearHub_FCanchor")
-					if anchor then anchor:Destroy() end
-					local bv = root:FindFirstChild("BearHub_FCvel")
-					if bv then bv:Destroy() end
-				end
-				local hum = char:FindFirstChildOfClass("Humanoid")
-				if hum then Camera.CameraSubject = hum end
-			end
-		end)
-	end
-
-	local function freecamTeleport()
-		if not freecamActive or PANIC_TRIGGERED then return end
-		local char = player.Character; if not char then return end
-		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
-		local camPos = Camera.CFrame.Position
-		local camLook = Camera.CFrame.LookVector
-		-- Raycast to find ground
-		local rayParams = RaycastParams.new()
-		rayParams.FilterDescendantsInstances = {char}
-		rayParams.FilterType = Enum.RaycastFilterType.Exclude
-		local result = workspace:Raycast(camPos, camLook * 1000, rayParams)
-		local targetPos
-		if result then
-			targetPos = result.Position + Vector3.new(0, 3, 0)
-		else
-			targetPos = camPos + camLook * 50
-		end
-		-- Stop freecam first
-		local savedCF = CFrame.new(targetPos)
-		stopFreeCam()
-		MISC.FreeCam = false
-		-- Teleport
-		task.wait(0.1)
-		pcall(function()
-			root.CFrame = savedCF
-			root.Velocity = Vector3.zero
-			root.AssemblyLinearVelocity = Vector3.zero
-		end)
-	end
-
-	local function startFreeCam()
-		if freecamActive or PANIC_TRIGGERED then return end
-		local char = player.Character; if not char then return end
-		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
-		freecamActive = true
-		fcDot.Visible = true
-		fcBar.Visible = true
-
-		local bpos = Instance.new("BodyPosition")
-		bpos.Name = "BearHub_FCanchor"
-		bpos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-		bpos.D = 1000; bpos.P = 10000
-		bpos.Position = root.Position
-		bpos.Parent = root
-
-		local bvel = Instance.new("BodyVelocity")
-		bvel.Name = "BearHub_FCvel"
-		bvel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-		bvel.Velocity = Vector3.zero
-		bvel.Parent = root
-
-		Camera.CameraType = Enum.CameraType.Scriptable
-		Camera.CFrame = Camera.CFrame
-
-		task.spawn(function()
-			local lastMousePos = UIS:GetMouseLocation()
-			local sensitivity = 0.3
-
-			while freecamActive and MISC.FreeCam and not PANIC_TRIGGERED do
-				local dt = RunService.RenderStepped:Wait()
-				local spd = MISC.FreeCamSpeed or 30
-
-				-- Mouse look
-				local currentMousePos = UIS:GetMouseLocation()
-				local mouseDelta = Vector2.new(0, 0)
-				if UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-					mouseDelta = currentMousePos - lastMousePos
-				end
-				lastMousePos = currentMousePos
-
-				local fw, rt, up = 0, 0, 0
-				if UIS:IsKeyDown(Enum.KeyCode.W) then fw = fw + 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.S) then fw = fw - 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.A) then rt = rt - 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.D) then rt = rt + 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.Space) then up = up + 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then up = up - 1 end
-
-				local cc = Camera.CFrame
-
-				-- Apply mouse rotation
-				if mouseDelta.Magnitude > 0 then
-					local yaw = -mouseDelta.X * sensitivity * dt * 60
-					local pitch = -mouseDelta.Y * sensitivity * dt * 60
-					cc = cc * CFrame.Angles(math.rad(pitch), math.rad(yaw), 0)
-				end
-
-				-- Apply movement
-				if fw ~= 0 or rt ~= 0 or up ~= 0 then
-					local mv = (cc.LookVector * fw + cc.RightVector * rt + Vector3.new(0, up, 0))
-					if mv.Magnitude > 0 then mv = mv.Unit * spd * dt end
-					cc = cc + mv
-				end
-
-				pcall(function() Camera.CFrame = cc end)
-			end
-			stopFreeCam()
-		end)
-	end
-
-	-- FreeCam teleport on LMB click
-	UIS.InputBegan:Connect(function(inp, gp)
-		if PANIC_TRIGGERED or gp then return end
-		if freecamActive and inp.UserInputType == Enum.UserInputType.MouseButton1 then
-			freecamTeleport()
-		end
-	end)
-
-	fcTpBtn.MouseButton1Click:Connect(function()
-		playClick()
-		freecamTeleport()
-	end)
-
-	task.spawn(function()
-		local wasOn = false
-		while true do
-			task.wait(0.1)
-			if PANIC_TRIGGERED then break end
-			if MISC.FreeCam and not wasOn then
-				startFreeCam()
-			elseif not MISC.FreeCam and wasOn then
-				stopFreeCam()
-			end
-			wasOn = MISC.FreeCam
-		end
-	end)
-
-	player.CharacterAdded:Connect(function()
-		task.wait(0.5)
-		if freecamActive then stopFreeCam(); MISC.FreeCam = false end
-	end)
+	-- FreeCam
+	local mfcP=Instance.new("Frame",mSubPF); mfcP.Size=UDim2.new(1,0,1,0); mfcP.BackgroundTransparency=1; mfcP.Visible=false
+	local fcPanel=mkPanel(mfcP,0.65,240,0,5)
+	mkSection(fcPanel,"Free Camera (Drone View)",1)
+	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
+	mkSlider(fcPanel,"FreeCam Speed",1,100,30," m/s",MISC,"FreeCamSpeed",3)
+	local fcInfo=Instance.new("TextLabel",fcPanel); fcInfo.Size=UDim2.new(1,0,0,80); fcInfo.BackgroundTransparency=1
+	fcInfo.Text="WASD = move | Space/LCtrl = up/down\nHold RMB = look around\nLMB = teleport to crosshair"
+	fcInfo.TextColor3=Color3.fromRGB(120,120,130)
+	fcInfo.Font=Enum.Font.Gotham; fcInfo.TextSize=11; fcInfo.TextWrapped=true; fcInfo.LayoutOrder=4
 
 	local selMS=nil
 	local function switchMS(n)
@@ -1981,7 +1886,7 @@ do
 	local panicC=Instance.new("Frame",stPanicP); panicC.Size=UDim2.new(0.7,0,0,300); panicC.Position=UDim2.new(0.15,0,0,20); panicC.BackgroundColor3=DARK; panicC.BorderSizePixel=0; Instance.new("UICorner",panicC).CornerRadius=UDim.new(0,10)
 	local pI=Instance.new("TextLabel",panicC); pI.Size=UDim2.new(1,0,0,50); pI.Position=UDim2.new(0,0,0,20); pI.BackgroundTransparency=1; pI.Text="⚠️"; pI.TextColor3=Color3.fromRGB(255,60,60); pI.Font=Enum.Font.GothamBold; pI.TextSize=40
 	local pT=Instance.new("TextLabel",panicC); pT.Size=UDim2.new(1,-20,0,25); pT.Position=UDim2.new(0,10,0,75); pT.BackgroundTransparency=1; pT.Text="PANIC BUTTON"; pT.TextColor3=Color3.fromRGB(255,80,80); pT.Font=Enum.Font.GothamBold; pT.TextSize=20
-	local pD=Instance.new("TextLabel",panicC); pD.Size=UDim2.new(1,-30,0,60); pD.Position=UDim2.new(0,15,0,105); pD.BackgroundTransparency=1; pD.TextWrapped=true; pD.Text="Instantly destroys the entire script, removes all traces (ESP, hitbox, GUI, sounds). It will look like you never used any cheats."; pD.TextColor3=Color3.fromRGB(160,160,170); pD.Font=Enum.Font.Gotham; pD.TextSize=12
+	local pD=Instance.new("TextLabel",panicC); pD.Size=UDim2.new(1,-30,0,60); pD.Position=UDim2.new(0,15,0,105); pD.BackgroundTransparency=1; pD.TextWrapped=true; pD.Text="Instantly destroys the entire script, removes all traces."; pD.TextColor3=Color3.fromRGB(160,160,170); pD.Font=Enum.Font.Gotham; pD.TextSize=12
 	local pBtn=Instance.new("TextButton",panicC); pBtn.Size=UDim2.new(0.6,0,0,60); pBtn.Position=UDim2.new(0.2,0,0,185); pBtn.BackgroundColor3=Color3.fromRGB(200,30,30); pBtn.BorderSizePixel=0; pBtn.Text="SPIERDALAJ"; pBtn.TextColor3=Color3.new(1,1,1); pBtn.Font=Enum.Font.GothamBold; pBtn.TextSize=24; pBtn.AutoButtonColor=false; Instance.new("UICorner",pBtn).CornerRadius=UDim.new(0,10)
 	local pSt=Instance.new("UIStroke",pBtn); pSt.Color=Color3.fromRGB(255,60,60); pSt.Thickness=2
 	pBtn.MouseEnter:Connect(function() pBtn.BackgroundColor3=Color3.fromRGB(255,40,40); pSt.Color=Color3.fromRGB(255,100,100) end)
@@ -1997,13 +1902,13 @@ do
 	end
 	local ss1=mkSSB("General",1); mkSSB("Panic",2); selSS=ss1; ss1.btn.TextColor3=Color3.new(1,1,1); ss1.ul.Visible=true
 
-	-- AUTOFARM (last)
+	-- AUTOFARM
 	local afP=createPage("AutoFarm")
 	local afL=Instance.new("TextLabel",afP); afL.Size=UDim2.new(1,-20,0,40); afL.Position=UDim2.new(0,10,0,10); afL.BackgroundTransparency=1; afL.Text="AutoFarm - Coming Soon"; afL.TextColor3=Color3.fromRGB(100,100,110); afL.Font=Enum.Font.Gotham; afL.TextSize=16
 end
 
 --============================================================
--- TABS + DRAG
+-- TABS + DRAG + MINIMIZE (INSERT)
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
 local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Players"},{"Settings"},{"AutoFarm"}}
@@ -2039,7 +1944,6 @@ for i, tab in ipairs(tabsData) do
 	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
--- MINIMIZE SYSTEM
 local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
 local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 
@@ -2089,7 +1993,7 @@ end
 
 UIS.InputBegan:Connect(function(inp, gp)
 	if PANIC_TRIGGERED or gp then return end
-	if inp.KeyCode == Enum.KeyCode.RightShift then
+	if inp.KeyCode == Enum.KeyCode.Insert then
 		if minimized then restore() else minimize() end
 	end
 end)
