@@ -58,6 +58,7 @@ local MISC = {
 	RapidFire = false, RapidFireLevel = 20,
 	WalkSpeedEnabled = false, WalkSpeed = 16,
 	JumpPowerEnabled = false, JumpPower = 50,
+	FreeCam = false, FreeCamSpeed = 30,
 }
 local SPECTATE = {Target = nil, Active = false}
 local PANIC_TRIGGERED = false
@@ -93,22 +94,21 @@ local function PANIC_DESTROY()
 	HITBOX.Enabled = false; HITBOX.Size = 0
 	MISC.SemiGod = false; MISC.NoRecoil = false; MISC.NoSpread = false; MISC.InfAmmo = false
 	MISC.NoClip = false; MISC.RapidFire = false; MISC.SuperPunch = false
-	MISC.WalkSpeedEnabled = false; MISC.JumpPowerEnabled = false
+	MISC.WalkSpeedEnabled = false; MISC.JumpPowerEnabled = false; MISC.FreeCam = false
 	SPECTATE.Active = false; SPECTATE.Target = nil
 	pcall(function()
 		local myChar = player.Character
 		if myChar then
 			local myHum = myChar:FindFirstChildOfClass("Humanoid")
 			if myHum then
-				Camera.CameraSubject = myHum
-				myHum.WalkSpeed = 16
-				myHum.UseJumpPower = true
-				myHum.JumpPower = 50
+				Camera.CameraSubject = myHum; myHum.WalkSpeed = 16
+				myHum.UseJumpPower = true; myHum.JumpPower = 50
 			end
+			Camera.CameraType = Enum.CameraType.Custom
 			local root = myChar:FindFirstChild("HumanoidRootPart")
 			if root then
 				for _, v in ipairs(root:GetChildren()) do
-					if v:IsA("BodyVelocity") or v:IsA("BodyGyro") then v:Destroy() end
+					if v:IsA("BodyVelocity") or v:IsA("BodyGyro") or v:IsA("BodyPosition") then v:Destroy() end
 				end
 			end
 			for _, part in ipairs(myChar:GetDescendants()) do
@@ -498,9 +498,7 @@ do
 					local hum = char:FindFirstChildOfClass("Humanoid")
 					local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
 					local head = char:FindFirstChild("Head")
-					if not hum or not root or not head or hum.Health <= 0 then
-						if d then hideAll(d) end; skip = true
-					end
+					if not hum or not root or not head or hum.Health <= 0 then if d then hideAll(d) end; skip = true end
 					if not skip then
 						local myChar = player.Character
 						local mr = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso"))
@@ -743,7 +741,6 @@ do
 		end
 	end)
 
-	-- HITBOX
 	local savedMS, savedMO, hitHL = {}, {}, {}
 	local HBM = {
 		Head={R15={"Head"},R6={"Head"}},
@@ -841,7 +838,6 @@ end
 -- MISC
 --============================================================
 do
-	-- Semi God
 	task.spawn(function()
 		while true do
 			task.wait(0.1); if PANIC_TRIGGERED then break end
@@ -873,7 +869,7 @@ do
 		if h then pcall(function() h.Health = h.MaxHealth end) end
 	end
 
-	-- Walk Speed + Jump Power (FIXED - restores defaults when disabled)
+	-- Walk Speed + Jump Power (FIXED)
 	local lastWSEnabled, lastJPEnabled = false, false
 	task.spawn(function()
 		while true do
@@ -888,7 +884,6 @@ do
 						pcall(function() h.WalkSpeed = 16 end)
 					end
 					lastWSEnabled = MISC.WalkSpeedEnabled
-
 					if MISC.JumpPowerEnabled then
 						pcall(function() h.UseJumpPower = true; h.JumpPower = MISC.JumpPower end)
 					elseif lastJPEnabled then
@@ -899,12 +894,8 @@ do
 			end
 		end
 	end)
-
-	-- Also reset on character respawn
-	player.CharacterAdded:Connect(function(c)
-		task.wait(0.5)
-		lastWSEnabled = false
-		lastJPEnabled = false
+	player.CharacterAdded:Connect(function()
+		task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false
 	end)
 
 	-- NoClip + Fly
@@ -974,6 +965,98 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
 
+	-- FREECAM
+	local freecamActive = false
+	local freecamCF = nil
+
+	local function stopFreeCam()
+		if not freecamActive then return end
+		freecamActive = false
+		pcall(function()
+			Camera.CameraType = Enum.CameraType.Custom
+			local char = player.Character
+			if char then
+				local root = char:FindFirstChild("HumanoidRootPart")
+				if root then
+					local anchor = root:FindFirstChild("BearHub_FCanchor")
+					if anchor then anchor:Destroy() end
+					local bv = root:FindFirstChild("BearHub_FCvel")
+					if bv then bv:Destroy() end
+				end
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				if hum then
+					Camera.CameraSubject = hum
+				end
+			end
+		end)
+	end
+
+	local function startFreeCam()
+		if freecamActive or PANIC_TRIGGERED then return end
+		local char = player.Character; if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
+		freecamActive = true
+		freecamCF = Camera.CFrame
+
+		-- Freeze character in place using BodyPosition + BodyGyro
+		local bpos = Instance.new("BodyPosition")
+		bpos.Name = "BearHub_FCanchor"
+		bpos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		bpos.D = 1000; bpos.P = 10000
+		bpos.Position = root.Position
+		bpos.Parent = root
+
+		local bvel = Instance.new("BodyVelocity")
+		bvel.Name = "BearHub_FCvel"
+		bvel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+		bvel.Velocity = Vector3.zero
+		bvel.Parent = root
+
+		-- Switch camera to scriptable
+		Camera.CameraType = Enum.CameraType.Scriptable
+		Camera.CFrame = freecamCF
+
+		task.spawn(function()
+			while freecamActive and MISC.FreeCam and not PANIC_TRIGGERED do
+				local dt = RunService.RenderStepped:Wait()
+				local spd = MISC.FreeCamSpeed or 30
+				local fw, rt, up = 0, 0, 0
+				if UIS:IsKeyDown(Enum.KeyCode.W) then fw = fw + 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.S) then fw = fw - 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.A) then rt = rt - 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.D) then rt = rt + 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.Space) then up = up + 1 end
+				if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then up = up - 1 end
+				if fw ~= 0 or rt ~= 0 or up ~= 0 then
+					local cc = Camera.CFrame
+					local mv = (cc.LookVector * fw + cc.RightVector * rt + Vector3.new(0, up, 0))
+					if mv.Magnitude > 0 then mv = mv.Unit * spd * dt end
+					pcall(function() Camera.CFrame = cc + mv end)
+				end
+			end
+			stopFreeCam()
+		end)
+	end
+
+	task.spawn(function()
+		local wasOn = false
+		while true do
+			task.wait(0.1)
+			if PANIC_TRIGGERED then break end
+			if MISC.FreeCam and not wasOn then
+				startFreeCam()
+			elseif not MISC.FreeCam and wasOn then
+				stopFreeCam()
+			end
+			wasOn = MISC.FreeCam
+		end
+	end)
+
+	player.CharacterAdded:Connect(function()
+		task.wait(0.5)
+		if freecamActive then stopFreeCam(); MISC.FreeCam = false end
+	end)
+
 	-- Tools Hook
 	local hookedTools = {}
 	local function hookTool(tool)
@@ -1038,7 +1121,7 @@ do
 		end
 	end)
 
-	-- Super Punch (toggle - hooks tool activate)
+	-- Super Punch
 	local punchedTools = {}
 	local function doSuperPunch()
 		if PANIC_TRIGGERED or not MISC.SuperPunch then return end
@@ -1090,9 +1173,7 @@ do
 				for _, remote in ipairs(remotes) do
 					pcall(function()
 						if remote:IsA("RemoteEvent") then
-							remote:FireServer(best)
-							remote:FireServer(best, targetHum)
-							remote:FireServer(targetHum)
+							remote:FireServer(best); remote:FireServer(best, targetHum); remote:FireServer(targetHum)
 						end
 					end)
 				end
@@ -1125,9 +1206,7 @@ do
 	end)
 	local bp2 = player:FindFirstChildOfClass("Backpack")
 	if bp2 then bp2.ChildAdded:Connect(function(c) if c:IsA("Tool") then hookToolSP(c) end end) end
-	task.spawn(function()
-		while true do task.wait(2); if PANIC_TRIGGERED then break end; pcall(scanSP) end
-	end)
+	task.spawn(function() while true do task.wait(2); if PANIC_TRIGGERED then break end; pcall(scanSP) end end)
 
 	-- Rapid Fire
 	local function isMouseOverGui()
@@ -1188,22 +1267,6 @@ do
 	bearIcon.Size = UDim2.new(0, 80, 0, 80); bearIcon.Position = UDim2.new(0.5, -40, 0, 15)
 	bearIcon.BackgroundTransparency = 1; bearIcon.Image = BEAR_ICON; bearIcon.ScaleType = Enum.ScaleType.Fit
 
-	-- Minimize button on sidebar
-	local minimizeBtn = Instance.new("TextButton", sidebar)
-	minimizeBtn.Size = UDim2.new(0, 26, 0, 26)
-	minimizeBtn.Position = UDim2.new(1, -31, 0, 5)
-	minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 40, 120)
-	minimizeBtn.BorderSizePixel = 0
-	minimizeBtn.Text = "−"
-	minimizeBtn.TextColor3 = Color3.new(1,1,1)
-	minimizeBtn.Font = Enum.Font.GothamBold
-	minimizeBtn.TextSize = 18
-	minimizeBtn.AutoButtonColor = false
-	minimizeBtn.ZIndex = 10
-	Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0, 6)
-	minimizeBtn.MouseEnter:Connect(function() minimizeBtn.BackgroundColor3 = Color3.fromRGB(80, 55, 150) end)
-	minimizeBtn.MouseLeave:Connect(function() minimizeBtn.BackgroundColor3 = Color3.fromRGB(60, 40, 120) end)
-
 	local tabsFrame = Instance.new("Frame", sidebar)
 	tabsFrame.Name = "TabsFrame"
 	tabsFrame.Size = UDim2.new(1, -20, 1, -130)
@@ -1229,7 +1292,6 @@ do
 	pagesFrame.Size = UDim2.new(1, 0, 1, -55); pagesFrame.Position = UDim2.new(0, 0, 0, 55)
 	pagesFrame.BackgroundTransparency = 1
 
-	-- Color Picker
 	colorPickerGui = Instance.new("Frame", main)
 	colorPickerGui.Size = UDim2.new(0, 220, 0, 260)
 	colorPickerGui.Position = UDim2.new(0.5, -110, 0.5, -130)
@@ -1237,8 +1299,7 @@ do
 	colorPickerGui.BorderSizePixel = 0; colorPickerGui.Visible = false
 	colorPickerGui.ZIndex = 100; colorPickerGui.Active = true
 	Instance.new("UICorner", colorPickerGui).CornerRadius = UDim.new(0, 10)
-	local cpStroke = Instance.new("UIStroke", colorPickerGui)
-	cpStroke.Color = PURPLE; cpStroke.Thickness = 2
+	Instance.new("UIStroke", colorPickerGui).Color = PURPLE
 
 	local cpTitleLbl = Instance.new("TextLabel", colorPickerGui)
 	cpTitleLbl.Size = UDim2.new(1, 0, 0, 30); cpTitleLbl.BackgroundTransparency = 1
@@ -1257,24 +1318,12 @@ do
 	cpGrid.BackgroundColor3 = Color3.fromRGB(255,0,0); cpGrid.BorderSizePixel = 0
 	cpGrid.ZIndex = 101; cpGrid.ClipsDescendants = true
 	Instance.new("UICorner", cpGrid).CornerRadius = UDim.new(0, 6)
-
-	local so = Instance.new("Frame", cpGrid)
-	so.Size = UDim2.new(1,0,1,0); so.BackgroundColor3 = Color3.new(1,1,1)
-	so.BorderSizePixel = 0; so.ZIndex = 102
-	Instance.new("UIGradient", so).Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)
-	})
-	local vo = Instance.new("Frame", cpGrid)
-	vo.Size = UDim2.new(1,0,1,0); vo.BackgroundColor3 = Color3.new(0,0,0)
-	vo.BorderSizePixel = 0; vo.ZIndex = 103
-	local vg = Instance.new("UIGradient", vo)
-	vg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,1), NumberSequenceKeypoint.new(1,0)})
-	vg.Rotation = 90
-	local cpCur = Instance.new("Frame", cpGrid)
-	cpCur.Size = UDim2.new(0,10,0,10); cpCur.BackgroundColor3 = Color3.new(1,1,1)
-	cpCur.BorderSizePixel = 0; cpCur.ZIndex = 105
-	Instance.new("UICorner", cpCur).CornerRadius = UDim.new(1,0)
-	Instance.new("UIStroke", cpCur).Color = Color3.new(0,0,0)
+	local so = Instance.new("Frame", cpGrid); so.Size = UDim2.new(1,0,1,0); so.BackgroundColor3 = Color3.new(1,1,1); so.BorderSizePixel = 0; so.ZIndex = 102
+	Instance.new("UIGradient", so).Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)})
+	local vo = Instance.new("Frame", cpGrid); vo.Size = UDim2.new(1,0,1,0); vo.BackgroundColor3 = Color3.new(0,0,0); vo.BorderSizePixel = 0; vo.ZIndex = 103
+	local vg = Instance.new("UIGradient", vo); vg.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,1), NumberSequenceKeypoint.new(1,0)}); vg.Rotation = 90
+	local cpCur = Instance.new("Frame", cpGrid); cpCur.Size = UDim2.new(0,10,0,10); cpCur.BackgroundColor3 = Color3.new(1,1,1); cpCur.BorderSizePixel = 0; cpCur.ZIndex = 105
+	Instance.new("UICorner", cpCur).CornerRadius = UDim.new(1,0); Instance.new("UIStroke", cpCur).Color = Color3.new(0,0,0)
 
 	hueBar = Instance.new("Frame", colorPickerGui)
 	hueBar.Size = UDim2.new(1,-20,0,20); hueBar.Position = UDim2.new(0,10,0,195)
@@ -1289,21 +1338,11 @@ do
 		ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255,0,255)),
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(255,0,0)),
 	})
-	local hueSlider = Instance.new("Frame", hueBar)
-	hueSlider.Size = UDim2.new(0,4,1,4); hueSlider.Position = UDim2.new(0,-2,0,-2)
-	hueSlider.BackgroundColor3 = Color3.new(1,1,1); hueSlider.BorderSizePixel = 0
-	hueSlider.ZIndex = 102; Instance.new("UICorner", hueSlider).CornerRadius = UDim.new(0,2)
-
-	local cpPrev = Instance.new("Frame", colorPickerGui)
-	cpPrev.Size = UDim2.new(0,40,0,30); cpPrev.Position = UDim2.new(0,10,0,222)
-	cpPrev.BackgroundColor3 = Color3.fromRGB(255,0,0); cpPrev.BorderSizePixel = 0
-	cpPrev.ZIndex = 101; Instance.new("UICorner", cpPrev).CornerRadius = UDim.new(0,6)
-
-	local cpApply = Instance.new("TextButton", colorPickerGui)
-	cpApply.Size = UDim2.new(0,80,0,28); cpApply.Position = UDim2.new(1,-95,0,223)
-	cpApply.BackgroundColor3 = PURPLE; cpApply.Text = "Apply"
-	cpApply.TextColor3 = Color3.new(1,1,1); cpApply.Font = Enum.Font.GothamBold
-	cpApply.TextSize = 13; cpApply.ZIndex = 102; cpApply.AutoButtonColor = false
+	local hueSlider = Instance.new("Frame", hueBar); hueSlider.Size = UDim2.new(0,4,1,4); hueSlider.Position = UDim2.new(0,-2,0,-2); hueSlider.BackgroundColor3 = Color3.new(1,1,1); hueSlider.BorderSizePixel = 0; hueSlider.ZIndex = 102
+	Instance.new("UICorner", hueSlider).CornerRadius = UDim.new(0,2)
+	local cpPrev = Instance.new("Frame", colorPickerGui); cpPrev.Size = UDim2.new(0,40,0,30); cpPrev.Position = UDim2.new(0,10,0,222); cpPrev.BackgroundColor3 = Color3.fromRGB(255,0,0); cpPrev.BorderSizePixel = 0; cpPrev.ZIndex = 101
+	Instance.new("UICorner", cpPrev).CornerRadius = UDim.new(0,6)
+	local cpApply = Instance.new("TextButton", colorPickerGui); cpApply.Size = UDim2.new(0,80,0,28); cpApply.Position = UDim2.new(1,-95,0,223); cpApply.BackgroundColor3 = PURPLE; cpApply.Text = "Apply"; cpApply.TextColor3 = Color3.new(1,1,1); cpApply.Font = Enum.Font.GothamBold; cpApply.TextSize = 13; cpApply.ZIndex = 102; cpApply.AutoButtonColor = false
 	Instance.new("UICorner", cpApply).CornerRadius = UDim.new(0,6)
 
 	local cH, cS, cV = 0, 1, 1; local activeCC = nil
@@ -1314,32 +1353,23 @@ do
 		hueSlider.Position = UDim2.new(cH,-2,0,-2)
 	end
 	_G.BearHub_canvasDrag = false; _G.BearHub_hueDrag = false
-
-	local cpGB = Instance.new("TextButton", cpGrid)
-	cpGB.Size = UDim2.new(1,0,1,0); cpGB.BackgroundTransparency = 1
-	cpGB.Text = ""; cpGB.ZIndex = 106
+	local cpGB = Instance.new("TextButton", cpGrid); cpGB.Size = UDim2.new(1,0,1,0); cpGB.BackgroundTransparency = 1; cpGB.Text = ""; cpGB.ZIndex = 106
 	cpGB.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 then
 			_G.BearHub_canvasDrag = true
 			local ap = cpGrid.AbsolutePosition; local as = cpGrid.AbsoluteSize
-			cS = math.clamp((i.Position.X-ap.X)/as.X,0,1)
-			cV = 1-math.clamp((i.Position.Y-ap.Y)/as.Y,0,1); updCP()
+			cS = math.clamp((i.Position.X-ap.X)/as.X,0,1); cV = 1-math.clamp((i.Position.Y-ap.Y)/as.Y,0,1); updCP()
 		end
 	end)
-	local hB = Instance.new("TextButton", hueBar)
-	hB.Size = UDim2.new(1,0,1,0); hB.BackgroundTransparency = 1; hB.Text = ""; hB.ZIndex = 103
+	local hB = Instance.new("TextButton", hueBar); hB.Size = UDim2.new(1,0,1,0); hB.BackgroundTransparency = 1; hB.Text = ""; hB.ZIndex = 103
 	hB.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 then
 			_G.BearHub_hueDrag = true
 			cH = math.clamp((i.Position.X-hueBar.AbsolutePosition.X)/hueBar.AbsoluteSize.X,0,1); updCP()
 		end
 	end)
-	cpApply.MouseButton1Click:Connect(function()
-		playClick(); if activeCC then activeCC(Color3.fromHSV(cH,cS,cV)) end; colorPickerGui.Visible = false
-	end)
-	_G.BearHub_openCP = function(col, cb)
-		local h, s, v = col:ToHSV(); cH, cS, cV = h, s, v; activeCC = cb; updCP(); colorPickerGui.Visible = true
-	end
+	cpApply.MouseButton1Click:Connect(function() playClick(); if activeCC then activeCC(Color3.fromHSV(cH,cS,cV)) end; colorPickerGui.Visible = false end)
+	_G.BearHub_openCP = function(col, cb) local h, s, v = col:ToHSV(); cH, cS, cV = h, s, v; activeCC = cb; updCP(); colorPickerGui.Visible = true end
 	_G.BearHub_updCPValues = function(x, y, kind)
 		if kind == "canvas" then
 			cS = math.clamp((x-cpGrid.AbsolutePosition.X)/cpGrid.AbsoluteSize.X,0,1)
@@ -1348,13 +1378,6 @@ do
 			cH = math.clamp((x-hueBar.AbsolutePosition.X)/hueBar.AbsoluteSize.X,0,1); updCP()
 		end
 	end
-
-	-- Wire minimize button
-	minimizeBtn.MouseButton1Click:Connect(function()
-		-- Will be wired after minimize/restore functions are defined
-		-- Using _G to bridge
-		if _G.BearHub_minimize then _G.BearHub_minimize() end
-	end)
 end
 openCP = _G.BearHub_openCP
 
@@ -1403,8 +1426,7 @@ do
 		lb.Font=Enum.Font.Gotham; lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left
 		local ci=Instance.new("TextButton",h); ci.Size=UDim2.new(0,22,0,22); ci.Position=UDim2.new(1,-30,0.5,-11)
 		ci.BackgroundColor3=colRef; ci.Text=""; ci.AutoButtonColor=false; ci.BorderSizePixel=0
-		Instance.new("UICorner",ci).CornerRadius=UDim.new(1,0)
-		Instance.new("UIStroke",ci).Color=Color3.fromRGB(80,80,90)
+		Instance.new("UICorner",ci).CornerRadius=UDim.new(1,0); Instance.new("UIStroke",ci).Color=Color3.fromRGB(80,80,90)
 		ci.MouseButton1Click:Connect(function()
 			playClick(); openCP(ci.BackgroundColor3,function(nc)
 				ci.BackgroundColor3=nc
@@ -1430,8 +1452,8 @@ do
 		bg.BackgroundColor3=Color3.fromRGB(50,50,60); bg.BorderSizePixel=0
 		Instance.new("UICorner",bg).CornerRadius=UDim.new(1,0)
 		local pct=(val-minV)/(maxV-minV)
-		local fill=Instance.new("Frame",bg); fill.Size=UDim2.new(pct,0,1,0); fill.BackgroundColor3=PURPLE
-		fill.BorderSizePixel=0; Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
+		local fill=Instance.new("Frame",bg); fill.Size=UDim2.new(pct,0,1,0); fill.BackgroundColor3=PURPLE; fill.BorderSizePixel=0
+		Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
 		local knob=Instance.new("Frame",bg); knob.Size=UDim2.new(0,16,0,16); knob.Position=UDim2.new(pct,-8,0.5,-8)
 		knob.BackgroundColor3=Color3.new(1,1,1); knob.BorderSizePixel=0; knob.ZIndex=2
 		Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
@@ -1560,7 +1582,8 @@ end
 do
 	local function mkPanel(parent, w, h2, xPos, yPos)
 		local f=Instance.new("Frame",parent)
-		f.Size=UDim2.new(w,0,0,h2); f.Position=UDim2.new(xPos,xPos==0 and 10 or 5,0,yPos or 5)
+		f.Size=UDim2.new(w,0,0,h2)
+		f.Position=UDim2.new(xPos, xPos==0 and 10 or 5, 0, yPos or 5)
 		f.BackgroundColor3=DARK; f.BorderSizePixel=0
 		Instance.new("UICorner",f).CornerRadius=UDim.new(0,8)
 		local ll=Instance.new("UIListLayout",f); ll.Padding=UDim.new(0,4); ll.SortOrder=Enum.SortOrder.LayoutOrder
@@ -1570,8 +1593,7 @@ do
 
 	-- VISUALIZATION
 	local vizP=createPage("Visualization")
-	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,360,0.5,5)
-	vR.Position=UDim2.new(0.5,5,0,5)
+	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,360,0.5,5); vR.Position=UDim2.new(0.5,5,0,5)
 	mkSection(vL,"Visualization",1); mkCheck(vL,"Enable",ESP,"Enabled",2)
 	mkSlider(vL,"Max Distance",0,1000,300,"m",ESP,"MaxDistance",3)
 	mkCheck(vL,"Show LocalPlayer",ESP,"ShowLocalPlayer",4); mkCheck(vL,"Visible Only",ESP,"VisibleOnly",5)
@@ -1585,6 +1607,7 @@ do
 	local subBar=Instance.new("Frame",aimP); subBar.Size=UDim2.new(1,-20,0,30); subBar.Position=UDim2.new(0,10,0,0); subBar.BackgroundTransparency=1
 	local sbl=Instance.new("UIListLayout",subBar); sbl.FillDirection=Enum.FillDirection.Horizontal; sbl.Padding=UDim.new(0,15)
 	local subPF=Instance.new("Frame",aimP); subPF.Size=UDim2.new(1,0,1,-40); subPF.Position=UDim2.new(0,0,0,38); subPF.BackgroundTransparency=1
+
 	local tbP=Instance.new("Frame",subPF); tbP.Size=UDim2.new(1,0,1,0); tbP.BackgroundTransparency=1; tbP.Visible=true
 	local tbL=mkPanel(tbP,0.48,300,0,5); local tbR=mkPanel(tbP,0.48,300,0.5,5); tbR.Position=UDim2.new(0.5,5,0,5)
 	mkSection(tbL,"TriggerBot",1); mkKeybind(tbL,"Enable",TRIGGERBOT,2)
@@ -1593,6 +1616,7 @@ do
 	mkSection(tbR,"Options",1); mkCheck(tbR,"Exclude Dead",TRIGGERBOT,"ExcludeDead",2)
 	mkCheck(tbR,"Visible Only",TRIGGERBOT,"VisibleOnly",3); mkSlider(tbR,"Max Distance",0,500,250,"m",TRIGGERBOT,"MaxDistance",4)
 	mkSlider(tbR,"Shot Delay",0,1000,100,"ms",TRIGGERBOT,"ShotDelay",5)
+
 	local abP=Instance.new("Frame",subPF); abP.Size=UDim2.new(1,0,1,0); abP.BackgroundTransparency=1; abP.Visible=false
 	local abL=mkPanel(abP,0.48,300,0,5); local abR=mkPanel(abP,0.48,360,0.5,5); abR.Position=UDim2.new(0.5,5,0,5)
 	mkSection(abL,"Aimbot",1); mkKeybind(abL,"Enable",AIMBOT,2)
@@ -1600,10 +1624,12 @@ do
 	mkSection(abR,"Options",1); mkDropdown(abR,"Bones",{"Head","Torso","Legs"},AIMBOT,"Bone",2)
 	mkSlider(abR,"Field of view",1,100,10,"",AIMBOT,"FOV",3); mkSlider(abR,"Max Distance",0,500,250,"m",AIMBOT,"MaxDistance",4)
 	mkSlider(abR,"Smooth X",1,100,80,"",AIMBOT,"SmoothX",5); mkSlider(abR,"Smooth Y",1,100,80,"",AIMBOT,"SmoothY",6)
+
 	local hbP=Instance.new("Frame",subPF); hbP.Size=UDim2.new(1,0,1,0); hbP.BackgroundTransparency=1; hbP.Visible=false
 	local hbL=mkPanel(hbP,0.48,250,0,5)
 	mkSection(hbL,"Hitbox Expander",1); mkCheck(hbL,"Enable",HITBOX,"Enabled",2)
 	mkDropdown(hbL,"Bones",{"Head","Torso","Legs"},HITBOX,"Bone",3); mkSlider(hbL,"Size",0,30,0,"",HITBOX,"Size",4)
+
 	local selSub=nil
 	local function switchSub(n) tbP.Visible=(n=="TriggerBot"); abP.Visible=(n=="Aimbot"); hbP.Visible=(n=="Hitbox") end
 	local function mkSB(n,o)
@@ -1613,24 +1639,23 @@ do
 		btn.MouseButton1Click:Connect(function()
 			playClick(); if selSub then selSub.btn.TextColor3=Color3.fromRGB(120,120,130); selSub.ul.Visible=false end
 			selSub={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchSub(n)
-		end)
-		return {btn=btn,ul=ul}
+		end); return {btn=btn,ul=ul}
 	end
 	local s1=mkSB("TriggerBot",1); mkSB("Aimbot",2); mkSB("Hitbox",3); selSub=s1; s1.btn.TextColor3=Color3.new(1,1,1); s1.ul.Visible=true
 
 	-- MISCELLANEOUS with sub-tabs
 	local miscP=createPage("Miscellaneous")
 	local mSubBar=Instance.new("Frame",miscP); mSubBar.Size=UDim2.new(1,-20,0,30); mSubBar.Position=UDim2.new(0,10,0,0); mSubBar.BackgroundTransparency=1
-	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,10)
+	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
 	local mSubPF=Instance.new("Frame",miscP); mSubPF.Size=UDim2.new(1,0,1,-40); mSubPF.Position=UDim2.new(0,0,0,38); mSubPF.BackgroundTransparency=1
 
-	-- Quick Actions sub-page
+	-- Quick Actions
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
 	local qaPanel=mkPanel(mqaP,0.48,130,0,5)
 	mkSection(qaPanel,"Quick Actions",1)
 	mkButton(qaPanel,"Heal",healPlayer,2)
 
-	-- Combat sub-page
+	-- Combat
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
 	local cbPanel=mkPanel(mcbP,0.48,290,0,5)
 	mkSection(cbPanel,"Combat Cheats",1)
@@ -1640,7 +1665,7 @@ do
 	mkCheck(cbPanel,"No Spread",MISC,"NoSpread",5)
 	mkCheck(cbPanel,"Infinity Ammo",MISC,"InfAmmo",6)
 
-	-- Movement sub-page
+	-- Movement
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
 	local mvPanel=mkPanel(mmvP,0.6,380,0,5)
 	mkSection(mvPanel,"Movement",1)
@@ -1651,29 +1676,38 @@ do
 	mkCheck(mvPanel,"Jump Power",MISC,"JumpPowerEnabled",6)
 	mkSlider(mvPanel,"Jump Power Value",1,500,50," m",MISC,"JumpPower",7)
 
-	-- Rapid Fire sub-page
+	-- Rapid Fire
 	local mrfP=Instance.new("Frame",mSubPF); mrfP.Size=UDim2.new(1,0,1,0); mrfP.BackgroundTransparency=1; mrfP.Visible=false
 	local rfPanel=mkPanel(mrfP,0.48,200,0,5)
 	mkSection(rfPanel,"Rapid Fire",1)
 	mkCheck(rfPanel,"Enable Rapid Fire",MISC,"RapidFire",2)
 	mkSlider(rfPanel,"Fire Speed",0,20,20,"",MISC,"RapidFireLevel",3)
 
+	-- FreeCam
+	local mfcP=Instance.new("Frame",mSubPF); mfcP.Size=UDim2.new(1,0,1,0); mfcP.BackgroundTransparency=1; mfcP.Visible=false
+	local fcPanel=mkPanel(mfcP,0.65,200,0,5)
+	mkSection(fcPanel,"Free Camera (Drone View)",1)
+	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
+	mkSlider(fcPanel,"FreeCam Speed",1,100,30," m/s",MISC,"FreeCamSpeed",3)
+	local fcInfo=Instance.new("TextLabel",fcPanel); fcInfo.Size=UDim2.new(1,0,0,40); fcInfo.BackgroundTransparency=1
+	fcInfo.Text="W/S/A/D = move   Space = up   LCtrl = down\nCamera follows mouse. Character stays frozen."; fcInfo.TextColor3=Color3.fromRGB(120,120,130)
+	fcInfo.Font=Enum.Font.Gotham; fcInfo.TextSize=11; fcInfo.TextWrapped=true; fcInfo.LayoutOrder=4
+
 	local selMS=nil
 	local function switchMS(n)
 		mqaP.Visible=(n=="Actions"); mcbP.Visible=(n=="Combat")
-		mmvP.Visible=(n=="Movement"); mrfP.Visible=(n=="RapidFire")
+		mmvP.Visible=(n=="Movement"); mrfP.Visible=(n=="RapidFire"); mfcP.Visible=(n=="FreeCam")
 	end
 	local function mkMSB(n,dn,o)
-		local btn=Instance.new("TextButton",mSubBar); btn.Size=UDim2.new(0,88,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
-		btn.Text=dn; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=13; btn.AutoButtonColor=false; btn.LayoutOrder=o
+		local btn=Instance.new("TextButton",mSubBar); btn.Size=UDim2.new(0,80,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
+		btn.Text=dn; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=12; btn.AutoButtonColor=false; btn.LayoutOrder=o
 		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
 		btn.MouseButton1Click:Connect(function()
 			playClick(); if selMS then selMS.btn.TextColor3=Color3.fromRGB(120,120,130); selMS.ul.Visible=false end
 			selMS={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchMS(n)
-		end)
-		return {btn=btn,ul=ul}
+		end); return {btn=btn,ul=ul}
 	end
-	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Movement",3); mkMSB("RapidFire","Rapid Fire",4)
+	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
 	selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
 	-- PLAYERS
@@ -1777,7 +1811,7 @@ do
 end
 
 --============================================================
--- TABS + MINIMIZE/DRAG
+-- TABS + DRAG
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
 local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Players"},{"Settings"},{"AutoFarm"}}
@@ -1861,10 +1895,6 @@ local function restore()
 	end)
 end
 
--- Wire minimize button
-_G.BearHub_minimize = minimize
-
--- RightShift hotkey
 UIS.InputBegan:Connect(function(inp, gp)
 	if PANIC_TRIGGERED or gp then return end
 	if inp.KeyCode == Enum.KeyCode.RightShift then
