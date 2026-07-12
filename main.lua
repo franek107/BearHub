@@ -963,27 +963,9 @@ end
 end)
 player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
 
--- FREECAM (legacy stub - prawdziwy freecam jest nizej przy GUI)
+-- FREECAM LEGACY STUB
 local freecamActiveLegacy = false
-local function stopFreeCamLegacy()
-	freecamActiveLegacy = false
-end
-local function startFreeCamLegacy()
-	-- Wylaczony - prawdziwy freecam dziala nizej
-	return
-end
-task.spawn(function()
-	local wasOn = false
-	while true do
-		task.wait(0.1)
-		if PANIC_TRIGGERED then break end
-		wasOn = MISC.FreeCam
-	end
-end)
-player.CharacterAdded:Connect(function()
-	task.wait(0.5)
-	freecamActiveLegacy = false
-end)
+player.CharacterAdded:Connect(function() task.wait(0.5); freecamActiveLegacy = false end)
 
 local hookedTools = {}
 local function hookTool(tool)
@@ -1516,7 +1498,6 @@ local pd=Instance.new("UIPadding",f); pd.PaddingTop=UDim.new(0,8); pd.PaddingLef
 return f
 end
 
--- VISUALIZATION
 local vizP=createPage("Visualization")
 local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,360,0.5,5); vR.Position=UDim2.new(0.5,5,0,5)
 mkSection(vL,"Visualization",1); mkCheck(vL,"Enable",ESP,"Enabled",2)
@@ -1527,7 +1508,6 @@ mkCheckColor(vR,"Name",nil,"Name",nil,4); mkCheckColor(vR,"ID",nil,"ID",nil,5)
 mkCheckColor(vR,"Health Bar",nil,"HealthBar",nil,6); mkCheckColor(vR,"Distance",nil,"Distance",nil,7)
 mkCheckColor(vR,"Snaplines",nil,"Snaplines",nil,8); mkCheckColor(vR,"Inventory",nil,"Inventory",nil,9)
 
--- AIM ASSISTANCE
 local aimP=createPage("AimAssistance")
 local subBar=Instance.new("Frame",aimP); subBar.Size=UDim2.new(1,-20,0,30); subBar.Position=UDim2.new(0,10,0,0); subBar.BackgroundTransparency=1
 local sbl=Instance.new("UIListLayout",subBar); sbl.FillDirection=Enum.FillDirection.Horizontal; sbl.Padding=UDim.new(0,15)
@@ -1568,7 +1548,6 @@ end); return {btn=btn,ul=ul}
 end
 local s1=mkSB("TriggerBot",1); mkSB("Aimbot",2); mkSB("Hitbox",3); selSub=s1; s1.btn.TextColor3=Color3.new(1,1,1); s1.ul.Visible=true
 
--- MISCELLANEOUS
 local miscP=createPage("Miscellaneous")
 local mSubBar=Instance.new("Frame",miscP); mSubBar.Size=UDim2.new(1,-20,0,30); mSubBar.Position=UDim2.new(0,10,0,0); mSubBar.BackgroundTransparency=1
 local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
@@ -1610,193 +1589,203 @@ mkSection(fcPanel,"Free Camera",1)
 mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
 mkSlider(fcPanel,"FreeCam Speed",1,200,30," m/s",MISC,"FreeCamSpeed",3)
 
-	-- FREECAM HUD + LOGIKA (NAPRAWIONY)
-	local freecamActive = false
-	local oldMouseBehavior = Enum.MouseBehavior.Default
-	local oldMouseIconEnabled = true
+-- FREECAM HUD
+local freecamActive = false
+local oldMouseBehavior = Enum.MouseBehavior.Default
+local oldMouseIconEnabled = true
 
-	local fcDot = Instance.new("Frame", gui)
-	fcDot.Size = UDim2.new(0, 6, 0, 6)
-	fcDot.AnchorPoint = Vector2.new(0.5, 0.5)
-	fcDot.Position = UDim2.new(0.5, 0, 0.5, 0)
-	fcDot.BackgroundColor3 = Color3.new(1,1,1)
-	fcDot.BorderSizePixel = 0
+local fcDot = Instance.new("Frame", gui)
+fcDot.Size = UDim2.new(0, 6, 0, 6)
+fcDot.AnchorPoint = Vector2.new(0.5, 0.5)
+fcDot.Position = UDim2.new(0.5, 0, 0.5, 0)
+fcDot.BackgroundColor3 = Color3.new(1,1,1)
+fcDot.BorderSizePixel = 0
+fcDot.Visible = false
+fcDot.ZIndex = 9998
+Instance.new("UICorner", fcDot).CornerRadius = UDim.new(1, 0)
+
+local fcBar = Instance.new("Frame", gui)
+fcBar.Size = UDim2.new(0, 300, 0, 40)
+fcBar.AnchorPoint = Vector2.new(0.5, 1)
+fcBar.Position = UDim2.new(0.5, 0, 1, -80)
+fcBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+fcBar.BorderSizePixel = 0
+fcBar.Visible = false
+fcBar.ZIndex = 9998
+Instance.new("UICorner", fcBar).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", fcBar).Color = PURPLE
+
+local fcLabel = Instance.new("TextLabel", fcBar)
+fcLabel.Size = UDim2.new(0, 140, 1, 0)
+fcLabel.Position = UDim2.new(0, 10, 0, 0)
+fcLabel.BackgroundTransparency = 1
+fcLabel.Text = "FREE CAM"
+fcLabel.TextColor3 = Color3.fromRGB(180, 140, 255)
+fcLabel.Font = Enum.Font.GothamBold
+fcLabel.TextSize = 14
+fcLabel.TextXAlignment = Enum.TextXAlignment.Left
+fcLabel.ZIndex = 9999
+
+local fcTpBtn = Instance.new("TextButton", fcBar)
+fcTpBtn.Size = UDim2.new(0, 120, 0, 28)
+fcTpBtn.Position = UDim2.new(1, -130, 0.5, -14)
+fcTpBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
+fcTpBtn.BorderSizePixel = 0
+fcTpBtn.Text = "Teleport (LMB)"
+fcTpBtn.TextColor3 = Color3.new(1,1,1)
+fcTpBtn.Font = Enum.Font.GothamBold
+fcTpBtn.TextSize = 12
+fcTpBtn.AutoButtonColor = false
+fcTpBtn.ZIndex = 9999
+Instance.new("UICorner", fcTpBtn).CornerRadius = UDim.new(0, 6)
+
+local function stopFreeCam()
+	if not freecamActive then return end
+	freecamActive = false
 	fcDot.Visible = false
-	fcDot.ZIndex = 9998
-	Instance.new("UICorner", fcDot).CornerRadius = UDim.new(1, 0)
-
-	local fcBar = Instance.new("Frame", gui)
-	fcBar.Size = UDim2.new(0, 300, 0, 40)
-	fcBar.AnchorPoint = Vector2.new(0.5, 1)
-	fcBar.Position = UDim2.new(0.5, 0, 1, -20)
-	fcBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-	fcBar.BorderSizePixel = 0
 	fcBar.Visible = false
-	fcBar.ZIndex = 9998
-	Instance.new("UICorner", fcBar).CornerRadius = UDim.new(0, 10)
-	Instance.new("UIStroke", fcBar).Color = PURPLE
-
-	local fcLabel = Instance.new("TextLabel", fcBar)
-	fcLabel.Size = UDim2.new(0, 140, 1, 0)
-	fcLabel.Position = UDim2.new(0, 10, 0, 0)
-	fcLabel.BackgroundTransparency = 1
-	fcLabel.Text = "FREE CAM"
-	fcLabel.TextColor3 = Color3.fromRGB(180, 140, 255)
-	fcLabel.Font = Enum.Font.GothamBold
-	fcLabel.TextSize = 14
-	fcLabel.TextXAlignment = Enum.TextXAlignment.Left
-	fcLabel.ZIndex = 9999
-
-	local fcTpBtn = Instance.new("TextButton", fcBar)
-	fcTpBtn.Size = UDim2.new(0, 120, 0, 28)
-	fcTpBtn.Position = UDim2.new(1, -130, 0.5, -14)
-	fcTpBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
-	fcTpBtn.BorderSizePixel = 0
-	fcTpBtn.Text = "Teleport (LMB)"
-	fcTpBtn.TextColor3 = Color3.new(1,1,1)
-	fcTpBtn.Font = Enum.Font.GothamBold
-	fcTpBtn.TextSize = 12
-	fcTpBtn.AutoButtonColor = false
-	fcTpBtn.ZIndex = 9999
-	Instance.new("UICorner", fcTpBtn).CornerRadius = UDim.new(0, 6)
-
-	local function stopFreeCam()
-		if not freecamActive then return end
-		freecamActive = false
-		fcDot.Visible = false
-		fcBar.Visible = false
-		pcall(function()
-			UIS.MouseBehavior = oldMouseBehavior
-			UIS.MouseIconEnabled = oldMouseIconEnabled
-			Camera.CameraType = Enum.CameraType.Custom
-			local char = player.Character
-			if char then
-				local root = char:FindFirstChild("HumanoidRootPart")
-				if root then
-					local anchor = root:FindFirstChild("BearHub_FCanchor")
-					if anchor then anchor:Destroy() end
-					local bv = root:FindFirstChild("BearHub_FCvel")
-					if bv then bv:Destroy() end
-				end
-				local hum = char:FindFirstChildOfClass("Humanoid")
-				if hum then Camera.CameraSubject = hum end
+	pcall(function()
+		UIS.MouseBehavior = oldMouseBehavior
+		UIS.MouseIconEnabled = oldMouseIconEnabled
+		Camera.CameraType = Enum.CameraType.Custom
+		local char = player.Character
+		if char then
+			local root = char:FindFirstChild("HumanoidRootPart")
+			if root then
+				local anchor = root:FindFirstChild("BearHub_FCanchor")
+				if anchor then anchor:Destroy() end
+				local bv = root:FindFirstChild("BearHub_FCvel")
+				if bv then bv:Destroy() end
 			end
-		end)
-	end
-
-	local function freecamTeleport()
-		if not freecamActive or PANIC_TRIGGERED then return end
-		local char = player.Character; if not char then return end
-		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
-		local camPos = Camera.CFrame.Position
-		local camLook = Camera.CFrame.LookVector
-		local rayParams = RaycastParams.new()
-		rayParams.FilterDescendantsInstances = {char}
-		rayParams.FilterType = Enum.RaycastFilterType.Exclude
-		local result = workspace:Raycast(camPos, camLook * 1000, rayParams)
-		local targetPos
-		if result then
-			targetPos = result.Position + Vector3.new(0, 3, 0)
-		else
-			targetPos = camPos + camLook * 50
-		end
-		local savedCF = CFrame.new(targetPos)
-		stopFreeCam()
-		MISC.FreeCam = false
-		task.wait(0.1)
-		pcall(function()
-			root.CFrame = savedCF
-			root.Velocity = Vector3.zero
-			root.AssemblyLinearVelocity = Vector3.zero
-		end)
-	end
-
-	local function startFreeCam()
-		if freecamActive or PANIC_TRIGGERED then return end
-		local char = player.Character; if not char then return end
-		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
-		freecamActive = true
-		fcDot.Visible = true
-		fcBar.Visible = true
-		oldMouseBehavior = UIS.MouseBehavior
-		oldMouseIconEnabled = UIS.MouseIconEnabled
-		UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
-		UIS.MouseIconEnabled = false
-		local bpos = Instance.new("BodyPosition")
-		bpos.Name = "BearHub_FCanchor"
-		bpos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-		bpos.D = 1000; bpos.P = 10000
-		bpos.Position = root.Position
-		bpos.Parent = root
-		local bvel = Instance.new("BodyVelocity")
-		bvel.Name = "BearHub_FCvel"
-		bvel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-		bvel.Velocity = Vector3.zero
-		bvel.Parent = root
-		Camera.CameraType = Enum.CameraType.Scriptable
-		local look = Camera.CFrame.LookVector
-		local camYaw = math.atan2(-look.X, -look.Z)
-		local camPitch = math.asin(math.clamp(look.Y, -1, 1))
-		local camPos = Camera.CFrame.Position
-		local sensitivity = 0.0022
-		task.spawn(function()
-			while freecamActive and MISC.FreeCam and not PANIC_TRIGGERED do
-				local dt = RunService.RenderStepped:Wait()
-				local spd = MISC.FreeCamSpeed or 30
-				local mouseDelta = UIS:GetMouseDelta()
-				camYaw = camYaw - mouseDelta.X * sensitivity
-				camPitch = math.clamp(camPitch - mouseDelta.Y * sensitivity, -math.rad(89), math.rad(89))
-				local rotCF = CFrame.Angles(0, camYaw, 0) * CFrame.Angles(camPitch, 0, 0)
-				local fw, rt, up = 0, 0, 0
-				if UIS:IsKeyDown(Enum.KeyCode.W) then fw = fw + 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.S) then fw = fw - 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.A) then rt = rt - 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.D) then rt = rt + 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.Space) then up = up + 1 end
-				if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then up = up - 1 end
-				if fw ~= 0 or rt ~= 0 or up ~= 0 then
-					local mv = (rotCF.LookVector * fw + rotCF.RightVector * rt + Vector3.new(0, up, 0))
-					if mv.Magnitude > 0 then mv = mv.Unit * spd * dt end
-					camPos = camPos + mv
-				end
-				pcall(function()
-					Camera.CFrame = CFrame.new(camPos) * rotCF
-				end)
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			if hum then
+				Camera.CameraSubject = hum
+				hum.WalkSpeed = MISC.WalkSpeedEnabled and MISC.WalkSpeed or 16
+				hum.JumpPower = MISC.JumpPowerEnabled and MISC.JumpPower or 50
 			end
-			stopFreeCam()
-		end)
-	end
-
-	UIS.InputBegan:Connect(function(inp, gp)
-		if PANIC_TRIGGERED or gp then return end
-		if freecamActive and inp.UserInputType == Enum.UserInputType.MouseButton1 then
-			freecamTeleport()
 		end
 	end)
+end
 
-	fcTpBtn.MouseButton1Click:Connect(function()
-		playClick()
-		freecamTeleport()
+local function freecamTeleport()
+	if not freecamActive or PANIC_TRIGGERED then return end
+	local char = player.Character; if not char then return end
+	local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
+	local camPos = Camera.CFrame.Position
+	local camLook = Camera.CFrame.LookVector
+	local rayParams = RaycastParams.new()
+	rayParams.FilterDescendantsInstances = {char}
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	local result = workspace:Raycast(camPos, camLook * 1000, rayParams)
+	local targetPos
+	if result then
+		targetPos = result.Position + Vector3.new(0, 3, 0)
+	else
+		targetPos = camPos + camLook * 50
+	end
+	local savedCF = CFrame.new(targetPos)
+	stopFreeCam()
+	MISC.FreeCam = false
+	task.wait(0.1)
+	pcall(function()
+		root.CFrame = savedCF
+		root.Velocity = Vector3.zero
+		root.AssemblyLinearVelocity = Vector3.zero
 	end)
+end
 
+local function startFreeCam()
+	if freecamActive or PANIC_TRIGGERED then return end
+	local char = player.Character; if not char then return end
+	local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
+	freecamActive = true
+	fcDot.Visible = true
+	fcBar.Visible = true
+	oldMouseBehavior = UIS.MouseBehavior
+	oldMouseIconEnabled = UIS.MouseIconEnabled
+	UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+	UIS.MouseIconEnabled = false
+	local bpos = Instance.new("BodyPosition")
+	bpos.Name = "BearHub_FCanchor"
+	bpos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+	bpos.D = 1000; bpos.P = 10000
+	bpos.Position = root.Position
+	bpos.Parent = root
+	local bvel = Instance.new("BodyVelocity")
+	bvel.Name = "BearHub_FCvel"
+	bvel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+	bvel.Velocity = Vector3.zero
+	bvel.Parent = root
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = 0
+		hum.JumpPower = 0
+		hum.JumpHeight = 0
+	end
+	Camera.CameraType = Enum.CameraType.Scriptable
+	local look = Camera.CFrame.LookVector
+	local camYaw = math.atan2(-look.X, -look.Z)
+	local camPitch = math.asin(math.clamp(look.Y, -1, 1))
+	local camPos = Camera.CFrame.Position
+	local sensitivity = 0.006
 	task.spawn(function()
-		local wasOn = false
-		while true do
-			task.wait(0.1)
-			if PANIC_TRIGGERED then break end
-			if MISC.FreeCam and not wasOn then
-				startFreeCam()
-			elseif not MISC.FreeCam and wasOn then
-				stopFreeCam()
+		while freecamActive and MISC.FreeCam and not PANIC_TRIGGERED do
+			local dt = RunService.RenderStepped:Wait()
+			local spd = MISC.FreeCamSpeed or 30
+			local mouseDelta = UIS:GetMouseDelta()
+			camYaw = camYaw - mouseDelta.X * sensitivity
+			camPitch = math.clamp(camPitch - mouseDelta.Y * sensitivity, -math.rad(89), math.rad(89))
+			local rotCF = CFrame.Angles(0, camYaw, 0) * CFrame.Angles(camPitch, 0, 0)
+			local fw, rt, up = 0, 0, 0
+			if UIS:IsKeyDown(Enum.KeyCode.W) then fw = fw + 1 end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then fw = fw - 1 end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then rt = rt - 1 end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then rt = rt + 1 end
+			if UIS:IsKeyDown(Enum.KeyCode.Space) then up = up + 1 end
+			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then up = up - 1 end
+			if fw ~= 0 or rt ~= 0 or up ~= 0 then
+				local mv = (rotCF.LookVector * fw + rotCF.RightVector * rt + Vector3.new(0, up, 0))
+				if mv.Magnitude > 0 then mv = mv.Unit * spd * dt end
+				camPos = camPos + mv
 			end
-			wasOn = MISC.FreeCam
+			pcall(function()
+				Camera.CFrame = CFrame.new(camPos) * rotCF
+			end)
 		end
+		stopFreeCam()
 	end)
+end
 
-	player.CharacterAdded:Connect(function()
-		task.wait(0.5)
-		if freecamActive then stopFreeCam(); MISC.FreeCam = false end
-	end)
+UIS.InputBegan:Connect(function(inp, gp)
+	if PANIC_TRIGGERED or gp then return end
+	if freecamActive and inp.UserInputType == Enum.UserInputType.MouseButton1 then
+		freecamTeleport()
+	end
+end)
+
+fcTpBtn.MouseButton1Click:Connect(function()
+	playClick()
+	freecamTeleport()
+end)
+
+task.spawn(function()
+	local wasOn = false
+	while true do
+		task.wait(0.1)
+		if PANIC_TRIGGERED then break end
+		if MISC.FreeCam and not wasOn then
+			startFreeCam()
+		elseif not MISC.FreeCam and wasOn then
+			stopFreeCam()
+		end
+		wasOn = MISC.FreeCam
+	end
+end)
+
+player.CharacterAdded:Connect(function()
+	task.wait(0.5)
+	if freecamActive then stopFreeCam(); MISC.FreeCam = false end
+end)
 
 local selMS=nil
 local function switchMS(n)
@@ -1815,13 +1804,11 @@ end
 local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
 selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
--- PLAYERS
 local plP=createPage("Players")
 local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8)
 local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=Color3.fromRGB(160,160,170); plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
 local plCL=Instance.new("TextLabel",plLF); plCL.Size=UDim2.new(0,85,0,25); plCL.Position=UDim2.new(1,-90,0,5); plCL.BackgroundTransparency=1; plCL.Text="0 players"; plCL.TextColor3=Color3.fromRGB(150,150,160); plCL.Font=Enum.Font.Gotham; plCL.TextSize=12; plCL.TextXAlignment=Enum.TextXAlignment.Right
 local plS=Instance.new("ScrollingFrame",plLF); plS.Size=UDim2.new(1,-10,1,-40); plS.Position=UDim2.new(0,5,0,32); plS.BackgroundTransparency=1; plS.ScrollBarThickness=3; plS.ScrollBarImageColor3=PURPLE; plS.CanvasSize=UDim2.new(0,0,0,0); plS.AutomaticCanvasSize=Enum.AutomaticSize.Y; plS.BorderSizePixel=0; Instance.new("UIListLayout",plS).Padding=UDim.new(0,4)
-
 local plIF=Instance.new("Frame",plP); plIF.Size=UDim2.new(0.55,0,1,-10); plIF.Position=UDim2.new(0.44,5,0,5); plIF.BackgroundColor3=DARK; plIF.BorderSizePixel=0; Instance.new("UICorner",plIF).CornerRadius=UDim.new(0,8)
 local plIT=Instance.new("TextLabel",plIF); plIT.Size=UDim2.new(1,-20,0,22); plIT.Position=UDim2.new(0,10,0,8); plIT.BackgroundTransparency=1; plIT.Text="Selected Player"; plIT.TextColor3=Color3.fromRGB(160,160,170); plIT.Font=Enum.Font.GothamBold; plIT.TextSize=14; plIT.TextXAlignment=Enum.TextXAlignment.Left
 local plAF=Instance.new("Frame",plIF); plAF.Size=UDim2.new(0,60,0,60); plAF.Position=UDim2.new(0.5,-30,0,35); plAF.BackgroundColor3=Color3.fromRGB(50,50,60); plAF.BorderSizePixel=0; Instance.new("UICorner",plAF).CornerRadius=UDim.new(1,0)
@@ -1888,8 +1875,47 @@ local stP=createPage("Settings")
 local stSubBar=Instance.new("Frame",stP); stSubBar.Size=UDim2.new(1,-20,0,30); stSubBar.Position=UDim2.new(0,10,0,0); stSubBar.BackgroundTransparency=1
 local stSbl=Instance.new("UIListLayout",stSubBar); stSbl.FillDirection=Enum.FillDirection.Horizontal; stSbl.Padding=UDim.new(0,15)
 local stSubPF=Instance.new("Frame",stP); stSubPF.Size=UDim2.new(1,0,1,-40); stSubPF.Position=UDim2.new(0,0,0,38); stSubPF.BackgroundTransparency=1
+
+-- General settings z bindem menu
 local stGenP=Instance.new("Frame",stSubPF); stGenP.Size=UDim2.new(1,0,1,0); stGenP.BackgroundTransparency=1; stGenP.Visible=true
-local sgL=Instance.new("TextLabel",stGenP); sgL.Size=UDim2.new(1,-20,0,40); sgL.Position=UDim2.new(0,10,0,10); sgL.BackgroundTransparency=1; sgL.Text="General Settings - Coming Soon"; sgL.TextColor3=Color3.fromRGB(100,100,110); sgL.Font=Enum.Font.Gotham; sgL.TextSize=16
+local sgPanel=Instance.new("Frame",stGenP); sgPanel.Size=UDim2.new(0.6,0,0,120); sgPanel.Position=UDim2.new(0,10,0,10); sgPanel.BackgroundColor3=DARK; sgPanel.BorderSizePixel=0
+Instance.new("UICorner",sgPanel).CornerRadius=UDim.new(0,8)
+local sgLL=Instance.new("UIListLayout",sgPanel); sgLL.Padding=UDim.new(0,4); sgLL.SortOrder=Enum.SortOrder.LayoutOrder
+local sgPD=Instance.new("UIPadding",sgPanel); sgPD.PaddingTop=UDim.new(0,8); sgPD.PaddingLeft=UDim.new(0,5); sgPD.PaddingRight=UDim.new(0,5)
+mkSection(sgPanel,"Menu Settings",1)
+
+local MENU_BIND = {KeyName = "RightShift", KeyCode = Enum.KeyCode.RightShift}
+
+local mbH=Instance.new("Frame",sgPanel); mbH.Size=UDim2.new(1,0,0,30); mbH.BackgroundTransparency=1; mbH.LayoutOrder=2
+local mbLbl=Instance.new("TextLabel",mbH); mbLbl.Size=UDim2.new(0.5,0,1,0); mbLbl.Position=UDim2.new(0,5,0,0)
+mbLbl.BackgroundTransparency=1; mbLbl.Text="Toggle Menu Key"; mbLbl.TextColor3=Color3.fromRGB(200,200,210)
+mbLbl.Font=Enum.Font.Gotham; mbLbl.TextSize=13; mbLbl.TextXAlignment=Enum.TextXAlignment.Left
+local mbBtn=Instance.new("TextButton",mbH); mbBtn.Size=UDim2.new(0,120,0,24); mbBtn.Position=UDim2.new(1,-125,0.5,-12)
+mbBtn.BackgroundColor3=Color3.fromRGB(40,40,50); mbBtn.BorderSizePixel=0; mbBtn.Text=MENU_BIND.KeyName
+mbBtn.TextColor3=Color3.fromRGB(180,180,190); mbBtn.Font=Enum.Font.GothamBold; mbBtn.TextSize=11
+mbBtn.AutoButtonColor=false; Instance.new("UICorner",mbBtn).CornerRadius=UDim.new(0,5)
+
+local mbListening = false
+mbBtn.MouseButton1Click:Connect(function()
+	playClick()
+	if mbListening then return end
+	mbListening = true
+	mbBtn.Text = "Press a key..."
+	mbBtn.TextColor3 = Color3.fromRGB(255, 200, 100)
+end)
+
+UIS.InputBegan:Connect(function(inp, gp)
+	if mbListening and inp.UserInputType == Enum.UserInputType.Keyboard then
+		mbListening = false
+		MENU_BIND.KeyCode = inp.KeyCode
+		MENU_BIND.KeyName = inp.KeyCode.Name
+		mbBtn.Text = MENU_BIND.KeyName
+		mbBtn.TextColor3 = Color3.fromRGB(180,180,190)
+	end
+end)
+
+_G.BearHub_getMenuBind = function() return MENU_BIND.KeyCode end
+
 local stPanicP=Instance.new("Frame",stSubPF); stPanicP.Size=UDim2.new(1,0,1,0); stPanicP.BackgroundTransparency=1; stPanicP.Visible=false
 local panicC=Instance.new("Frame",stPanicP); panicC.Size=UDim2.new(0.7,0,0,300); panicC.Position=UDim2.new(0.15,0,0,20); panicC.BackgroundColor3=DARK; panicC.BorderSizePixel=0; Instance.new("UICorner",panicC).CornerRadius=UDim.new(0,10)
 local pI=Instance.new("TextLabel",panicC); pI.Size=UDim2.new(1,0,0,50); pI.Position=UDim2.new(0,0,0,20); pI.BackgroundTransparency=1; pI.Text="⚠️"; pI.TextColor3=Color3.fromRGB(255,60,60); pI.Font=Enum.Font.GothamBold; pI.TextSize=40
@@ -1900,6 +1926,7 @@ local pSt=Instance.new("UIStroke",pBtn); pSt.Color=Color3.fromRGB(255,60,60); pS
 pBtn.MouseEnter:Connect(function() pBtn.BackgroundColor3=Color3.fromRGB(255,40,40); pSt.Color=Color3.fromRGB(255,100,100) end)
 pBtn.MouseLeave:Connect(function() pBtn.BackgroundColor3=Color3.fromRGB(200,30,30); pSt.Color=Color3.fromRGB(255,60,60) end)
 pBtn.MouseButton1Click:Connect(function() PANIC_DESTROY() end)
+
 local selSS=nil
 local function switchSS(n) stGenP.Visible=(n=="General"); stPanicP.Visible=(n=="Panic") end
 local function mkSSB(n,o)
@@ -1951,7 +1978,6 @@ local b = makeTabBtn(tab[1], i)
 if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
--- MINIMIZE SYSTEM
 local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
 local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 
@@ -2001,7 +2027,8 @@ end
 
 UIS.InputBegan:Connect(function(inp, gp)
 if PANIC_TRIGGERED or gp then return end
-if inp.KeyCode == Enum.KeyCode.RightShift then
+local bindKey = _G.BearHub_getMenuBind and _G.BearHub_getMenuBind() or Enum.KeyCode.RightShift
+if inp.KeyCode == bindKey then
 if minimized then restore() else minimize() end
 end
 end)
