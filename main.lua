@@ -52,6 +52,7 @@ local AIMBOT = {
 }
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
+
 local MISC = {
 	SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false,
 	SuperPunch = false,
@@ -61,6 +62,13 @@ local MISC = {
 	JumpPowerEnabled = false, JumpPower = 50,
 	FreeCam = false, FreeCamSpeed = 30,
 }
+
+local EXPLOITS = {
+	TeleportWalk = false, TeleportWalkDistance = 5,
+	ClickTeleport = false, ClickTeleportKeyName = "NONE", ClickTeleportKeyCheck = nil,
+	AntiAFK = false,
+}
+
 local SPECTATE = {Target = nil, Active = false}
 local PANIC_TRIGGERED = false
 local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
@@ -96,6 +104,7 @@ local function PANIC_DESTROY()
 	MISC.SemiGod = false; MISC.NoRecoil = false; MISC.NoSpread = false; MISC.InfAmmo = false
 	MISC.NoClip = false; MISC.RapidFire = false; MISC.SuperPunch = false
 	MISC.WalkSpeedEnabled = false; MISC.JumpPowerEnabled = false; MISC.FreeCam = false
+	EXPLOITS.TeleportWalk = false; EXPLOITS.ClickTeleport = false; EXPLOITS.AntiAFK = false
 	SPECTATE.Active = false; SPECTATE.Target = nil
 	pcall(function()
 		local myChar = player.Character
@@ -558,43 +567,25 @@ do
 											local row2 = {}
 											for i, name in ipairs(items) do
 												if i > 10 then break end
-												if i <= 5 then
-													table.insert(row1, name)
-												else
-													table.insert(row2, name)
-												end
+												if i <= 5 then table.insert(row1, name) else table.insert(row2, name) end
 											end
 											local t1 = "[" .. table.concat(row1, ", ") .. "]"
-											d.inventory.Text = t1
-											d.inventory.TextColor3 = ESP.Inventory.Color
+											d.inventory.Text = t1; d.inventory.TextColor3 = ESP.Inventory.Color
 											d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo)
-											d.inventory.Size = UDim2.new(0, 400, 0, 20)
-											d.inventory.Visible = true
-											bo = bo + 16
+											d.inventory.Size = UDim2.new(0, 400, 0, 20); d.inventory.Visible = true; bo = bo + 16
 											if #row2 > 0 then
 												local t2 = "[" .. table.concat(row2, ", ") .. "]"
-												d.inventory2.Text = t2
-												d.inventory2.TextColor3 = ESP.Inventory.Color
+												d.inventory2.Text = t2; d.inventory2.TextColor3 = ESP.Inventory.Color
 												d.inventory2.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo)
-												d.inventory2.Size = UDim2.new(0, 400, 0, 20)
-												d.inventory2.Visible = true
-												bo = bo + 16
-											else
-												d.inventory2.Visible = false
-											end
+												d.inventory2.Size = UDim2.new(0, 400, 0, 20); d.inventory2.Visible = true; bo = bo + 16
+											else d.inventory2.Visible = false end
 										else
-											d.inventory.Text = "[Empty]"
-											d.inventory.TextColor3 = Color3.fromRGB(120, 120, 130)
+											d.inventory.Text = "[Empty]"; d.inventory.TextColor3 = Color3.fromRGB(120, 120, 130)
 											d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo)
-											d.inventory.Size = UDim2.new(0, 300, 0, 20)
-											d.inventory.Visible = true
-											d.inventory2.Visible = false
-											bo = bo + 16
+											d.inventory.Size = UDim2.new(0, 300, 0, 20); d.inventory.Visible = true
+											d.inventory2.Visible = false; bo = bo + 16
 										end
-									else
-										d.inventory.Visible = false
-										d.inventory2.Visible = false
-									end
+									else d.inventory.Visible = false; d.inventory2.Visible = false end
 									if ESP.HealthBar.Enabled then
 										local bx = lX - 6
 										local hp3 = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
@@ -614,8 +605,7 @@ do
 										for i = 1, 12 do
 											if d.skeleton[i] then
 												if i <= #bones then
-													local a = getPos(char, bones[i][1])
-													local b = getPos(char, bones[i][2])
+													local a = getPos(char, bones[i][1]); local b = getPos(char, bones[i][2])
 													if a and b then
 														local s1, o1, d1 = w2s(a); local s2, o2, d2 = w2s(b)
 														if o1 and o2 and d1 > 0 and d2 > 0 then
@@ -627,9 +617,7 @@ do
 												else d.skeleton[i].Visible = false end
 											end
 										end
-									else
-										for i = 1, 12 do if d.skeleton[i] then d.skeleton[i].Visible = false end end
-									end
+									else for i = 1, 12 do if d.skeleton[i] then d.skeleton[i].Visible = false end end end
 								end
 							end
 						end
@@ -920,39 +908,24 @@ do
 		if h then pcall(function() h.Health = h.MaxHealth end) end
 	end
 
-	-- COPY ITEM FUNCTION
 	_G.BearHub_copyItem = function()
 		if PANIC_TRIGGERED then return false, "Disabled" end
 		local char = player.Character
 		if not char then return false, "No character" end
-
 		local equippedTool = nil
 		for _, child in ipairs(char:GetChildren()) do
-			if child:IsA("Tool") then
-				equippedTool = child
-				break
-			end
+			if child:IsA("Tool") then equippedTool = child; break end
 		end
-
 		if not equippedTool then return false, "No tool equipped" end
-
 		local success, err = pcall(function()
 			local clone = equippedTool:Clone()
 			if clone then
 				local backpack = player:FindFirstChildOfClass("Backpack")
-				if backpack then
-					clone.Parent = backpack
-				else
-					clone.Parent = char
-				end
+				if backpack then clone.Parent = backpack else clone.Parent = char end
 			end
 		end)
-
-		if success then
-			return true, "Copied: " .. equippedTool.Name
-		else
-			return false, "Failed to copy: " .. tostring(err)
-		end
+		if success then return true, "Copied: " .. equippedTool.Name
+		else return false, "Failed to copy: " .. tostring(err) end
 	end
 
 	local lastWSEnabled, lastJPEnabled = false, false
@@ -979,9 +952,7 @@ do
 			end
 		end
 	end)
-	player.CharacterAdded:Connect(function()
-		task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false
-	end)
+	player.CharacterAdded:Connect(function() task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false end)
 
 	local flyBV, flyBG, flying = nil, nil, false
 	local function stopFly()
@@ -1048,9 +1019,6 @@ do
 		end
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
-
-	local freecamActiveLegacy = false
-	player.CharacterAdded:Connect(function() task.wait(0.5); freecamActiveLegacy = false end)
 
 	local hookedTools = {}
 	local function hookTool(tool)
@@ -1220,12 +1188,12 @@ do
 				local rf = MISC.RapidFireLevel or 20
 				if rf < 20 then
 					if not isMouseOverGui() then
-						local d2 = (rf / 20) * 0.15
 						pcall(function()
 							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
 							task.wait(0.01)
 							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
 						end)
+						local d2 = (rf / 20) * 0.15
 						task.wait(math.max(d2, 0.01))
 					else task.wait(0.05) end
 				else task.wait(0.05) end
@@ -1236,6 +1204,100 @@ end
 
 local healPlayer = _G.BearHub_healPlayer
 local copyItem = _G.BearHub_copyItem
+
+--============================================================
+-- EXPLOITS LOGIC
+--============================================================
+do
+	-- TELEPORT WALK
+	RunService.RenderStepped:Connect(function()
+		if PANIC_TRIGGERED or not EXPLOITS.TeleportWalk then return end
+		local char = player.Character; if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart")
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if not root or not hum then return end
+		local moveDir = hum.MoveDirection
+		if moveDir.Magnitude > 0 then
+			local dist = math.clamp(EXPLOITS.TeleportWalkDistance, 0.1, 300)
+			local newPos = root.Position + (moveDir.Unit * dist * 0.12)
+			pcall(function()
+				root.CFrame = CFrame.new(newPos) * (root.CFrame - root.CFrame.Position)
+			end)
+		end
+	end)
+
+	-- CLICK TELEPORT
+	local ctCooldown = false
+	local function doClickTeleport()
+		if PANIC_TRIGGERED or not EXPLOITS.ClickTeleport then return end
+		if ctCooldown then return end
+		local char = player.Character; if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
+		local mouse = player:GetMouse()
+		if mouse then
+			local targetPos = mouse.Hit.Position + Vector3.new(0, 3, 0)
+			ctCooldown = true
+			pcall(function()
+				root.CFrame = CFrame.new(targetPos)
+				for _, p in ipairs(char:GetDescendants()) do
+					if p:IsA("BasePart") then
+						pcall(function()
+							p.Velocity = Vector3.zero
+							p.AssemblyLinearVelocity = Vector3.zero
+						end)
+					end
+				end
+			end)
+			task.wait(0.15)
+			ctCooldown = false
+		end
+	end
+
+	UIS.InputBegan:Connect(function(inp, gp)
+		if PANIC_TRIGGERED or gp then return end
+		if not EXPLOITS.ClickTeleport then return end
+		if not EXPLOITS.ClickTeleportKeyCheck then return end
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			if EXPLOITS.ClickTeleportKeyCheck() then
+				doClickTeleport()
+			end
+		end
+		if inp.UserInputType == Enum.UserInputType.Keyboard then
+			if EXPLOITS.ClickTeleportKeyCheck and EXPLOITS.ClickTeleportKeyName ~= "NONE" then
+				local kn = inp.KeyCode.Name
+				if kn == EXPLOITS.ClickTeleportKeyName then
+					doClickTeleport()
+				end
+			end
+		end
+	end)
+
+	-- ANTI-AFK
+	task.spawn(function()
+		while true do
+			task.wait(55)
+			if PANIC_TRIGGERED then break end
+			if EXPLOITS.AntiAFK then
+				pcall(function()
+					VIM:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+					task.wait(0.05)
+					VIM:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+				end)
+			end
+		end
+	end)
+	pcall(function()
+		player.Idled:Connect(function()
+			if EXPLOITS.AntiAFK and not PANIC_TRIGGERED then
+				pcall(function()
+					VIM:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+					task.wait(0.05)
+					VIM:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+				end)
+			end
+		end)
+	end)
+end
 
 --============================================================
 -- GUI MAIN + COLOR PICKER
@@ -1433,14 +1495,19 @@ do
 		end)
 	end
 
-	mkSlider = function(p,t,minV,maxV,def,suf,tbl,k,o)
+	mkSlider = function(p,t,minV,maxV,def,suf,tbl,k,o,isFloat)
 		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,50); h.BackgroundTransparency=1; h.LayoutOrder=o or 0
 		local val=def or minV
 		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(0.6,0,0,20); lb.Position=UDim2.new(0,5,0,0)
 		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(200,200,210)
 		lb.Font=Enum.Font.GothamBold; lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left
 		local vl=Instance.new("TextLabel",h); vl.Size=UDim2.new(0.4,-5,0,20); vl.Position=UDim2.new(0.6,0,0,0)
-		vl.BackgroundTransparency=1; vl.Text=tostring(val)..(suf or ""); vl.TextColor3=Color3.fromRGB(150,150,160)
+		vl.BackgroundTransparency=1
+		local function fmtVal(v)
+			if isFloat then return string.format("%.1f", v)..(suf or "")
+			else return tostring(math.floor(v))..(suf or "") end
+		end
+		vl.Text=fmtVal(val); vl.TextColor3=Color3.fromRGB(150,150,160)
 		vl.Font=Enum.Font.Gotham; vl.TextSize=13; vl.TextXAlignment=Enum.TextXAlignment.Right
 		local bg=Instance.new("Frame",h); bg.Size=UDim2.new(1,-10,0,6); bg.Position=UDim2.new(0,5,0,30)
 		bg.BackgroundColor3=Color3.fromRGB(50,50,60); bg.BorderSizePixel=0
@@ -1457,9 +1524,10 @@ do
 		local function upd(x)
 			local ap=bg.AbsolutePosition; local as=bg.AbsoluteSize
 			local rx=math.clamp((x-ap.X)/as.X,0,1)
-			val=math.floor(minV+(maxV-minV)*rx)
+			if isFloat then val=math.floor((minV+(maxV-minV)*rx)*10)/10
+			else val=math.floor(minV+(maxV-minV)*rx) end
 			fill.Size=UDim2.new(rx,0,1,0); knob.Position=UDim2.new(rx,-8,0.5,-8)
-			vl.Text=tostring(val)..(suf or ""); if tbl and k then tbl[k]=val end
+			vl.Text=fmtVal(val); if tbl and k then tbl[k]=val end
 			if val~=lsv then local now=tick(); if now-lsst>0.08 then lsst=now; playSlider() end; lsv=val end
 		end
 		hit.InputBegan:Connect(function(i)
@@ -1549,6 +1617,51 @@ do
 		end)
 	end
 
+	-- SPECIAL KEYBIND FOR CLICK TELEPORT (no enable checkbox, just key selector)
+	local function mkClickTeleportKeybind(p, o)
+		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,30); h.BackgroundTransparency=1; h.LayoutOrder=o or 0
+		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,-130,1,0); lb.Position=UDim2.new(0,5,0,0)
+		lb.BackgroundTransparency=1; lb.Text="Teleport Key (hold + LMB)"; lb.TextColor3=Color3.fromRGB(200,200,210)
+		lb.Font=Enum.Font.Gotham; lb.TextSize=12; lb.TextXAlignment=Enum.TextXAlignment.Left
+		local keyBtn=Instance.new("TextButton",h); keyBtn.Size=UDim2.new(0,110,0,24); keyBtn.Position=UDim2.new(1,-115,0.5,-12)
+		keyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); keyBtn.BorderSizePixel=0; keyBtn.Text=EXPLOITS.ClickTeleportKeyName
+		keyBtn.TextColor3=Color3.fromRGB(180,180,190); keyBtn.Font=Enum.Font.GothamBold; keyBtn.TextSize=11
+		keyBtn.AutoButtonColor=false; Instance.new("UICorner",keyBtn).CornerRadius=UDim.new(0,5)
+		local to=#BIND_OPTIONS+1
+		local ddF=Instance.new("Frame",h); ddF.Size=UDim2.new(0,170,0,math.min(to,8)*28); ddF.Position=UDim2.new(1,-175,1,2)
+		ddF.BackgroundColor3=Color3.fromRGB(30,30,38); ddF.BorderSizePixel=0; ddF.Visible=false
+		ddF.ZIndex=200; ddF.ClipsDescendants=true; Instance.new("UICorner",ddF).CornerRadius=UDim.new(0,6)
+		Instance.new("UIStroke",ddF).Color=PURPLE
+		local ddS=Instance.new("ScrollingFrame",ddF); ddS.Size=UDim2.new(1,0,1,0); ddS.BackgroundTransparency=1
+		ddS.ScrollBarThickness=3; ddS.ScrollBarImageColor3=PURPLE; ddS.CanvasSize=UDim2.new(0,0,0,to*28)
+		ddS.ZIndex=201; Instance.new("UIListLayout",ddS)
+		local nb=Instance.new("TextButton",ddS); nb.Size=UDim2.new(1,0,0,28); nb.BackgroundColor3=Color3.fromRGB(30,30,38)
+		nb.Text=" NONE"; nb.TextColor3=Color3.fromRGB(150,150,160); nb.Font=Enum.Font.Gotham; nb.TextSize=12
+		nb.TextXAlignment=Enum.TextXAlignment.Left; nb.AutoButtonColor=false; nb.ZIndex=202; nb.BorderSizePixel=0; nb.LayoutOrder=0
+		nb.MouseEnter:Connect(function() nb.BackgroundColor3=Color3.fromRGB(50,50,65) end)
+		nb.MouseLeave:Connect(function() nb.BackgroundColor3=Color3.fromRGB(30,30,38) end)
+		nb.MouseButton1Click:Connect(function()
+			playClick(); EXPLOITS.ClickTeleportKeyName="NONE"; EXPLOITS.ClickTeleportKeyCheck=nil
+			keyBtn.Text="NONE"; ddF.Visible=false
+		end)
+		for i,opt in ipairs(BIND_OPTIONS) do
+			local name=opt[1]; local cfn=opt[2]
+			local ob=Instance.new("TextButton",ddS); ob.Size=UDim2.new(1,0,0,28); ob.BackgroundColor3=Color3.fromRGB(30,30,38)
+			ob.Text=" "..name; ob.TextColor3=Color3.fromRGB(180,180,190); ob.Font=Enum.Font.Gotham; ob.TextSize=12
+			ob.TextXAlignment=Enum.TextXAlignment.Left; ob.AutoButtonColor=false; ob.ZIndex=202; ob.BorderSizePixel=0; ob.LayoutOrder=i
+			ob.MouseEnter:Connect(function() ob.BackgroundColor3=Color3.fromRGB(50,50,65) end)
+			ob.MouseLeave:Connect(function() ob.BackgroundColor3=Color3.fromRGB(30,30,38) end)
+			ob.MouseButton1Click:Connect(function()
+				playClick(); EXPLOITS.ClickTeleportKeyName=name; EXPLOITS.ClickTeleportKeyCheck=cfn
+				keyBtn.Text=name; ddF.Visible=false
+			end)
+		end
+		local ddO=false
+		keyBtn.MouseButton1Click:Connect(function() playClick(); ddO=not ddO; ddF.Visible=ddO end)
+		_G.BearHub_mkClickTpKeybind = mkClickTeleportKeybind
+	end
+	_G.BearHub_mkClickTpKeybind = mkClickTeleportKeybind
+
 	mkButton = function(p,t,cb,o,cc)
 		local btn=Instance.new("TextButton",p); btn.Size=UDim2.new(1,-10,0,36)
 		btn.BackgroundColor3=cc or PURPLE; btn.BorderSizePixel=0; btn.Text=t
@@ -1585,6 +1698,7 @@ do
 		return f
 	end
 
+	-- VISUALIZATION PAGE
 	local vizP=createPage("Visualization")
 	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,360,0.5,5); vR.Position=UDim2.new(0.5,5,0,5)
 	mkSection(vL,"Visualization",1); mkCheck(vL,"Enable",ESP,"Enabled",2)
@@ -1595,6 +1709,7 @@ do
 	mkCheckColor(vR,"Health Bar",nil,"HealthBar",nil,6); mkCheckColor(vR,"Distance",nil,"Distance",nil,7)
 	mkCheckColor(vR,"Snaplines",nil,"Snaplines",nil,8); mkCheckColor(vR,"Inventory",nil,"Inventory",nil,9)
 
+	-- AIM PAGE
 	local aimP=createPage("AimAssistance")
 	local subBar=Instance.new("Frame",aimP); subBar.Size=UDim2.new(1,-20,0,30); subBar.Position=UDim2.new(0,10,0,0); subBar.BackgroundTransparency=1
 	local sbl=Instance.new("UIListLayout",subBar); sbl.FillDirection=Enum.FillDirection.Horizontal; sbl.Padding=UDim.new(0,15)
@@ -1635,44 +1750,29 @@ do
 	end
 	local s1=mkSB("TriggerBot",1); mkSB("Aimbot",2); mkSB("Hitbox",3); selSub=s1; s1.btn.TextColor3=Color3.new(1,1,1); s1.ul.Visible=true
 
+	-- MISC PAGE
 	local miscP=createPage("Miscellaneous")
 	local mSubBar=Instance.new("Frame",miscP); mSubBar.Size=UDim2.new(1,-20,0,30); mSubBar.Position=UDim2.new(0,10,0,0); mSubBar.BackgroundTransparency=1
 	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
 	local mSubPF=Instance.new("Frame",miscP); mSubPF.Size=UDim2.new(1,0,1,-40); mSubPF.Position=UDim2.new(0,0,0,38); mSubPF.BackgroundTransparency=1
 
+	-- Actions sub-page
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
-	local qaPanel=mkPanel(mqaP,0.48,180,0,5)
+	local qaPanel=mkPanel(mqaP,0.48,200,0,5)
 	mkSection(qaPanel,"Quick Actions",1)
 	mkButton(qaPanel,"Heal",healPlayer,2)
 
-	-- COPY ITEM BUTTON with status label
-	local copyStatusLabel = Instance.new("TextLabel", qaPanel)
-	copyStatusLabel.Size = UDim2.new(1, -10, 0, 18)
-	copyStatusLabel.BackgroundTransparency = 1
-	copyStatusLabel.Text = ""
-	copyStatusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
-	copyStatusLabel.Font = Enum.Font.GothamBold
-	copyStatusLabel.TextSize = 11
-	copyStatusLabel.TextXAlignment = Enum.TextXAlignment.Center
-	copyStatusLabel.LayoutOrder = 4
+	local copyStatusLabel=Instance.new("TextLabel",qaPanel); copyStatusLabel.Size=UDim2.new(1,-10,0,18); copyStatusLabel.BackgroundTransparency=1
+	copyStatusLabel.Text=""; copyStatusLabel.TextColor3=Color3.fromRGB(100,200,100); copyStatusLabel.Font=Enum.Font.GothamBold
+	copyStatusLabel.TextSize=11; copyStatusLabel.TextXAlignment=Enum.TextXAlignment.Center; copyStatusLabel.LayoutOrder=4
 
-	mkButton(qaPanel, "Copy Item (in hand)", function()
-		local ok, msg = copyItem()
-		if ok then
-			copyStatusLabel.Text = msg
-			copyStatusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
-		else
-			copyStatusLabel.Text = msg
-			copyStatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-		end
-		task.spawn(function()
-			task.wait(2.5)
-			if copyStatusLabel.Text == msg then
-				copyStatusLabel.Text = ""
-			end
-		end)
-	end, 3, Color3.fromRGB(60, 140, 220))
+	mkButton(qaPanel,"Copy Item (in hand)",function()
+		local ok,msg=copyItem()
+		copyStatusLabel.Text=msg; copyStatusLabel.TextColor3=ok and Color3.fromRGB(100,200,100) or Color3.fromRGB(255,100,100)
+		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
+	end,3,Color3.fromRGB(60,140,220))
 
+	-- Combat sub-page
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
 	local cbPanel=mkPanel(mcbP,0.48,290,0,5)
 	mkSection(cbPanel,"Combat Cheats",1)
@@ -1682,6 +1782,7 @@ do
 	mkCheck(cbPanel,"No Spread",MISC,"NoSpread",5)
 	mkCheck(cbPanel,"Infinity Ammo",MISC,"InfAmmo",6)
 
+	-- Movement sub-page
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
 	local mvPanel=mkPanel(mmvP,0.6,380,0,5)
 	mkSection(mvPanel,"Movement",1)
@@ -1692,12 +1793,14 @@ do
 	mkCheck(mvPanel,"Jump Power",MISC,"JumpPowerEnabled",6)
 	mkSlider(mvPanel,"Jump Power Value",1,500,50," m",MISC,"JumpPower",7)
 
+	-- RapidFire sub-page
 	local mrfP=Instance.new("Frame",mSubPF); mrfP.Size=UDim2.new(1,0,1,0); mrfP.BackgroundTransparency=1; mrfP.Visible=false
 	local rfPanel=mkPanel(mrfP,0.48,200,0,5)
 	mkSection(rfPanel,"Rapid Fire",1)
 	mkCheck(rfPanel,"Enable Rapid Fire",MISC,"RapidFire",2)
 	mkSlider(rfPanel,"Fire Speed",0,20,20,"",MISC,"RapidFireLevel",3)
 
+	-- FreeCam sub-page
 	local mfcP=Instance.new("Frame",mSubPF); mfcP.Size=UDim2.new(1,0,1,0); mfcP.BackgroundTransparency=1; mfcP.Visible=false
 	local fcPanel=mkPanel(mfcP,0.6,200,0,5)
 	mkSection(fcPanel,"Free Camera",1)
@@ -1710,67 +1813,43 @@ do
 	local oldMouseIconEnabled = true
 
 	local fcDot = Instance.new("Frame", gui)
-	fcDot.Size = UDim2.new(0, 6, 0, 6)
-	fcDot.AnchorPoint = Vector2.new(0.5, 0.5)
-	fcDot.Position = UDim2.new(0.5, 0, 0.5, 0)
-	fcDot.BackgroundColor3 = Color3.new(1,1,1)
-	fcDot.BorderSizePixel = 0
-	fcDot.Visible = false
-	fcDot.ZIndex = 9998
+	fcDot.Size = UDim2.new(0, 6, 0, 6); fcDot.AnchorPoint = Vector2.new(0.5, 0.5)
+	fcDot.Position = UDim2.new(0.5, 0, 0.5, 0); fcDot.BackgroundColor3 = Color3.new(1,1,1)
+	fcDot.BorderSizePixel = 0; fcDot.Visible = false; fcDot.ZIndex = 9998
 	Instance.new("UICorner", fcDot).CornerRadius = UDim.new(1, 0)
 
 	local fcBar = Instance.new("Frame", gui)
-	fcBar.Size = UDim2.new(0, 300, 0, 40)
-	fcBar.AnchorPoint = Vector2.new(0.5, 1)
-	fcBar.Position = UDim2.new(0.5, 0, 1, -80)
-	fcBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-	fcBar.BorderSizePixel = 0
-	fcBar.Visible = false
-	fcBar.ZIndex = 9998
+	fcBar.Size = UDim2.new(0, 300, 0, 40); fcBar.AnchorPoint = Vector2.new(0.5, 1)
+	fcBar.Position = UDim2.new(0.5, 0, 1, -80); fcBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+	fcBar.BorderSizePixel = 0; fcBar.Visible = false; fcBar.ZIndex = 9998
 	Instance.new("UICorner", fcBar).CornerRadius = UDim.new(0, 10)
 	Instance.new("UIStroke", fcBar).Color = PURPLE
 
 	local fcLabel = Instance.new("TextLabel", fcBar)
-	fcLabel.Size = UDim2.new(0, 140, 1, 0)
-	fcLabel.Position = UDim2.new(0, 10, 0, 0)
-	fcLabel.BackgroundTransparency = 1
-	fcLabel.Text = "FREE CAM"
-	fcLabel.TextColor3 = Color3.fromRGB(180, 140, 255)
-	fcLabel.Font = Enum.Font.GothamBold
-	fcLabel.TextSize = 14
-	fcLabel.TextXAlignment = Enum.TextXAlignment.Left
-	fcLabel.ZIndex = 9999
+	fcLabel.Size = UDim2.new(0, 140, 1, 0); fcLabel.Position = UDim2.new(0, 10, 0, 0)
+	fcLabel.BackgroundTransparency = 1; fcLabel.Text = "FREE CAM"
+	fcLabel.TextColor3 = Color3.fromRGB(180, 140, 255); fcLabel.Font = Enum.Font.GothamBold
+	fcLabel.TextSize = 14; fcLabel.TextXAlignment = Enum.TextXAlignment.Left; fcLabel.ZIndex = 9999
 
 	local fcTpBtn = Instance.new("TextButton", fcBar)
-	fcTpBtn.Size = UDim2.new(0, 120, 0, 28)
-	fcTpBtn.Position = UDim2.new(1, -130, 0.5, -14)
-	fcTpBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
-	fcTpBtn.BorderSizePixel = 0
-	fcTpBtn.Text = "Teleport (LMB)"
-	fcTpBtn.TextColor3 = Color3.new(1,1,1)
-	fcTpBtn.Font = Enum.Font.GothamBold
-	fcTpBtn.TextSize = 12
-	fcTpBtn.AutoButtonColor = false
-	fcTpBtn.ZIndex = 9999
+	fcTpBtn.Size = UDim2.new(0, 120, 0, 28); fcTpBtn.Position = UDim2.new(1, -130, 0.5, -14)
+	fcTpBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220); fcTpBtn.BorderSizePixel = 0
+	fcTpBtn.Text = "Teleport (LMB)"; fcTpBtn.TextColor3 = Color3.new(1,1,1)
+	fcTpBtn.Font = Enum.Font.GothamBold; fcTpBtn.TextSize = 12; fcTpBtn.AutoButtonColor = false; fcTpBtn.ZIndex = 9999
 	Instance.new("UICorner", fcTpBtn).CornerRadius = UDim.new(0, 6)
 
 	local function stopFreeCam()
 		if not freecamActive then return end
-		freecamActive = false
-		fcDot.Visible = false
-		fcBar.Visible = false
+		freecamActive = false; fcDot.Visible = false; fcBar.Visible = false
 		pcall(function()
-			UIS.MouseBehavior = oldMouseBehavior
-			UIS.MouseIconEnabled = oldMouseIconEnabled
+			UIS.MouseBehavior = oldMouseBehavior; UIS.MouseIconEnabled = oldMouseIconEnabled
 			Camera.CameraType = Enum.CameraType.Custom
 			local char = player.Character
 			if char then
 				local root = char:FindFirstChild("HumanoidRootPart")
 				if root then
-					local anchor = root:FindFirstChild("BearHub_FCanchor")
-					if anchor then anchor:Destroy() end
-					local bv = root:FindFirstChild("BearHub_FCvel")
-					if bv then bv:Destroy() end
+					local anchor = root:FindFirstChild("BearHub_FCanchor"); if anchor then anchor:Destroy() end
+					local bv = root:FindFirstChild("BearHub_FCvel"); if bv then bv:Destroy() end
 				end
 				local hum = char:FindFirstChildOfClass("Humanoid")
 				if hum then
@@ -1786,26 +1865,15 @@ do
 		if not freecamActive or PANIC_TRIGGERED then return end
 		local char = player.Character; if not char then return end
 		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
-		local camPos = Camera.CFrame.Position
-		local camLook = Camera.CFrame.LookVector
-		local rayParams = RaycastParams.new()
-		rayParams.FilterDescendantsInstances = {char}
-		rayParams.FilterType = Enum.RaycastFilterType.Exclude
+		local camPos = Camera.CFrame.Position; local camLook = Camera.CFrame.LookVector
+		local rayParams = RaycastParams.new(); rayParams.FilterDescendantsInstances = {char}; rayParams.FilterType = Enum.RaycastFilterType.Exclude
 		local result = workspace:Raycast(camPos, camLook * 1000, rayParams)
-		local targetPos
-		if result then
-			targetPos = result.Position + Vector3.new(0, 3, 0)
-		else
-			targetPos = camPos + camLook * 50
-		end
+		local targetPos = result and (result.Position + Vector3.new(0, 3, 0)) or (camPos + camLook * 50)
 		local savedCF = CFrame.new(targetPos)
-		stopFreeCam()
-		MISC.FreeCam = false
+		stopFreeCam(); MISC.FreeCam = false
 		task.wait(0.1)
 		pcall(function()
-			root.CFrame = savedCF
-			root.Velocity = Vector3.zero
-			root.AssemblyLinearVelocity = Vector3.zero
+			root.CFrame = savedCF; root.Velocity = Vector3.zero; root.AssemblyLinearVelocity = Vector3.zero
 		end)
 	end
 
@@ -1813,35 +1881,21 @@ do
 		if freecamActive or PANIC_TRIGGERED then return end
 		local char = player.Character; if not char then return end
 		local root = char:FindFirstChild("HumanoidRootPart"); if not root then return end
-		freecamActive = true
-		fcDot.Visible = true
-		fcBar.Visible = true
-		oldMouseBehavior = UIS.MouseBehavior
-		oldMouseIconEnabled = UIS.MouseIconEnabled
-		UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
-		UIS.MouseIconEnabled = false
-		local bpos = Instance.new("BodyPosition")
-		bpos.Name = "BearHub_FCanchor"
-		bpos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-		bpos.D = 1000; bpos.P = 10000
-		bpos.Position = root.Position
-		bpos.Parent = root
-		local bvel = Instance.new("BodyVelocity")
-		bvel.Name = "BearHub_FCvel"
-		bvel.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-		bvel.Velocity = Vector3.zero
-		bvel.Parent = root
+		freecamActive = true; fcDot.Visible = true; fcBar.Visible = true
+		oldMouseBehavior = UIS.MouseBehavior; oldMouseIconEnabled = UIS.MouseIconEnabled
+		UIS.MouseBehavior = Enum.MouseBehavior.LockCenter; UIS.MouseIconEnabled = false
+		local bpos = Instance.new("BodyPosition"); bpos.Name = "BearHub_FCanchor"
+		bpos.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bpos.D = 1000; bpos.P = 10000
+		bpos.Position = root.Position; bpos.Parent = root
+		local bvel = Instance.new("BodyVelocity"); bvel.Name = "BearHub_FCvel"
+		bvel.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bvel.Velocity = Vector3.zero; bvel.Parent = root
 		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then
-			hum.WalkSpeed = 0
-			hum.JumpPower = 0
-			hum.JumpHeight = 0
-		end
+		if hum then hum.WalkSpeed = 0; hum.JumpPower = 0; hum.JumpHeight = 0 end
 		Camera.CameraType = Enum.CameraType.Scriptable
 		local look = Camera.CFrame.LookVector
 		local camYaw = math.atan2(-look.X, -look.Z)
 		local camPitch = math.asin(math.clamp(look.Y, -1, 1))
-		local camPos = Camera.CFrame.Position
+		local camPos2 = Camera.CFrame.Position
 		local sensitivity = 0.006
 		task.spawn(function()
 			while freecamActive and MISC.FreeCam and not PANIC_TRIGGERED do
@@ -1861,11 +1915,9 @@ do
 				if fw ~= 0 or rt ~= 0 or up ~= 0 then
 					local mv = (rotCF.LookVector * fw + rotCF.RightVector * rt + Vector3.new(0, up, 0))
 					if mv.Magnitude > 0 then mv = mv.Unit * spd * dt end
-					camPos = camPos + mv
+					camPos2 = camPos2 + mv
 				end
-				pcall(function()
-					Camera.CFrame = CFrame.new(camPos) * rotCF
-				end)
+				pcall(function() Camera.CFrame = CFrame.new(camPos2) * rotCF end)
 			end
 			stopFreeCam()
 		end)
@@ -1873,33 +1925,21 @@ do
 
 	UIS.InputBegan:Connect(function(inp, gp)
 		if PANIC_TRIGGERED or gp then return end
-		if freecamActive and inp.UserInputType == Enum.UserInputType.MouseButton1 then
-			freecamTeleport()
-		end
+		if freecamActive and inp.UserInputType == Enum.UserInputType.MouseButton1 then freecamTeleport() end
 	end)
-
-	fcTpBtn.MouseButton1Click:Connect(function()
-		playClick()
-		freecamTeleport()
-	end)
+	fcTpBtn.MouseButton1Click:Connect(function() playClick(); freecamTeleport() end)
 
 	task.spawn(function()
 		local wasOn = false
 		while true do
-			task.wait(0.1)
-			if PANIC_TRIGGERED then break end
-			if MISC.FreeCam and not wasOn then
-				startFreeCam()
-			elseif not MISC.FreeCam and wasOn then
-				stopFreeCam()
-			end
+			task.wait(0.1); if PANIC_TRIGGERED then break end
+			if MISC.FreeCam and not wasOn then startFreeCam()
+			elseif not MISC.FreeCam and wasOn then stopFreeCam() end
 			wasOn = MISC.FreeCam
 		end
 	end)
-
 	player.CharacterAdded:Connect(function()
-		task.wait(0.5)
-		if freecamActive then stopFreeCam(); MISC.FreeCam = false end
+		task.wait(0.5); if freecamActive then stopFreeCam(); MISC.FreeCam = false end
 	end)
 
 	local selMS=nil
@@ -1919,6 +1959,7 @@ do
 	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
 	selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
+	-- PLAYERS PAGE
 	local plP=createPage("Players")
 	local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8)
 	local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=Color3.fromRGB(160,160,170); plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
@@ -1985,7 +2026,110 @@ do
 	plSW.MouseEnter:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(240,170,70) end); plSW.MouseLeave:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(220,150,50) end)
 	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and Color3.fromRGB(255,180,80) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 
-	-- SETTINGS
+	-- EXPLOITS PAGE
+	local exP=createPage("Exploits")
+	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
+	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,15)
+	local exSubPF=Instance.new("Frame",exP); exSubPF.Size=UDim2.new(1,0,1,-40); exSubPF.Position=UDim2.new(0,0,0,38); exSubPF.BackgroundTransparency=1
+
+	-- TeleportWalk sub-page
+	local exTwP=Instance.new("Frame",exSubPF); exTwP.Size=UDim2.new(1,0,1,0); exTwP.BackgroundTransparency=1; exTwP.Visible=true
+	local twPanel=mkPanel(exTwP,0.7,200,0,5)
+	mkSection(twPanel,"Teleport Walk",1)
+
+	local twInfoLbl=Instance.new("TextLabel",twPanel); twInfoLbl.Size=UDim2.new(1,-10,0,32); twInfoLbl.BackgroundTransparency=1
+	twInfoLbl.TextWrapped=true; twInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
+	twInfoLbl.Text="Teleports you forward each frame instead of walking. Harder to detect than WalkSpeed. Use WASD to move."; twInfoLbl.Font=Enum.Font.Gotham; twInfoLbl.TextSize=11; twInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; twInfoLbl.LayoutOrder=2
+
+	mkCheck(twPanel,"Enable Teleport Walk",EXPLOITS,"TeleportWalk",3)
+	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,nil,true)
+
+	-- ClickTeleport sub-page
+	local exCtP=Instance.new("Frame",exSubPF); exCtP.Size=UDim2.new(1,0,1,0); exCtP.BackgroundTransparency=1; exCtP.Visible=false
+	local ctPanel=mkPanel(exCtP,0.7,220,0,5)
+	mkSection(ctPanel,"Click Teleport",1)
+
+	local ctInfoLbl=Instance.new("TextLabel",ctPanel); ctInfoLbl.Size=UDim2.new(1,-10,0,32); ctInfoLbl.BackgroundTransparency=1
+	ctInfoLbl.TextWrapped=true; ctInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
+	ctInfoLbl.Text="Hold your chosen key and click LMB anywhere to teleport there. Select a key from the dropdown below."; ctInfoLbl.Font=Enum.Font.Gotham; ctInfoLbl.TextSize=11; ctInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ctInfoLbl.LayoutOrder=2
+
+	mkCheck(ctPanel,"Enable Click Teleport",EXPLOITS,"ClickTeleport",3)
+
+	-- Click teleport keybind selector
+	local ctKH=Instance.new("Frame",ctPanel); ctKH.Size=UDim2.new(1,0,0,30); ctKH.BackgroundTransparency=1; ctKH.LayoutOrder=4
+	local ctKLbl=Instance.new("TextLabel",ctKH); ctKLbl.Size=UDim2.new(1,-130,1,0); ctKLbl.Position=UDim2.new(0,5,0,0)
+	ctKLbl.BackgroundTransparency=1; ctKLbl.Text="Teleport Key (hold + LMB)"; ctKLbl.TextColor3=Color3.fromRGB(200,200,210)
+	ctKLbl.Font=Enum.Font.Gotham; ctKLbl.TextSize=12; ctKLbl.TextXAlignment=Enum.TextXAlignment.Left
+
+	local ctKeyBtn=Instance.new("TextButton",ctKH); ctKeyBtn.Size=UDim2.new(0,110,0,24); ctKeyBtn.Position=UDim2.new(1,-115,0.5,-12)
+	ctKeyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); ctKeyBtn.BorderSizePixel=0; ctKeyBtn.Text=EXPLOITS.ClickTeleportKeyName
+	ctKeyBtn.TextColor3=Color3.fromRGB(180,180,190); ctKeyBtn.Font=Enum.Font.GothamBold; ctKeyBtn.TextSize=11
+	ctKeyBtn.AutoButtonColor=false; Instance.new("UICorner",ctKeyBtn).CornerRadius=UDim.new(0,5)
+
+	local BIND_OPTIONS_CT = {
+		{"LPM (MB1)",function() return mbHeld[1] end},
+		{"PPM (MB2)",function() return mbHeld[2] end},
+		{"Side Back (MB4)",function() return mbHeld[4] end},
+		{"Side Front (MB5)",function() return mbHeld[5] end},
+	}
+	local KB2={Enum.KeyCode.E,Enum.KeyCode.F,Enum.KeyCode.G,Enum.KeyCode.H,Enum.KeyCode.Q,Enum.KeyCode.R,Enum.KeyCode.T,Enum.KeyCode.X,Enum.KeyCode.Z,Enum.KeyCode.C,Enum.KeyCode.V,Enum.KeyCode.B,Enum.KeyCode.CapsLock,Enum.KeyCode.LeftAlt,Enum.KeyCode.RightAlt,Enum.KeyCode.LeftControl,Enum.KeyCode.RightControl,Enum.KeyCode.LeftShift,Enum.KeyCode.F1,Enum.KeyCode.F2,Enum.KeyCode.F3,Enum.KeyCode.F4,Enum.KeyCode.F5,Enum.KeyCode.F6,Enum.KeyCode.F7,Enum.KeyCode.F8}
+	for _,kc in ipairs(KB2) do local kcc=kc; table.insert(BIND_OPTIONS_CT,{kc.Name,function() return UIS:IsKeyDown(kcc) end}) end
+
+	local ctTo=#BIND_OPTIONS_CT+1
+	local ctDdF=Instance.new("Frame",ctKH); ctDdF.Size=UDim2.new(0,170,0,math.min(ctTo,8)*28); ctDdF.Position=UDim2.new(1,-175,1,2)
+	ctDdF.BackgroundColor3=Color3.fromRGB(30,30,38); ctDdF.BorderSizePixel=0; ctDdF.Visible=false
+	ctDdF.ZIndex=200; ctDdF.ClipsDescendants=true; Instance.new("UICorner",ctDdF).CornerRadius=UDim.new(0,6)
+	Instance.new("UIStroke",ctDdF).Color=PURPLE
+	local ctDdS=Instance.new("ScrollingFrame",ctDdF); ctDdS.Size=UDim2.new(1,0,1,0); ctDdS.BackgroundTransparency=1
+	ctDdS.ScrollBarThickness=3; ctDdS.ScrollBarImageColor3=PURPLE; ctDdS.CanvasSize=UDim2.new(0,0,0,ctTo*28)
+	ctDdS.ZIndex=201; Instance.new("UIListLayout",ctDdS)
+	local ctNb=Instance.new("TextButton",ctDdS); ctNb.Size=UDim2.new(1,0,0,28); ctNb.BackgroundColor3=Color3.fromRGB(30,30,38)
+	ctNb.Text=" NONE"; ctNb.TextColor3=Color3.fromRGB(150,150,160); ctNb.Font=Enum.Font.Gotham; ctNb.TextSize=12
+	ctNb.TextXAlignment=Enum.TextXAlignment.Left; ctNb.AutoButtonColor=false; ctNb.ZIndex=202; ctNb.BorderSizePixel=0; ctNb.LayoutOrder=0
+	ctNb.MouseEnter:Connect(function() ctNb.BackgroundColor3=Color3.fromRGB(50,50,65) end)
+	ctNb.MouseLeave:Connect(function() ctNb.BackgroundColor3=Color3.fromRGB(30,30,38) end)
+	ctNb.MouseButton1Click:Connect(function()
+		playClick(); EXPLOITS.ClickTeleportKeyName="NONE"; EXPLOITS.ClickTeleportKeyCheck=nil; ctKeyBtn.Text="NONE"; ctDdF.Visible=false
+	end)
+	for i,opt in ipairs(BIND_OPTIONS_CT) do
+		local name=opt[1]; local cfn=opt[2]
+		local ob=Instance.new("TextButton",ctDdS); ob.Size=UDim2.new(1,0,0,28); ob.BackgroundColor3=Color3.fromRGB(30,30,38)
+		ob.Text=" "..name; ob.TextColor3=Color3.fromRGB(180,180,190); ob.Font=Enum.Font.Gotham; ob.TextSize=12
+		ob.TextXAlignment=Enum.TextXAlignment.Left; ob.AutoButtonColor=false; ob.ZIndex=202; ob.BorderSizePixel=0; ob.LayoutOrder=i
+		ob.MouseEnter:Connect(function() ob.BackgroundColor3=Color3.fromRGB(50,50,65) end)
+		ob.MouseLeave:Connect(function() ob.BackgroundColor3=Color3.fromRGB(30,30,38) end)
+		ob.MouseButton1Click:Connect(function()
+			playClick(); EXPLOITS.ClickTeleportKeyName=name; EXPLOITS.ClickTeleportKeyCheck=cfn; ctKeyBtn.Text=name; ctDdF.Visible=false
+		end)
+	end
+	local ctDdO=false
+	ctKeyBtn.MouseButton1Click:Connect(function() playClick(); ctDdO=not ctDdO; ctDdF.Visible=ctDdO end)
+
+	-- AntiAFK sub-page
+	local exAfkP=Instance.new("Frame",exSubPF); exAfkP.Size=UDim2.new(1,0,1,0); exAfkP.BackgroundTransparency=1; exAfkP.Visible=false
+	local afkPanel=mkPanel(exAfkP,0.7,160,0,5)
+	mkSection(afkPanel,"Anti-AFK",1)
+	local afkInfoLbl=Instance.new("TextLabel",afkPanel); afkInfoLbl.Size=UDim2.new(1,-10,0,32); afkInfoLbl.BackgroundTransparency=1
+	afkInfoLbl.TextWrapped=true; afkInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
+	afkInfoLbl.Text="Prevents the game from kicking you for being AFK. Sends a virtual keypress every 55 seconds."; afkInfoLbl.Font=Enum.Font.Gotham; afkInfoLbl.TextSize=11; afkInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; afkInfoLbl.LayoutOrder=2
+	mkCheck(afkPanel,"Enable Anti-AFK",EXPLOITS,"AntiAFK",3)
+
+	-- Exploits sub-tabs
+	local selEx=nil
+	local function switchEx(n) exTwP.Visible=(n=="TpWalk"); exCtP.Visible=(n=="ClickTp"); exAfkP.Visible=(n=="AntiAFK") end
+	local function mkExB(n,dn,o)
+		local btn=Instance.new("TextButton",exSubBar); btn.Size=UDim2.new(0,100,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
+		btn.Text=dn; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=13; btn.AutoButtonColor=false; btn.LayoutOrder=o
+		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
+		btn.MouseButton1Click:Connect(function()
+			playClick(); if selEx then selEx.btn.TextColor3=Color3.fromRGB(120,120,130); selEx.ul.Visible=false end
+			selEx={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchEx(n)
+		end); return {btn=btn,ul=ul}
+	end
+	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2); mkExB("AntiAFK","Anti-AFK",3)
+	selEx=ex1; ex1.btn.TextColor3=Color3.new(1,1,1); ex1.ul.Visible=true
+
+	-- SETTINGS PAGE
 	local stP=createPage("Settings")
 	local stSubBar=Instance.new("Frame",stP); stSubBar.Size=UDim2.new(1,-20,0,30); stSubBar.Position=UDim2.new(0,10,0,0); stSubBar.BackgroundTransparency=1
 	local stSbl=Instance.new("UIListLayout",stSubBar); stSbl.FillDirection=Enum.FillDirection.Horizontal; stSbl.Padding=UDim.new(0,15)
@@ -1999,7 +2143,6 @@ do
 	mkSection(sgPanel,"Menu Settings",1)
 
 	local MENU_BIND = {KeyName = "RightShift", KeyCode = Enum.KeyCode.RightShift}
-
 	local mbH=Instance.new("Frame",sgPanel); mbH.Size=UDim2.new(1,0,0,30); mbH.BackgroundTransparency=1; mbH.LayoutOrder=2
 	local mbLbl=Instance.new("TextLabel",mbH); mbLbl.Size=UDim2.new(0.5,0,1,0); mbLbl.Position=UDim2.new(0,5,0,0)
 	mbLbl.BackgroundTransparency=1; mbLbl.Text="Toggle Menu Key"; mbLbl.TextColor3=Color3.fromRGB(200,200,210)
@@ -2011,23 +2154,15 @@ do
 
 	local mbListening = false
 	mbBtn.MouseButton1Click:Connect(function()
-		playClick()
-		if mbListening then return end
-		mbListening = true
-		mbBtn.Text = "Press a key..."
-		mbBtn.TextColor3 = Color3.fromRGB(255, 200, 100)
+		playClick(); if mbListening then return end
+		mbListening = true; mbBtn.Text = "Press a key..."; mbBtn.TextColor3 = Color3.fromRGB(255, 200, 100)
 	end)
-
 	UIS.InputBegan:Connect(function(inp, gp)
 		if mbListening and inp.UserInputType == Enum.UserInputType.Keyboard then
-			mbListening = false
-			MENU_BIND.KeyCode = inp.KeyCode
-			MENU_BIND.KeyName = inp.KeyCode.Name
-			mbBtn.Text = MENU_BIND.KeyName
-			mbBtn.TextColor3 = Color3.fromRGB(180,180,190)
+			mbListening = false; MENU_BIND.KeyCode = inp.KeyCode; MENU_BIND.KeyName = inp.KeyCode.Name
+			mbBtn.Text = MENU_BIND.KeyName; mbBtn.TextColor3 = Color3.fromRGB(180,180,190)
 		end
 	end)
-
 	_G.BearHub_getMenuBind = function() return MENU_BIND.KeyCode end
 
 	local stPanicP=Instance.new("Frame",stSubPF); stPanicP.Size=UDim2.new(1,0,1,0); stPanicP.BackgroundTransparency=1; stPanicP.Visible=false
@@ -2059,7 +2194,7 @@ end
 -- TABS + DRAG
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
-local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Players"},{"Settings"},{"AutoFarm"}}
+local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"}}
 local selTab = nil
 
 local function switchPage(name)
@@ -2148,7 +2283,6 @@ UIS.InputBegan:Connect(function(inp, gp)
 end)
 
 local dragging, dragStart, startPos, mainDragMoved = false, nil, nil, false
-
 sidebar.InputBegan:Connect(function(i)
 	if i.UserInputType == Enum.UserInputType.MouseButton1 then
 		dragging = true; mainDragMoved = false; dragStart = i.Position; startPos = main.Position
@@ -2156,7 +2290,6 @@ sidebar.InputBegan:Connect(function(i)
 end)
 
 local ballDrag, ballStart, ballPos, ballMoved, lastClickTime = false, nil, nil, false, 0
-
 miniBall.InputBegan:Connect(function(i)
 	if i.UserInputType == Enum.UserInputType.MouseButton1 then
 		ballDrag = true; ballMoved = false; ballStart = i.Position; ballPos = miniBall.Position
