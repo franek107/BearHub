@@ -8,6 +8,7 @@ local Camera = workspace.CurrentCamera
 local SoundService = game:GetService("SoundService")
 local VIM = game:GetService("VirtualInputManager")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 local CLICK_SOUND_ID = "rbxassetid://6895079853"
 local SLIDER_SOUND_ID = "rbxassetid://5765856907"
@@ -18,6 +19,47 @@ local GRAY = Color3.fromRGB(60, 60, 70)
 local DARK = Color3.fromRGB(35, 35, 42)
 local CHECK_ICON = "rbxassetid://6031094667"
 local BEAR_ICON = "rbxassetid://7733658504"
+
+--============================================================
+-- FILE SYSTEM DETECTION (executor functions)
+--============================================================
+local FS_AVAILABLE = false
+local fs_writefile, fs_readfile, fs_listfiles, fs_isfile, fs_isfolder, fs_makefolder, fs_delfile
+do
+    local ok = pcall(function()
+        fs_writefile = writefile or (syn and syn.writefile) or (getgenv and getgenv().writefile)
+        fs_readfile = readfile or (syn and syn.readfile) or (getgenv and getgenv().readfile)
+        fs_listfiles = listfiles or (syn and syn.listfiles) or (getgenv and getgenv().listfiles)
+        fs_isfile = isfile or (syn and syn.isfile) or (getgenv and getgenv().isfile)
+        fs_isfolder = isfolder or (syn and syn.isfolder) or (getgenv and getgenv().isfolder)
+        fs_makefolder = makefolder or (syn and syn.makefolder) or (getgenv and getgenv().makefolder)
+        fs_delfile = delfile or (syn and syn.delfile) or (getgenv and getgenv().delfile)
+    end)
+    if ok and fs_writefile and fs_readfile and fs_listfiles then
+        FS_AVAILABLE = true
+    end
+end
+
+local CONFIG_FOLDER = "BearHub_Configs"
+if FS_AVAILABLE then
+    pcall(function()
+        if fs_isfolder and not fs_isfolder(CONFIG_FOLDER) then
+            if fs_makefolder then fs_makefolder(CONFIG_FOLDER) end
+        end
+    end)
+end
+
+local function sanitizeFileName(name)
+    if not name then return "unnamed" end
+    local clean = name:gsub("[^%w%s%-_]", "_"):gsub("%s+", "_")
+    if #clean == 0 then clean = "unnamed" end
+    if #clean > 40 then clean = clean:sub(1, 40) end
+    return clean
+end
+
+local function getConfigPath(name)
+    return CONFIG_FOLDER .. "/" .. sanitizeFileName(name) .. ".json"
+end
 
 local ESP = {
 Enabled = true, MaxDistance = 300, ShowLocalPlayer = false, VisibleOnly = false,
@@ -1072,7 +1114,6 @@ end
 end)
 player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
 
--- FREECAM LEGACY STUB
 local freecamActiveLegacy = false
 player.CharacterAdded:Connect(function() task.wait(0.5); freecamActiveLegacy = false end)
 
@@ -1261,17 +1302,27 @@ end
 local healPlayer = _G.BearHub_healPlayer
 
 --============================================================
--- CONFIG SYSTEM LOGIC
+-- CONFIG SYSTEM WITH PERSISTENT STORAGE
 --============================================================
 local CONFIG_STORE = {}
 local CONFIG_LIST_BUTTONS = {}
 local selectedConfigName = nil
+
+-- Registry for UI elements that need refresh after config load
+local UI_REGISTRY = {
+    checks = {}, -- { {box=..., checkIcon=..., tbl=..., key=..., isSub=..., subKey=...}, ... }
+    colorPickers = {}, -- { {colorIndicator=..., tbl=..., key=..., isSub=..., subKey=...}, ... }
+    sliders = {}, -- { {fill=..., knob=..., label=..., min=..., max=..., suf=..., tbl=..., key=...}, ... }
+    dropdowns = {}, -- { {button=..., tbl=..., key=...}, ... }
+    keybinds = {}, -- { {box=..., checkIcon=..., keyBtn=..., tbl=...}, ... }
+}
 
 local function colorToTable(c)
     return {R = c.R, G = c.G, B = c.B}
 end
 
 local function tableToColor(t)
+    if type(t) ~= "table" then return Color3.new(1,1,1) end
     return Color3.new(t.R or 1, t.G or 1, t.B or 1)
 end
 
@@ -1344,86 +1395,131 @@ end
 local function loadConfigData(data)
     if not data then return end
     
-    -- Load ESP
     if data.ESP then
-        ESP.Enabled = data.ESP.Enabled
-        ESP.MaxDistance = data.ESP.MaxDistance
-        ESP.ShowLocalPlayer = data.ESP.ShowLocalPlayer
-        ESP.VisibleOnly = data.ESP.VisibleOnly
+        if data.ESP.Enabled ~= nil then ESP.Enabled = data.ESP.Enabled end
+        if data.ESP.MaxDistance ~= nil then ESP.MaxDistance = data.ESP.MaxDistance end
+        if data.ESP.ShowLocalPlayer ~= nil then ESP.ShowLocalPlayer = data.ESP.ShowLocalPlayer end
+        if data.ESP.VisibleOnly ~= nil then ESP.VisibleOnly = data.ESP.VisibleOnly end
         
         local targets = {"Box", "Skeleton", "Name", "ID", "HealthBar", "Distance", "Snaplines", "Inventory"}
         for _, name in ipairs(targets) do
             if data.ESP[name] then
-                ESP[name].Enabled = data.ESP[name].Enabled
-                if data.ESP[name].Color then
-                    ESP[name].Color = tableToColor(data.ESP[name].Color)
-                end
+                if data.ESP[name].Enabled ~= nil then ESP[name].Enabled = data.ESP[name].Enabled end
+                if data.ESP[name].Color then ESP[name].Color = tableToColor(data.ESP[name].Color) end
             end
         end
     end
     
-    -- Load Triggerbot
     if data.TRIGGERBOT then
-        TRIGGERBOT.Enabled = data.TRIGGERBOT.Enabled
-        TRIGGERBOT.KeybindName = data.TRIGGERBOT.KeybindName
-        TRIGGERBOT.Type = data.TRIGGERBOT.Type
-        TRIGGERBOT.ShowFOV = data.TRIGGERBOT.ShowFOV
-        if data.TRIGGERBOT.FOVColor then
-            TRIGGERBOT.FOVColor = tableToColor(data.TRIGGERBOT.FOVColor)
-        end
-        TRIGGERBOT.FOV = data.TRIGGERBOT.FOV
-        TRIGGERBOT.ExcludeDead = data.TRIGGERBOT.ExcludeDead
-        TRIGGERBOT.VisibleOnly = data.TRIGGERBOT.VisibleOnly
-        TRIGGERBOT.MaxDistance = data.TRIGGERBOT.MaxDistance
-        TRIGGERBOT.ShotDelay = data.TRIGGERBOT.ShotDelay
+        if data.TRIGGERBOT.Enabled ~= nil then TRIGGERBOT.Enabled = data.TRIGGERBOT.Enabled end
+        if data.TRIGGERBOT.KeybindName ~= nil then TRIGGERBOT.KeybindName = data.TRIGGERBOT.KeybindName end
+        if data.TRIGGERBOT.Type ~= nil then TRIGGERBOT.Type = data.TRIGGERBOT.Type end
+        if data.TRIGGERBOT.ShowFOV ~= nil then TRIGGERBOT.ShowFOV = data.TRIGGERBOT.ShowFOV end
+        if data.TRIGGERBOT.FOVColor then TRIGGERBOT.FOVColor = tableToColor(data.TRIGGERBOT.FOVColor) end
+        if data.TRIGGERBOT.FOV ~= nil then TRIGGERBOT.FOV = data.TRIGGERBOT.FOV end
+        if data.TRIGGERBOT.ExcludeDead ~= nil then TRIGGERBOT.ExcludeDead = data.TRIGGERBOT.ExcludeDead end
+        if data.TRIGGERBOT.VisibleOnly ~= nil then TRIGGERBOT.VisibleOnly = data.TRIGGERBOT.VisibleOnly end
+        if data.TRIGGERBOT.MaxDistance ~= nil then TRIGGERBOT.MaxDistance = data.TRIGGERBOT.MaxDistance end
+        if data.TRIGGERBOT.ShotDelay ~= nil then TRIGGERBOT.ShotDelay = data.TRIGGERBOT.ShotDelay end
         TRIGGERBOT.KeybindCheck = nil
     end
     
-    -- Load Aimbot
     if data.AIMBOT then
-        AIMBOT.Enabled = data.AIMBOT.Enabled
-        AIMBOT.KeybindName = data.AIMBOT.KeybindName
-        AIMBOT.DrawFOV = data.AIMBOT.DrawFOV
-        if data.AIMBOT.FOVColor then
-            AIMBOT.FOVColor = tableToColor(data.AIMBOT.FOVColor)
-        end
-        AIMBOT.VisibleCheck = data.AIMBOT.VisibleCheck
-        AIMBOT.ExcludeDead = data.AIMBOT.ExcludeDead
-        AIMBOT.Bone = data.AIMBOT.Bone
-        AIMBOT.FOV = data.AIMBOT.FOV
-        AIMBOT.MaxDistance = data.AIMBOT.MaxDistance
-        AIMBOT.SmoothX = data.AIMBOT.SmoothX
-        AIMBOT.SmoothY = data.AIMBOT.SmoothY
+        if data.AIMBOT.Enabled ~= nil then AIMBOT.Enabled = data.AIMBOT.Enabled end
+        if data.AIMBOT.KeybindName ~= nil then AIMBOT.KeybindName = data.AIMBOT.KeybindName end
+        if data.AIMBOT.DrawFOV ~= nil then AIMBOT.DrawFOV = data.AIMBOT.DrawFOV end
+        if data.AIMBOT.FOVColor then AIMBOT.FOVColor = tableToColor(data.AIMBOT.FOVColor) end
+        if data.AIMBOT.VisibleCheck ~= nil then AIMBOT.VisibleCheck = data.AIMBOT.VisibleCheck end
+        if data.AIMBOT.ExcludeDead ~= nil then AIMBOT.ExcludeDead = data.AIMBOT.ExcludeDead end
+        if data.AIMBOT.Bone ~= nil then AIMBOT.Bone = data.AIMBOT.Bone end
+        if data.AIMBOT.FOV ~= nil then AIMBOT.FOV = data.AIMBOT.FOV end
+        if data.AIMBOT.MaxDistance ~= nil then AIMBOT.MaxDistance = data.AIMBOT.MaxDistance end
+        if data.AIMBOT.SmoothX ~= nil then AIMBOT.SmoothX = data.AIMBOT.SmoothX end
+        if data.AIMBOT.SmoothY ~= nil then AIMBOT.SmoothY = data.AIMBOT.SmoothY end
         AIMBOT.KeybindCheck = nil
     end
     
-    -- Load Hitbox
     if data.HITBOX then
-        HITBOX.Enabled = data.HITBOX.Enabled
-        HITBOX.Bone = data.HITBOX.Bone
-        HITBOX.Size = data.HITBOX.Size
+        if data.HITBOX.Enabled ~= nil then HITBOX.Enabled = data.HITBOX.Enabled end
+        if data.HITBOX.Bone ~= nil then HITBOX.Bone = data.HITBOX.Bone end
+        if data.HITBOX.Size ~= nil then HITBOX.Size = data.HITBOX.Size end
     end
     
-    -- Load Misc
     if data.MISC then
-        MISC.SemiGod = data.MISC.SemiGod
-        MISC.NoRecoil = data.MISC.NoRecoil
-        MISC.NoSpread = data.MISC.NoSpread
-        MISC.InfAmmo = data.MISC.InfAmmo
-        MISC.SuperPunch = data.MISC.SuperPunch
-        MISC.NoClip = data.MISC.NoClip
-        MISC.NoClipSpeed = data.MISC.NoClipSpeed
-        MISC.RapidFire = data.MISC.RapidFire
-        MISC.RapidFireLevel = data.MISC.RapidFireLevel
-        MISC.WalkSpeedEnabled = data.MISC.WalkSpeedEnabled
-        MISC.WalkSpeed = data.MISC.WalkSpeed
-        MISC.JumpPowerEnabled = data.MISC.JumpPowerEnabled
-        MISC.JumpPower = data.MISC.JumpPower
-        MISC.FreeCam = data.MISC.FreeCam
-        MISC.FreeCamSpeed = data.MISC.FreeCamSpeed
+        for k, v in pairs(data.MISC) do
+            if MISC[k] ~= nil and v ~= nil then MISC[k] = v end
+        end
     end
-    
-    pcall(fullRefresh)
+end
+
+-- File persistence functions
+local function saveConfigToFile(name, data)
+    if not FS_AVAILABLE then return false, "File system not available" end
+    local path = getConfigPath(name)
+    local ok, err = pcall(function()
+        local json = HttpService:JSONEncode(data)
+        fs_writefile(path, json)
+    end)
+    if ok then return true end
+    return false, tostring(err)
+end
+
+local function deleteConfigFile(name)
+    if not FS_AVAILABLE then return false end
+    local path = getConfigPath(name)
+    local ok = pcall(function()
+        if fs_isfile and fs_isfile(path) and fs_delfile then
+            fs_delfile(path)
+        end
+    end)
+    return ok
+end
+
+local function loadConfigFromFile(name)
+    if not FS_AVAILABLE then return nil end
+    local path = getConfigPath(name)
+    local result = nil
+    pcall(function()
+        if fs_isfile and fs_isfile(path) then
+            local content = fs_readfile(path)
+            if content and #content > 0 then
+                result = HttpService:JSONDecode(content)
+            end
+        end
+    end)
+    return result
+end
+
+local function scanConfigFolder()
+    if not FS_AVAILABLE then return {} end
+    local found = {}
+    pcall(function()
+        if fs_isfolder and fs_isfolder(CONFIG_FOLDER) then
+            local files = fs_listfiles(CONFIG_FOLDER)
+            if files then
+                for _, filepath in ipairs(files) do
+                    local ok, name = pcall(function()
+                        -- Extract filename from path
+                        local fname = filepath:match("([^/\\]+)%.json$")
+                        return fname
+                    end)
+                    if ok and name then
+                        local content = nil
+                        pcall(function() content = fs_readfile(filepath) end)
+                        if content then
+                            local ok2, data = pcall(function()
+                                return HttpService:JSONDecode(content)
+                            end)
+                            if ok2 and data then
+                                found[name] = data
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end)
+    return found
 end
 
 --============================================================
@@ -1593,6 +1689,8 @@ box.MouseButton1Click:Connect(function()
 playClick(); en=not en; box.BackgroundColor3=en and PURPLE or GRAY; ck.Visible=en; tbl[k]=en
 if tbl==ESP then pcall(fullRefresh) end
 end)
+
+table.insert(UI_REGISTRY.checks, {box=box, checkIcon=ck, tbl=tbl, key=k, isSub=false})
 end
 
 mkCheckColor = function(p,t,tbl,k,ck2,o)
@@ -1620,6 +1718,9 @@ box.MouseButton1Click:Connect(function()
 playClick(); en=not en; box.BackgroundColor3=en and PURPLE or GRAY; ck.Visible=en
 if isSub then ESP[k].Enabled=en else tbl[k]=en end
 end)
+
+table.insert(UI_REGISTRY.checks, {box=box, checkIcon=ck, tbl=tbl, key=k, isSub=isSub})
+table.insert(UI_REGISTRY.colorPickers, {colorIndicator=ci, tbl=tbl, key=k, isSub=isSub, subKey=ck2})
 end
 
 mkSlider = function(p,t,minV,maxV,def,suf,tbl,k,o)
@@ -1655,6 +1756,8 @@ hit.InputBegan:Connect(function(i)
 if i.UserInputType==Enum.UserInputType.MouseButton1 then drag=true; upd(i.Position.X) end
 end)
 table.insert(allSliders,{isDragging=function() return drag end, update=upd, setDrag=function(v) drag=v end})
+
+table.insert(UI_REGISTRY.sliders, {fill=fill, knob=knob, label=vl, min=minV, max=maxV, suf=suf, tbl=tbl, key=k})
 end
 
 mkDropdown = function(p,t,opts,tbl,k,o)
@@ -1681,6 +1784,8 @@ ob.MouseLeave:Connect(function() ob.BackgroundColor3=Color3.fromRGB(35,35,45) en
 ob.MouseButton1Click:Connect(function() playClick(); tbl[k]=opt; btn.Text="  "..opt; dd.Visible=false end)
 end
 btn.MouseButton1Click:Connect(function() playClick(); dd.Visible=not dd.Visible end)
+
+table.insert(UI_REGISTRY.dropdowns, {button=btn, tbl=tbl, key=k})
 end
 
 local BIND_OPTIONS = {
@@ -1722,6 +1827,10 @@ nb.TextXAlignment=Enum.TextXAlignment.Left; nb.AutoButtonColor=false; nb.ZIndex=
 nb.MouseEnter:Connect(function() nb.BackgroundColor3=Color3.fromRGB(50,50,65) end)
 nb.MouseLeave:Connect(function() nb.BackgroundColor3=Color3.fromRGB(30,30,38) end)
 nb.MouseButton1Click:Connect(function() playClick(); tbl.KeybindName="NONE"; tbl.KeybindCheck=nil; keyBtn.Text="NONE"; ddF.Visible=false end)
+
+local BIND_LOOKUP = {NONE = nil}
+for _,opt in ipairs(BIND_OPTIONS) do BIND_LOOKUP[opt[1]] = opt[2] end
+
 for i,opt in ipairs(BIND_OPTIONS) do
 local name=opt[1]; local cfn=opt[2]
 local ob=Instance.new("TextButton",ddS); ob.Size=UDim2.new(1,0,0,28); ob.BackgroundColor3=Color3.fromRGB(30,30,38)
@@ -1736,6 +1845,8 @@ keyBtn.MouseButton1Click:Connect(function() playClick(); ddO=not ddO; ddF.Visibl
 box.MouseButton1Click:Connect(function()
 playClick(); en=not en; tbl.Enabled=en; box.BackgroundColor3=en and PURPLE or GRAY; ck.Visible=en
 end)
+
+table.insert(UI_REGISTRY.keybinds, {box=box, checkIcon=ck, keyBtn=keyBtn, tbl=tbl, bindLookup=BIND_LOOKUP})
 end
 
 mkButton = function(p,t,cb,o,cc)
@@ -1758,6 +1869,69 @@ p.Visible=false; p.CanvasSize=UDim2.new(0,0,0,0); p.AutomaticCanvasSize=Enum.Aut
 _G.BearHub_tabPages[name]=p; return p
 end
 end
+
+--============================================================
+-- REFRESH ALL UI - After loading config
+--============================================================
+local function refreshAllUI()
+    -- Checks
+    for _, data in ipairs(UI_REGISTRY.checks) do
+        pcall(function()
+            local val
+            if data.isSub then
+                val = ESP[data.key] and ESP[data.key].Enabled
+            else
+                val = data.tbl[data.key]
+            end
+            val = val or false
+            data.box.BackgroundColor3 = val and PURPLE or GRAY
+            data.checkIcon.Visible = val
+        end)
+    end
+    -- Color pickers
+    for _, data in ipairs(UI_REGISTRY.colorPickers) do
+        pcall(function()
+            local col
+            if data.isSub then
+                col = ESP[data.key] and ESP[data.key].Color
+            else
+                col = data.tbl[data.subKey]
+            end
+            if col then data.colorIndicator.BackgroundColor3 = col end
+        end)
+    end
+    -- Sliders
+    for _, data in ipairs(UI_REGISTRY.sliders) do
+        pcall(function()
+            local val = data.tbl[data.key] or data.min
+            local rx = math.clamp((val - data.min) / (data.max - data.min), 0, 1)
+            data.fill.Size = UDim2.new(rx, 0, 1, 0)
+            data.knob.Position = UDim2.new(rx, -8, 0.5, -8)
+            data.label.Text = tostring(val) .. (data.suf or "")
+        end)
+    end
+    -- Dropdowns
+    for _, data in ipairs(UI_REGISTRY.dropdowns) do
+        pcall(function()
+            data.button.Text = "  " .. tostring(data.tbl[data.key])
+        end)
+    end
+    -- Keybinds
+    for _, data in ipairs(UI_REGISTRY.keybinds) do
+        pcall(function()
+            local en = data.tbl.Enabled or false
+            data.box.BackgroundColor3 = en and PURPLE or GRAY
+            data.checkIcon.Visible = en
+            data.keyBtn.Text = data.tbl.KeybindName or "NONE"
+            -- Restore keybind check function
+            if data.tbl.KeybindName and data.bindLookup then
+                data.tbl.KeybindCheck = data.bindLookup[data.tbl.KeybindName]
+            end
+        end)
+    end
+    pcall(fullRefresh)
+end
+_G.BearHub_refreshAllUI = refreshAllUI
 
 --============================================================
 -- PAGES
@@ -2353,6 +2527,17 @@ cfgActTitle.Font = Enum.Font.GothamBold
 cfgActTitle.TextSize = 14
 cfgActTitle.TextXAlignment = Enum.TextXAlignment.Left
 
+-- FS status indicator
+local cfgFSLabel = Instance.new("TextLabel", cfgActionsFrame)
+cfgFSLabel.Size = UDim2.new(0, 130, 0, 25)
+cfgFSLabel.Position = UDim2.new(1, -140, 0, 8)
+cfgFSLabel.BackgroundTransparency = 1
+cfgFSLabel.Text = FS_AVAILABLE and "💾 Persistent" or "⚠ Temp only"
+cfgFSLabel.TextColor3 = FS_AVAILABLE and Color3.fromRGB(120, 220, 130) or Color3.fromRGB(255, 180, 60)
+cfgFSLabel.Font = Enum.Font.GothamBold
+cfgFSLabel.TextSize = 11
+cfgFSLabel.TextXAlignment = Enum.TextXAlignment.Right
+
 -- TextBox Input for Name
 local cfgNameLabel = Instance.new("TextLabel", cfgActionsFrame)
 cfgNameLabel.Size = UDim2.new(1, -20, 0, 18)
@@ -2390,6 +2575,7 @@ cfgStatusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
 cfgStatusLabel.Font = Enum.Font.GothamBold
 cfgStatusLabel.TextSize = 11
 cfgStatusLabel.TextXAlignment = Enum.TextXAlignment.Center
+cfgStatusLabel.TextWrapped = true
 
 local function cfgStatus(txt, col, dur)
     cfgStatusLabel.Text = txt
@@ -2555,7 +2741,24 @@ local function removeConfigFromList(name)
     updateConfigCount()
 end
 
--- Create Button Event
+-- LOAD EXISTING CONFIGS ON STARTUP
+task.spawn(function()
+    task.wait(0.3)
+    if FS_AVAILABLE then
+        local found = scanConfigFolder()
+        for name, data in pairs(found) do
+            CONFIG_STORE[name] = data
+            addConfigToList(name)
+        end
+        local cnt = 0
+        for _ in pairs(CONFIG_STORE) do cnt = cnt + 1 end
+        if cnt > 0 then
+            cfgStatus("Loaded " .. cnt .. " saved config(s)", Color3.fromRGB(120, 220, 130), 3)
+        end
+    end
+end)
+
+-- CREATE Button
 cfgCreateBtn.MouseButton1Click:Connect(function()
     playClick()
     local name = cfgNameBox.Text
@@ -2563,31 +2766,53 @@ cfgCreateBtn.MouseButton1Click:Connect(function()
         cfgStatus("Enter a config name!", Color3.fromRGB(255, 100, 100), 2)
         return
     end
-    name = name:match("^%s*(.-)%s*$") -- Trim whitespace
+    name = name:match("^%s*(.-)%s*$")
     if #name > 30 then name = name:sub(1, 30) end
     if CONFIG_STORE[name] then
         cfgStatus("Config already exists!", Color3.fromRGB(255, 180, 60), 2)
         return
     end
-    CONFIG_STORE[name] = serializeCurrentConfig()
+    local data = serializeCurrentConfig()
+    CONFIG_STORE[name] = data
     addConfigToList(name)
     selectConfig(name)
     cfgNameBox.Text = ""
-    cfgStatus("Created '" .. name .. "' successfully!", Color3.fromRGB(100, 220, 120), 2)
+    
+    if FS_AVAILABLE then
+        local ok, err = saveConfigToFile(name, data)
+        if ok then
+            cfgStatus("Created '" .. name .. "' (saved to disk)", Color3.fromRGB(100, 220, 120), 2)
+        else
+            cfgStatus("Created '" .. name .. "' (memory only - " .. tostring(err) .. ")", Color3.fromRGB(255, 180, 60), 3)
+        end
+    else
+        cfgStatus("Created '" .. name .. "' (executor doesn't support file save)", Color3.fromRGB(255, 180, 60), 3)
+    end
 end)
 
--- Save Button Event
+-- SAVE Button
 cfgSaveBtn.MouseButton1Click:Connect(function()
     playClick()
     if not selectedConfigName or not CONFIG_STORE[selectedConfigName] then
         cfgStatus("Select a config first!", Color3.fromRGB(255, 100, 100), 2)
         return
     end
-    CONFIG_STORE[selectedConfigName] = serializeCurrentConfig()
-    cfgStatus("Saved setup to '" .. selectedConfigName .. "'!", Color3.fromRGB(140, 120, 255), 2)
+    local data = serializeCurrentConfig()
+    CONFIG_STORE[selectedConfigName] = data
+    
+    if FS_AVAILABLE then
+        local ok, err = saveConfigToFile(selectedConfigName, data)
+        if ok then
+            cfgStatus("Saved '" .. selectedConfigName .. "' to disk", Color3.fromRGB(140, 120, 255), 2)
+        else
+            cfgStatus("Saved '" .. selectedConfigName .. "' (memory only)", Color3.fromRGB(255, 180, 60), 2)
+        end
+    else
+        cfgStatus("Saved '" .. selectedConfigName .. "' (memory only)", Color3.fromRGB(255, 180, 60), 2)
+    end
 end)
 
--- Delete Button Event
+-- DELETE Button
 cfgDeleteBtn.MouseButton1Click:Connect(function()
     playClick()
     if not selectedConfigName or not CONFIG_STORE[selectedConfigName] then
@@ -2597,10 +2822,14 @@ cfgDeleteBtn.MouseButton1Click:Connect(function()
     local target = selectedConfigName
     CONFIG_STORE[target] = nil
     removeConfigFromList(target)
+    
+    if FS_AVAILABLE then
+        deleteConfigFile(target)
+    end
     cfgStatus("Deleted '" .. target .. "'", Color3.fromRGB(255, 80, 80), 2)
 end)
 
--- Load Button Event
+-- LOAD Button - fully applies config and refreshes UI
 cfgLoadBtn.MouseButton1Click:Connect(function()
     playClick()
     if not selectedConfigName or not CONFIG_STORE[selectedConfigName] then
@@ -2608,7 +2837,8 @@ cfgLoadBtn.MouseButton1Click:Connect(function()
         return
     end
     loadConfigData(CONFIG_STORE[selectedConfigName])
-    cfgStatus("Loaded '" .. selectedConfigName .. "' (some changes require reopen)", Color3.fromRGB(100, 180, 255), 3)
+    pcall(refreshAllUI)
+    cfgStatus("Loaded '" .. selectedConfigName .. "' successfully!", Color3.fromRGB(100, 180, 255), 2)
 end)
 
 -- Panic Panel
