@@ -915,6 +915,53 @@ end
 --============================================================
 -- MISC + BYPASS (NoClip & FreeCam)
 --============================================================
+
+-- HUD dla FreeCam (musi być utworzone PRZED użyciem)
+local fcDot = Instance.new("Frame", gui)
+fcDot.Size = UDim2.new(0, 6, 0, 6)
+fcDot.AnchorPoint = Vector2.new(0.5, 0.5)
+fcDot.Position = UDim2.new(0.5, 0, 0.5, 0)
+fcDot.BackgroundColor3 = Color3.new(1,1,1)
+fcDot.BorderSizePixel = 0
+fcDot.Visible = false
+fcDot.ZIndex = 9998
+Instance.new("UICorner", fcDot).CornerRadius = UDim.new(1, 0)
+
+local fcBar = Instance.new("Frame", gui)
+fcBar.Size = UDim2.new(0, 300, 0, 40)
+fcBar.AnchorPoint = Vector2.new(0.5, 1)
+fcBar.Position = UDim2.new(0.5, 0, 1, -80)
+fcBar.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+fcBar.BorderSizePixel = 0
+fcBar.Visible = false
+fcBar.ZIndex = 9998
+Instance.new("UICorner", fcBar).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", fcBar).Color = PURPLE
+
+local fcLabel = Instance.new("TextLabel", fcBar)
+fcLabel.Size = UDim2.new(0, 140, 1, 0)
+fcLabel.Position = UDim2.new(0, 10, 0, 0)
+fcLabel.BackgroundTransparency = 1
+fcLabel.Text = "FREE CAM"
+fcLabel.TextColor3 = Color3.fromRGB(180, 140, 255)
+fcLabel.Font = Enum.Font.GothamBold
+fcLabel.TextSize = 14
+fcLabel.TextXAlignment = Enum.TextXAlignment.Left
+fcLabel.ZIndex = 9999
+
+local fcTpBtn = Instance.new("TextButton", fcBar)
+fcTpBtn.Size = UDim2.new(0, 120, 0, 28)
+fcTpBtn.Position = UDim2.new(1, -130, 0.5, -14)
+fcTpBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
+fcTpBtn.BorderSizePixel = 0
+fcTpBtn.Text = "Teleport (LMB)"
+fcTpBtn.TextColor3 = Color3.new(1,1,1)
+fcTpBtn.Font = Enum.Font.GothamBold
+fcTpBtn.TextSize = 12
+fcTpBtn.AutoButtonColor = false
+fcTpBtn.ZIndex = 9999
+Instance.new("UICorner", fcTpBtn).CornerRadius = UDim.new(0, 6)
+
 do
 	-- SemiGod
 	task.spawn(function()
@@ -1043,7 +1090,7 @@ do
 		end
 	end
 
-	-- FREECAM BYPASS (szybki, stabilny, postać się nie rusza)
+	-- FREECAM BYPASS
 	local freecamActive = false
 	local oldMouseBehavior = Enum.MouseBehavior.Default
 	local oldMouseIconEnabled = true
@@ -1097,7 +1144,7 @@ do
 		local camYaw = math.atan2(-look.X, -look.Z)
 		local camPitch = math.asin(math.clamp(look.Y, -1, 1))
 		local camPos = Camera.CFrame.Position
-		local sensitivity = 0.007   -- SZYBSZA KAMERA (możesz zmienić na 0.009 jeśli chcesz jeszcze szybciej)
+		local sensitivity = 0.007
 
 		task.spawn(function()
 			while freecamActive and MISC.FreeCam and not PANIC_TRIGGERED do
@@ -1129,6 +1176,54 @@ do
 			stopFreeCam()
 		end)
 	end
+
+	-- Teleport na LMB w freecamie
+	UIS.InputBegan:Connect(function(inp, gp)
+		if PANIC_TRIGGERED or gp then return end
+		if freecamActive and inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			local char = player.Character
+			if not char then return end
+			local root = char:FindFirstChild("HumanoidRootPart")
+			if not root then return end
+			local camPos = Camera.CFrame.Position
+			local camLook = Camera.CFrame.LookVector
+			local rp = RaycastParams.new()
+			rp.FilterDescendantsInstances = {char}
+			rp.FilterType = Enum.RaycastFilterType.Exclude
+			local result = workspace:Raycast(camPos, camLook * 1000, rp)
+			local targetPos = result and (result.Position + Vector3.new(0,3,0)) or (camPos + camLook * 50)
+			MISC.FreeCam = false
+			stopFreeCam()
+			task.wait(0.1)
+			pcall(function()
+				root.CFrame = CFrame.new(targetPos)
+				root.Velocity = Vector3.zero
+			end)
+		end
+	end)
+
+	fcTpBtn.MouseButton1Click:Connect(function()
+		playClick()
+		if not freecamActive then return end
+		local char = player.Character
+		if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if not root then return end
+		local camPos = Camera.CFrame.Position
+		local camLook = Camera.CFrame.LookVector
+		local rp = RaycastParams.new()
+		rp.FilterDescendantsInstances = {char}
+		rp.FilterType = Enum.RaycastFilterType.Exclude
+		local result = workspace:Raycast(camPos, camLook * 1000, rp)
+		local targetPos = result and (result.Position + Vector3.new(0,3,0)) or (camPos + camLook * 50)
+		MISC.FreeCam = false
+		stopFreeCam()
+		task.wait(0.1)
+		pcall(function()
+			root.CFrame = CFrame.new(targetPos)
+			root.Velocity = Vector3.zero
+		end)
+	end)
 
 	-- Łączenie z GUI
 	task.spawn(function()
