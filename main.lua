@@ -416,7 +416,8 @@ holder=h, boxTop=makeLine(h), boxBot=makeLine(h),
 boxLeft=makeLine(h), boxRight=makeLine(h), skeleton={},
 snapline=makeLine(h), healthBg=makeLine(h), healthFill=makeLine(h),
 name=makeText(h, 14), id=makeText(h, 12),
-distance=makeText(h, 12), inventory=makeText(h, 11)
+distance=makeText(h, 12), inventory=makeText(h, 11),
+inventory2=makeText(h, 11)
 }
 for i = 1, 12 do d.skeleton[i] = makeLine(h) end
 espObjects[plr] = d; return d
@@ -472,13 +473,28 @@ local R6 = {
 }
 local invCache, invCacheTick = {}, {}
 local function getCachedInv(plr)
-local now = tick()
-if invCache[plr] and invCacheTick[plr] and (now - invCacheTick[plr]) < 1 then return invCache[plr] end
-local items = {}
-if plr.Character then for _, c in ipairs(plr.Character:GetChildren()) do if c:IsA("Tool") then table.insert(items, c.Name) end end end
-local bp = plr:FindFirstChildOfClass("Backpack")
-if bp then for _, c in ipairs(bp:GetChildren()) do if c:IsA("Tool") then table.insert(items, c.Name) end end end
-invCache[plr] = items; invCacheTick[plr] = now; return items
+    local now = tick()
+    if invCache[plr] and invCacheTick[plr] and (now - invCacheTick[plr]) < 1 then return invCache[plr] end
+    local items = {}
+    local seen = {}
+    if plr.Character then
+        for _, c in ipairs(plr.Character:GetChildren()) do
+            if c:IsA("Tool") and not seen[c.Name] then
+                seen[c.Name] = true
+                table.insert(items, c.Name)
+            end
+        end
+    end
+    local bp = plr:FindFirstChildOfClass("Backpack")
+    if bp then
+        for _, c in ipairs(bp:GetChildren()) do
+            if c:IsA("Tool") and not seen[c.Name] then
+                seen[c.Name] = true
+                table.insert(items, c.Name)
+            end
+        end
+    end
+    invCache[plr] = items; invCacheTick[plr] = now; return items
 end
 
 local function updateESP()
@@ -535,15 +551,49 @@ if ESP.Name.Enabled then d.name.Text = plr.DisplayName or plr.Name; d.name.Posit
 if ESP.ID.Enabled then d.id.Text = "ID: " .. plr.UserId; d.id.Position = UDim2.new(0, sp.X, 0, tY - (ESP.Name.Enabled and 30 or 15)); d.id.TextColor3 = ESP.ID.Color; d.id.Visible = true else d.id.Visible = false end
 if ESP.Distance.Enabled then d.distance.Text = math.floor(dist) .. "m"; d.distance.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo); d.distance.TextColor3 = ESP.Distance.Color; d.distance.Visible = true; bo = bo + 16 else d.distance.Visible = false end
 if ESP.Inventory.Enabled then
-local items = getCachedInv(plr)
-if #items > 0 then
-local it = table.concat(items, ", ")
-if #it > 40 then it = string.sub(it, 1, 37) .. "..." end
-d.inventory.Text = "[" .. it .. "]"; d.inventory.TextColor3 = ESP.Inventory.Color
-else d.inventory.Text = "[Empty]"; d.inventory.TextColor3 = Color3.fromRGB(120, 120, 130) end
-d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo)
-d.inventory.Size = UDim2.new(0, 300, 0, 20); d.inventory.Visible = true; bo = bo + 16
-else d.inventory.Visible = false end
+    local items = getCachedInv(plr)
+    if #items > 0 then
+        local row1 = {}
+        local row2 = {}
+        for i, name in ipairs(items) do
+            if i > 10 then break end
+            if i <= 5 then
+                table.insert(row1, name)
+            else
+                table.insert(row2, name)
+            end
+        end
+        local t1 = "[" .. table.concat(row1, ", ") .. "]"
+        d.inventory.Text = t1
+        d.inventory.TextColor3 = ESP.Inventory.Color
+        d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo)
+        d.inventory.Size = UDim2.new(0, 400, 0, 20)
+        d.inventory.Visible = true
+        bo = bo + 16
+        if #row2 > 0 then
+            local t2 = "[" .. table.concat(row2, ", ") .. "]"
+            d.inventory2.Text = t2
+            d.inventory2.TextColor3 = ESP.Inventory.Color
+            d.inventory2.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo)
+            d.inventory2.Size = UDim2.new(0, 400, 0, 20)
+            d.inventory2.Visible = true
+            bo = bo + 16
+        else
+            d.inventory2.Visible = false
+        end
+    else
+        d.inventory.Text = "[Empty]"
+        d.inventory.TextColor3 = Color3.fromRGB(120, 120, 130)
+        d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo)
+        d.inventory.Size = UDim2.new(0, 300, 0, 20)
+        d.inventory.Visible = true
+        d.inventory2.Visible = false
+        bo = bo + 16
+    end
+else
+    d.inventory.Visible = false
+    d.inventory2.Visible = false
+end
 if ESP.HealthBar.Enabled then
 local bx = lX - 6
 local hp3 = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
