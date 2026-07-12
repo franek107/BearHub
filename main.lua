@@ -474,10 +474,29 @@ local invCache, invCacheTick = {}, {}
 local function getCachedInv(plr)
 local now = tick()
 if invCache[plr] and invCacheTick[plr] and (now - invCacheTick[plr]) < 1 then return invCache[plr] end
-local items = {}
-if plr.Character then for _, c in ipairs(plr.Character:GetChildren()) do if c:IsA("Tool") then table.insert(items, c.Name) end end end
+local raw = {}
+local seen = {}
+if plr.Character then
+for _, c in ipairs(plr.Character:GetChildren()) do
+if c:IsA("Tool") and not seen[c.Name] then
+seen[c.Name] = true
+table.insert(raw, c.Name)
+end
+end
+end
 local bp = plr:FindFirstChildOfClass("Backpack")
-if bp then for _, c in ipairs(bp:GetChildren()) do if c:IsA("Tool") then table.insert(items, c.Name) end end end
+if bp then
+for _, c in ipairs(bp:GetChildren()) do
+if c:IsA("Tool") and not seen[c.Name] then
+seen[c.Name] = true
+table.insert(raw, c.Name)
+end
+end
+end
+local items = {}
+for i = 1, math.min(#raw, 10) do
+table.insert(items, raw[i])
+end
 invCache[plr] = items; invCacheTick[plr] = now; return items
 end
 
@@ -537,12 +556,26 @@ if ESP.Distance.Enabled then d.distance.Text = math.floor(dist) .. "m"; d.distan
 if ESP.Inventory.Enabled then
 local items = getCachedInv(plr)
 if #items > 0 then
-local it = table.concat(items, ", ")
-if #it > 40 then it = string.sub(it, 1, 37) .. "..." end
-d.inventory.Text = "[" .. it .. "]"; d.inventory.TextColor3 = ESP.Inventory.Color
+local row1 = {}
+local row2 = {}
+for i, item in ipairs(items) do
+if i <= 5 then
+table.insert(row1, item)
+else
+table.insert(row2, item)
+end
+end
+local line1 = table.concat(row1, ", ")
+local line2 = #row2 > 0 and table.concat(row2, ", ") or nil
+local txt = "[" .. line1 .. "]"
+if line2 then
+txt = txt .. "\n[" .. line2 .. "]"
+end
+d.inventory.Text = txt; d.inventory.TextColor3 = ESP.Inventory.Color
 else d.inventory.Text = "[Empty]"; d.inventory.TextColor3 = Color3.fromRGB(120, 120, 130) end
+d.inventory.TextYAlignment = Enum.TextYAlignment.Top
 d.inventory.Position = UDim2.new(0, sp.X, 0, bY + 12 + bo)
-d.inventory.Size = UDim2.new(0, 300, 0, 20); d.inventory.Visible = true; bo = bo + 16
+d.inventory.Size = UDim2.new(0, 350, 0, 34); d.inventory.Visible = true; bo = bo + 34
 else d.inventory.Visible = false end
 if ESP.HealthBar.Enabled then
 local bx = lX - 6
