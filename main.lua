@@ -1,3 +1,4 @@
+
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
@@ -919,6 +920,41 @@ do
 		if h then pcall(function() h.Health = h.MaxHealth end) end
 	end
 
+	-- COPY ITEM FUNCTION
+	_G.BearHub_copyItem = function()
+		if PANIC_TRIGGERED then return false, "Disabled" end
+		local char = player.Character
+		if not char then return false, "No character" end
+
+		local equippedTool = nil
+		for _, child in ipairs(char:GetChildren()) do
+			if child:IsA("Tool") then
+				equippedTool = child
+				break
+			end
+		end
+
+		if not equippedTool then return false, "No tool equipped" end
+
+		local success, err = pcall(function()
+			local clone = equippedTool:Clone()
+			if clone then
+				local backpack = player:FindFirstChildOfClass("Backpack")
+				if backpack then
+					clone.Parent = backpack
+				else
+					clone.Parent = char
+				end
+			end
+		end)
+
+		if success then
+			return true, "Copied: " .. equippedTool.Name
+		else
+			return false, "Failed to copy: " .. tostring(err)
+		end
+	end
+
 	local lastWSEnabled, lastJPEnabled = false, false
 	task.spawn(function()
 		while true do
@@ -1199,6 +1235,7 @@ do
 end
 
 local healPlayer = _G.BearHub_healPlayer
+local copyItem = _G.BearHub_copyItem
 
 --============================================================
 -- GUI MAIN + COLOR PICKER
@@ -1604,9 +1641,37 @@ do
 	local mSubPF=Instance.new("Frame",miscP); mSubPF.Size=UDim2.new(1,0,1,-40); mSubPF.Position=UDim2.new(0,0,0,38); mSubPF.BackgroundTransparency=1
 
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
-	local qaPanel=mkPanel(mqaP,0.48,130,0,5)
+	local qaPanel=mkPanel(mqaP,0.48,180,0,5)
 	mkSection(qaPanel,"Quick Actions",1)
 	mkButton(qaPanel,"Heal",healPlayer,2)
+
+	-- COPY ITEM BUTTON with status label
+	local copyStatusLabel = Instance.new("TextLabel", qaPanel)
+	copyStatusLabel.Size = UDim2.new(1, -10, 0, 18)
+	copyStatusLabel.BackgroundTransparency = 1
+	copyStatusLabel.Text = ""
+	copyStatusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
+	copyStatusLabel.Font = Enum.Font.GothamBold
+	copyStatusLabel.TextSize = 11
+	copyStatusLabel.TextXAlignment = Enum.TextXAlignment.Center
+	copyStatusLabel.LayoutOrder = 4
+
+	mkButton(qaPanel, "Copy Item (in hand)", function()
+		local ok, msg = copyItem()
+		if ok then
+			copyStatusLabel.Text = msg
+			copyStatusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
+		else
+			copyStatusLabel.Text = msg
+			copyStatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+		end
+		task.spawn(function()
+			task.wait(2.5)
+			if copyStatusLabel.Text == msg then
+				copyStatusLabel.Text = ""
+			end
+		end)
+	end, 3, Color3.fromRGB(60, 140, 220))
 
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
 	local cbPanel=mkPanel(mcbP,0.48,290,0,5)
