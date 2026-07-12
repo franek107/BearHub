@@ -389,6 +389,7 @@ local function clearESP(plr)
 end
 
 local function fullRefresh() for plr in pairs(espObjects) do clearESP(plr) end end
+_G.BearHub_fullRefresh = fullRefresh
 
 local function w2s(pos)
 	local ok, v = pcall(function() return Camera:WorldToViewportPoint(pos) end)
@@ -1378,14 +1379,14 @@ local function mkCheckColor(p,t,tbl,k,ck2,o)
 			if isSub then ESP[k].Color = nc else tbl[ck2] = nc end
 		end)
 	end)
-	box.MouseButton1Click:Connect(function()
+		box.MouseButton1Click:Connect(function()
 		playClick()
 		en = not en
 		box.BackgroundColor3 = en and PURPLE or GRAY
 		ck.Visible = en
-		if isSub then ESP[k].Enabled = en else tbl[k] = en end
+		tbl[k] = en
+		if tbl == ESP and _G.BearHub_fullRefresh then pcall(_G.BearHub_fullRefresh) end
 	end)
-end
 
 local function mkSlider(p,t,minV,maxV,def,suf,tbl,k,o)
 	local h = Instance.new("Frame",p)
