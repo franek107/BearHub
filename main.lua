@@ -19,7 +19,7 @@ local DARK = Color3.fromRGB(35, 35, 42)
 local CHECK_ICON = "rbxassetid://6031094667"
 local BEAR_ICON = "rbxassetid://7733658504"
 
-local TEXT_FONT = Enum.Font.ComicNeueAngular
+local TEXT_FONT = Enum.Font.ComicSansMS
 
 local ESP = {
 	Enabled = true, MaxDistance = 300, ShowLocalPlayer = false, VisibleOnly = false,
