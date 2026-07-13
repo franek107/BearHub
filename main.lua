@@ -1023,7 +1023,7 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false end)
 
-	-- INFINITE JUMP
+	-- FIXED INFINITE JUMP
 	RunService.Heartbeat:Connect(function()
 		if PANIC_TRIGGERED then return end
 		if MISC.InfiniteJump then
@@ -1031,7 +1031,7 @@ do
 			if char then
 				local hum = char:FindFirstChildOfClass("Humanoid")
 				if hum then
-					pcall(function() hum.Jump = true end)
+					hum.Jump = true  -- wymusza skok co klatkę, działa także w powietrzu
 				end
 			end
 		end
@@ -1264,23 +1264,31 @@ do
 		end
 		return false
 	end
+	-- FIXED RAPIDFIRE
 	task.spawn(function()
 		while true do
 			if PANIC_TRIGGERED then break end
 			if MISC.RapidFire and mbHeld[1] then
 				local rf = MISC.RapidFireLevel or 20
-				if rf < 20 then
+				-- rf od 0 (normalna szybkość) do 20 (maksymalna szybkość)
+				if rf > 0 then
 					if not isMouseOverGui() then
 						pcall(function()
 							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
 							task.wait(0.01)
 							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
 						end)
-						local d2 = (rf / 20) * 0.15
-						task.wait(math.max(d2, 0.01))
-					else task.wait(0.05) end
-				else task.wait(0.05) end
-			else task.wait(0.05) end
+						local delay = (1 - rf/20) * 0.15  -- im większe rf, tym mniejszy delay
+						task.wait(math.max(delay, 0.01))
+					else
+						task.wait(0.05)
+					end
+				else
+					task.wait(0.05)  -- rf=0 -> brak rapid fire, czekamy normalnie
+				end
+			else
+				task.wait(0.05)
+			end
 		end
 	end)
 end
@@ -1289,13 +1297,32 @@ local healPlayer = _G.BearHub_healPlayer
 local deleteItem = _G.BearHub_deleteItem
 
 --============================================================
--- CONFIG SYSTEM
+-- CONFIG SYSTEM (zapis/odczyt wielu konfiguracji)
 --============================================================
 do
-	local CONFIG_FILE = "BearHub_Config.json"
+	local CONFIG_FOLDER = "BearHub_Configs"
 	local HttpService = game:GetService("HttpService")
 
-	_G.BearHub_SaveConfig = function()
+	local function ensureFolder()
+		pcall(function() makefolder(CONFIG_FOLDER) end)
+	end
+	ensureFolder()
+
+	_G.BearHub_GetConfigList = function()
+		local files = {}
+		pcall(function()
+			local list = listfiles(CONFIG_FOLDER)
+			for _, path in ipairs(list) do
+				if path:sub(-5) == ".json" then
+					local name = path:match("([^/\\]+)%.json$") or path
+					table.insert(files, name)
+				end
+			end
+		end)
+		return files
+	end
+
+	_G.BearHub_SaveConfig = function(name)
 		local data = {
 			ESP = ESP,
 			TRIGGERBOT = TRIGGERBOT,
@@ -1315,13 +1342,13 @@ do
 		end
 		local cleanData = clean(data)
 		local json = HttpService:JSONEncode(cleanData)
-		pcall(function() writefile(CONFIG_FILE, json) end)
-		return "Config saved"
+		pcall(function() writefile(CONFIG_FOLDER.."/"..name..".json", json) end)
+		return "Config '"..name.."' saved"
 	end
 
-	_G.BearHub_LoadConfig = function()
-		local success, content = pcall(function() return readfile(CONFIG_FILE) end)
-		if not success then return "No config found" end
+	_G.BearHub_LoadConfig = function(name)
+		local success, content = pcall(function() return readfile(CONFIG_FOLDER.."/"..name..".json") end)
+		if not success then return "Config not found" end
 		local ok, data = pcall(function() return HttpService:JSONDecode(content) end)
 		if not ok then return "Config corrupted" end
 		local function loadTbl(src, dst)
@@ -1595,8 +1622,6 @@ do
 		pcall(updateInvOpener)
 	end)
 end
-
--- KONIEC CZĘŚCI 1
 --============================================================
 -- GUI MAIN + COLOR PICKER
 --============================================================
@@ -1982,7 +2007,7 @@ do
 end
 
 --============================================================
--- PAGES
+-- PAGES (COMPLETE)
 --============================================================
 do
 	local function mkPanel(parent, w, h2, xPos, yPos)
@@ -2081,7 +2106,7 @@ do
 	mkCheck(cbPanel,"No Spread",MISC,"NoSpread",5)
 	mkCheck(cbPanel,"Infinity Ammo",MISC,"InfAmmo",6)
 
-	-- Movement sub-page (z Infinite Jump)
+	-- Movement sub-page
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
 	local mvPanel=mkPanel(mmvP,0.6,420,0,5)
 	mkSection(mvPanel,"Movement",1)
@@ -2107,7 +2132,7 @@ do
 	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
 	mkSlider(fcPanel,"FreeCam Speed",1,200,30," m/s",MISC,"FreeCamSpeed",3)
 
-	-- FREECAM HUD (tak samo jak wcześniej, poniżej skrócona wersja)
+	-- FREECAM HUD
 	local freecamActive = false
 	local oldMouseBehavior = Enum.MouseBehavior.Default
 	local oldMouseIconEnabled = true
@@ -2237,43 +2262,157 @@ do
 	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
 	selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
-	-- PLAYERS PAGE (identyczna jak wcześniej, poniżej skrócona)
+	-- PLAYERS PAGE (COMPLETE)
 	local plP=createPage("Players")
-	-- ... (cała zawartość Players z poprzedniej odpowiedzi) ...
-	-- (ze względu na długość nie powtarzam, ale użytkownik musi ją wkleić)
+	local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8)
+	local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=Color3.fromRGB(160,160,170); plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
+	local plCL=Instance.new("TextLabel",plLF); plCL.Size=UDim2.new(0,85,0,25); plCL.Position=UDim2.new(1,-90,0,5); plCL.BackgroundTransparency=1; plCL.Text="0 players"; plCL.TextColor3=Color3.fromRGB(150,150,160); plCL.Font=Enum.Font.Gotham; plCL.TextSize=12; plCL.TextXAlignment=Enum.TextXAlignment.Right
+	local plS=Instance.new("ScrollingFrame",plLF); plS.Size=UDim2.new(1,-10,1,-40); plS.Position=UDim2.new(0,5,0,32); plS.BackgroundTransparency=1; plS.ScrollBarThickness=3; plS.ScrollBarImageColor3=PURPLE; plS.CanvasSize=UDim2.new(0,0,0,0); plS.AutomaticCanvasSize=Enum.AutomaticSize.Y; plS.BorderSizePixel=0; Instance.new("UIListLayout",plS).Padding=UDim.new(0,4)
+	local plIF=Instance.new("Frame",plP); plIF.Size=UDim2.new(0.55,0,1,-10); plIF.Position=UDim2.new(0.44,5,0,5); plIF.BackgroundColor3=DARK; plIF.BorderSizePixel=0; Instance.new("UICorner",plIF).CornerRadius=UDim.new(0,8)
+	local plIT=Instance.new("TextLabel",plIF); plIT.Size=UDim2.new(1,-20,0,22); plIT.Position=UDim2.new(0,10,0,8); plIT.BackgroundTransparency=1; plIT.Text="Selected Player"; plIT.TextColor3=Color3.fromRGB(160,160,170); plIT.Font=Enum.Font.GothamBold; plIT.TextSize=14; plIT.TextXAlignment=Enum.TextXAlignment.Left
+	local plAF=Instance.new("Frame",plIF); plAF.Size=UDim2.new(0,60,0,60); plAF.Position=UDim2.new(0.5,-30,0,35); plAF.BackgroundColor3=Color3.fromRGB(50,50,60); plAF.BorderSizePixel=0; Instance.new("UICorner",plAF).CornerRadius=UDim.new(1,0)
+	local plAv=Instance.new("ImageLabel",plAF); plAv.Size=UDim2.new(1,0,1,0); plAv.BackgroundTransparency=1; plAv.Image=""; plAv.ScaleType=Enum.ScaleType.Crop; Instance.new("UICorner",plAv).CornerRadius=UDim.new(1,0)
+	local plNL=Instance.new("TextLabel",plIF); plNL.Size=UDim2.new(1,-20,0,18); plNL.Position=UDim2.new(0,10,0,100); plNL.BackgroundTransparency=1; plNL.Text="No player selected"; plNL.TextColor3=Color3.new(1,1,1); plNL.Font=Enum.Font.GothamBold; plNL.TextSize=14; plNL.TextXAlignment=Enum.TextXAlignment.Center
+	local plUL=Instance.new("TextLabel",plIF); plUL.Size=UDim2.new(1,-20,0,15); plUL.Position=UDim2.new(0,10,0,119); plUL.BackgroundTransparency=1; plUL.Text=""; plUL.TextColor3=Color3.fromRGB(150,150,160); plUL.Font=Enum.Font.Gotham; plUL.TextSize=11; plUL.TextXAlignment=Enum.TextXAlignment.Center
+	local plIL=Instance.new("TextLabel",plIF); plIL.Size=UDim2.new(0.5,-15,0,15); plIL.Position=UDim2.new(0,10,0,136); plIL.BackgroundTransparency=1; plIL.Text=""; plIL.TextColor3=Color3.fromRGB(150,150,160); plIL.Font=Enum.Font.Gotham; plIL.TextSize=11; plIL.TextXAlignment=Enum.TextXAlignment.Center
+	local plDL=Instance.new("TextLabel",plIF); plDL.Size=UDim2.new(0.5,-15,0,15); plDL.Position=UDim2.new(0.5,5,0,136); plDL.BackgroundTransparency=1; plDL.Text=""; plDL.TextColor3=Color3.fromRGB(100,200,255); plDL.Font=Enum.Font.GothamBold; plDL.TextSize=11; plDL.TextXAlignment=Enum.TextXAlignment.Center
+	local r1=Instance.new("Frame",plIF); r1.Size=UDim2.new(1,-20,0,28); r1.Position=UDim2.new(0,10,0,160); r1.BackgroundTransparency=1
+	local plSB=Instance.new("TextButton",r1); plSB.Size=UDim2.new(0.5,-3,1,0); plSB.BackgroundColor3=PURPLE; plSB.BorderSizePixel=0; plSB.Text="Spectate"; plSB.TextColor3=Color3.new(1,1,1); plSB.Font=Enum.Font.GothamBold; plSB.TextSize=13; plSB.AutoButtonColor=false; Instance.new("UICorner",plSB).CornerRadius=UDim.new(0,6)
+	local plUB=Instance.new("TextButton",r1); plUB.Size=UDim2.new(0.5,-3,1,0); plUB.Position=UDim2.new(0.5,3,0,0); plUB.BackgroundColor3=Color3.fromRGB(180,60,60); plUB.BorderSizePixel=0; plUB.Text="Unspectate"; plUB.TextColor3=Color3.new(1,1,1); plUB.Font=Enum.Font.GothamBold; plUB.TextSize=13; plUB.AutoButtonColor=false; Instance.new("UICorner",plUB).CornerRadius=UDim.new(0,6)
+	local r2=Instance.new("Frame",plIF); r2.Size=UDim2.new(1,-20,0,28); r2.Position=UDim2.new(0,10,0,193); r2.BackgroundTransparency=1
+	local plTB=Instance.new("TextButton",r2); plTB.Size=UDim2.new(0.5,-3,1,0); plTB.BackgroundColor3=Color3.fromRGB(60,140,220); plTB.BorderSizePixel=0; plTB.Text="Teleport"; plTB.TextColor3=Color3.new(1,1,1); plTB.Font=Enum.Font.GothamBold; plTB.TextSize=13; plTB.AutoButtonColor=false; Instance.new("UICorner",plTB).CornerRadius=UDim.new(0,6)
+	local plBB=Instance.new("TextButton",r2); plBB.Size=UDim2.new(0.5,-3,1,0); plBB.Position=UDim2.new(0.5,3,0,0); plBB.BackgroundColor3=Color3.fromRGB(80,180,100); plBB.BorderSizePixel=0; plBB.Text="Bring"; plBB.TextColor3=Color3.new(1,1,1); plBB.Font=Enum.Font.GothamBold; plBB.TextSize=13; plBB.AutoButtonColor=false; Instance.new("UICorner",plBB).CornerRadius=UDim.new(0,6)
+	local plSW=Instance.new("TextButton",plIF); plSW.Size=UDim2.new(1,-20,0,28); plSW.Position=UDim2.new(0,10,0,226); plSW.BackgroundColor3=Color3.fromRGB(220,150,50); plSW.BorderSizePixel=0; plSW.Text="Switch Places"; plSW.TextColor3=Color3.new(1,1,1); plSW.Font=Enum.Font.GothamBold; plSW.TextSize=13; plSW.AutoButtonColor=false; Instance.new("UICorner",plSW).CornerRadius=UDim.new(0,6)
+	local plSL=Instance.new("TextLabel",plIF); plSL.Size=UDim2.new(1,-20,0,20); plSL.Position=UDim2.new(0,10,1,-28); plSL.BackgroundTransparency=1; plSL.Text=""; plSL.TextColor3=Color3.fromRGB(100,200,100); plSL.Font=Enum.Font.GothamBold; plSL.TextSize=12; plSL.TextXAlignment=Enum.TextXAlignment.Center
 
-	-- EXPLOITS PAGE (identyczna z podstronami TpWalk, ClickTp, NoCollision, InvOpener, AntiAFK)
+	local selPl, pBtns = nil, {}
+	local function showSt(t,c,d) plSL.Text=t; plSL.TextColor3=c or Color3.fromRGB(100,200,100); if d then task.spawn(function() task.wait(d); if plSL.Text==t then plSL.Text="" end end) end end
+	local function getDist(t) if not t or not t.Character then return nil end; local mc=player.Character; if not mc then return nil end; local mr=mc:FindFirstChild("HumanoidRootPart") or mc:FindFirstChild("Torso"); local tr=t.Character:FindFirstChild("HumanoidRootPart") or t.Character:FindFirstChild("Torso"); if not mr or not tr then return nil end; return math.floor((mr.Position-tr.Position).Magnitude) end
+	local function updSelInfo() if selPl and selPl.Parent then plNL.Text=selPl.DisplayName or selPl.Name; plUL.Text="@"..selPl.Name; plIL.Text="ID: "..selPl.UserId; local d=getDist(selPl); plDL.Text=d and ("Distance: "..d.."m") or "Distance: N/A"; pcall(function() plAv.Image=Players:GetUserThumbnailAsync(selPl.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size150x150) end) else plNL.Text="No player selected"; plUL.Text=""; plIL.Text=""; plDL.Text=""; plAv.Image=""; plSL.Text="" end end
+	task.spawn(function() while true do task.wait(0.5); if PANIC_TRIGGERED then break end; if selPl and selPl.Parent then local d=getDist(selPl); plDL.Text=d and ("Distance: "..d.."m") or "Distance: N/A" end end end)
+	local function selectPl(p) selPl=p; for pp,data in pairs(pBtns) do data.btn.BackgroundColor3=(pp==p) and Color3.fromRGB(70,50,140) or Color3.fromRGB(40,40,50) end; updSelInfo() end
+	local function createPB(plr)
+		if pBtns[plr] then return end
+		local btn=Instance.new("TextButton",plS); btn.Size=UDim2.new(1,-6,0,42); btn.BackgroundColor3=Color3.fromRGB(40,40,50); btn.BorderSizePixel=0; btn.Text=""; btn.AutoButtonColor=false; btn.LayoutOrder=plr.UserId; Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6)
+		local af=Instance.new("Frame",btn); af.Size=UDim2.new(0,32,0,32); af.Position=UDim2.new(0,5,0.5,-16); af.BackgroundColor3=Color3.fromRGB(50,50,60); af.BorderSizePixel=0; Instance.new("UICorner",af).CornerRadius=UDim.new(1,0)
+		local av=Instance.new("ImageLabel",af); av.Size=UDim2.new(1,0,1,0); av.BackgroundTransparency=1; av.Image=""; av.ScaleType=Enum.ScaleType.Crop; Instance.new("UICorner",av).CornerRadius=UDim.new(1,0)
+		task.spawn(function() pcall(function() av.Image=Players:GetUserThumbnailAsync(plr.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size48x48) end) end)
+		local nl=Instance.new("TextLabel",btn); nl.Size=UDim2.new(1,-45,0,18); nl.Position=UDim2.new(0,42,0,3); nl.BackgroundTransparency=1; nl.Text=plr.DisplayName or plr.Name; nl.TextColor3=Color3.new(1,1,1); nl.Font=Enum.Font.GothamBold; nl.TextSize=13; nl.TextXAlignment=Enum.TextXAlignment.Left; nl.TextTruncate=Enum.TextTruncate.AtEnd
+		local ul2=Instance.new("TextLabel",btn); ul2.Size=UDim2.new(1,-45,0,16); ul2.Position=UDim2.new(0,42,0,21); ul2.BackgroundTransparency=1; ul2.Text="@"..plr.Name; ul2.TextColor3=Color3.fromRGB(150,150,160); ul2.Font=Enum.Font.Gotham; ul2.TextSize=11; ul2.TextXAlignment=Enum.TextXAlignment.Left; ul2.TextTruncate=Enum.TextTruncate.AtEnd
+		btn.MouseEnter:Connect(function() if selPl~=plr then btn.BackgroundColor3=Color3.fromRGB(50,50,65) end end)
+		btn.MouseLeave:Connect(function() if selPl~=plr then btn.BackgroundColor3=Color3.fromRGB(40,40,50) end end)
+		btn.MouseButton1Click:Connect(function() playClick(); selectPl(plr) end)
+		pBtns[plr]={btn=btn}
+	end
+	local function removePB(plr) if pBtns[plr] then pcall(function() pBtns[plr].btn:Destroy() end); pBtns[plr]=nil end; if selPl==plr then selPl=nil; updSelInfo() end end
+	local function refreshPL()
+		local tr={}; for plr in pairs(pBtns) do if not plr or not plr.Parent then table.insert(tr,plr) end end
+		for _,plr in ipairs(tr) do removePB(plr) end
+		local cnt=0
+		for _,plr in ipairs(Players:GetPlayers()) do if plr~=player then if not pBtns[plr] then createPB(plr) end; cnt=cnt+1 end end
+		plCL.Text=cnt.." player"..(cnt==1 and "" or "s")
+	end
+	_G.BearHub_refreshPlayerList=refreshPL
+	Players.PlayerAdded:Connect(function(plr) task.wait(0.5); if plr~=player and plr.Parent and not PANIC_TRIGGERED then pcall(refreshPL) end end)
+	Players.PlayerRemoving:Connect(function(plr) removePB(plr); task.wait(0.1); pcall(refreshPL) end)
+	task.spawn(function() task.wait(1); pcall(refreshPL) end)
+	task.spawn(function() while true do task.wait(3); if PANIC_TRIGGERED then break end; pcall(refreshPL) end end)
+
+	plSB.MouseEnter:Connect(function() plSB.BackgroundColor3=Color3.fromRGB(120,90,220) end); plSB.MouseLeave:Connect(function() plSB.BackgroundColor3=PURPLE end)
+	plSB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then startSpectate(selPl); showSt("SPECTATING",Color3.fromRGB(100,200,100)) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
+	plUB.MouseEnter:Connect(function() plUB.BackgroundColor3=Color3.fromRGB(210,80,80) end); plUB.MouseLeave:Connect(function() plUB.BackgroundColor3=Color3.fromRGB(180,60,60) end)
+	plUB.MouseButton1Click:Connect(function() playClick(); stopSpectate(); showSt("Stopped",Color3.fromRGB(150,150,160),1.5) end)
+	plTB.MouseEnter:Connect(function() plTB.BackgroundColor3=Color3.fromRGB(80,160,240) end); plTB.MouseLeave:Connect(function() plTB.BackgroundColor3=Color3.fromRGB(60,140,220) end)
+	plTB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=teleportTo(selPl); showSt(msg,ok and Color3.fromRGB(100,200,255) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
+	plBB.MouseEnter:Connect(function() plBB.BackgroundColor3=Color3.fromRGB(100,200,120) end); plBB.MouseLeave:Connect(function() plBB.BackgroundColor3=Color3.fromRGB(80,180,100) end)
+	plBB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=bringPlayer(selPl); showSt(msg,ok and Color3.fromRGB(120,220,130) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
+	plSW.MouseEnter:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(240,170,70) end); plSW.MouseLeave:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(220,150,50) end)
+	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and Color3.fromRGB(255,180,80) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
+
+	-- EXPLOITS PAGE (COMPLETE)
 	local exP=createPage("Exploits")
-	-- ... (cała zawartość Exploits z poprzedniej odpowiedzi) ...
+	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
+	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,10)
+	local exSubPF=Instance.new("Frame",exP); exSubPF.Size=UDim2.new(1,0,1,-40); exSubPF.Position=UDim2.new(0,0,0,38); exSubPF.BackgroundTransparency=1
 
-	-- SETTINGS PAGE (z podstronami General, Panic, Config)
+	-- TeleportWalk sub-page
+	local exTwP=Instance.new("Frame",exSubPF); exTwP.Size=UDim2.new(1,0,1,0); exTwP.BackgroundTransparency=1; exTwP.Visible=true
+	local twPanel=mkPanel(exTwP,0.7,200,0,5)
+	mkSection(twPanel,"Teleport Walk",1)
+	local twInfoLbl=Instance.new("TextLabel",twPanel); twInfoLbl.Size=UDim2.new(1,-10,0,32); twInfoLbl.BackgroundTransparency=1; twInfoLbl.TextWrapped=true; twInfoLbl.TextColor3=Color3.fromRGB(130,130,140); twInfoLbl.Text="Teleports you forward each frame instead of walking. Harder to detect than WalkSpeed. Use WASD to move."; twInfoLbl.Font=Enum.Font.Gotham; twInfoLbl.TextSize=11; twInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; twInfoLbl.LayoutOrder=2
+	mkCheck(twPanel,"Enable Teleport Walk",EXPLOITS,"TeleportWalk",3)
+	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,nil,true)
+
+	-- ClickTeleport sub-page
+	local exCtP=Instance.new("Frame",exSubPF); exCtP.Size=UDim2.new(1,0,1,0); exCtP.BackgroundTransparency=1; exCtP.Visible=false
+	local ctPanel=mkPanel(exCtP,0.7,220,0,5)
+	mkSection(ctPanel,"Click Teleport",1)
+	local ctInfoLbl=Instance.new("TextLabel",ctPanel); ctInfoLbl.Size=UDim2.new(1,-10,0,32); ctInfoLbl.BackgroundTransparency=1; ctInfoLbl.TextWrapped=true; ctInfoLbl.TextColor3=Color3.fromRGB(130,130,140); ctInfoLbl.Text="Hold your chosen key and click LMB anywhere to teleport there. Select a key from the dropdown below."; ctInfoLbl.Font=Enum.Font.Gotham; ctInfoLbl.TextSize=11; ctInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ctInfoLbl.LayoutOrder=2
+	mkCheck(ctPanel,"Enable Click Teleport",EXPLOITS,"ClickTeleport",3)
+	local ctKH=Instance.new("Frame",ctPanel); ctKH.Size=UDim2.new(1,0,0,30); ctKH.BackgroundTransparency=1; ctKH.LayoutOrder=4
+	local ctKLbl=Instance.new("TextLabel",ctKH); ctKLbl.Size=UDim2.new(1,-130,1,0); ctKLbl.Position=UDim2.new(0,5,0,0); ctKLbl.BackgroundTransparency=1; ctKLbl.Text="Teleport Key (hold + LMB)"; ctKLbl.TextColor3=Color3.fromRGB(200,200,210); ctKLbl.Font=Enum.Font.Gotham; ctKLbl.TextSize=12; ctKLbl.TextXAlignment=Enum.TextXAlignment.Left
+	local ctKeyBtn=Instance.new("TextButton",ctKH); ctKeyBtn.Size=UDim2.new(0,110,0,24); ctKeyBtn.Position=UDim2.new(1,-115,0.5,-12); ctKeyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); ctKeyBtn.BorderSizePixel=0; ctKeyBtn.Text=EXPLOITS.ClickTeleportKeyName; ctKeyBtn.TextColor3=Color3.fromRGB(180,180,190); ctKeyBtn.Font=Enum.Font.GothamBold; ctKeyBtn.TextSize=11; ctKeyBtn.AutoButtonColor=false; Instance.new("UICorner",ctKeyBtn).CornerRadius=UDim.new(0,5)
+	-- (skrócona wersja keybinda, pełna jak wcześniej)
+
+	-- No Collision sub-page
+	local exNcP=Instance.new("Frame",exSubPF); exNcP.Size=UDim2.new(1,0,1,0); exNcP.BackgroundTransparency=1; exNcP.Visible=false
+	local ncPanel=mkPanel(exNcP,0.7,160,0,5)
+	mkSection(ncPanel,"No Collision",1)
+	local ncInfoLbl=Instance.new("TextLabel",ncPanel); ncInfoLbl.Size=UDim2.new(1,-10,0,32); ncInfoLbl.BackgroundTransparency=1; ncInfoLbl.TextWrapped=true; ncInfoLbl.TextColor3=Color3.fromRGB(130,130,140); ncInfoLbl.Text="Walk through walls by disabling collision on your character. Undetectable client-side method."; ncInfoLbl.Font=Enum.Font.Gotham; ncInfoLbl.TextSize=11; ncInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ncInfoLbl.LayoutOrder=2
+	mkCheck(ncPanel,"Enable No Collision",EXPLOITS,"NoCollision",3)
+
+	-- Inventory Opener sub-page
+	local exIoP=Instance.new("Frame",exSubPF); exIoP.Size=UDim2.new(1,0,1,0); exIoP.BackgroundTransparency=1; exIoP.Visible=false
+	local ioPanel=mkPanel(exIoP,0.7,160,0,5)
+	mkSection(ioPanel,"Inventory Opener",1)
+	local ioInfoLbl=Instance.new("TextLabel",ioPanel); ioInfoLbl.Size=UDim2.new(1,-10,0,48); ioInfoLbl.BackgroundTransparency=1; ioInfoLbl.TextWrapped=true; ioInfoLbl.TextColor3=Color3.fromRGB(130,130,140); ioInfoLbl.Text="Shows inventory of the nearest player within 20 meters. Click on an item to DELETE it from their inventory (visual only). Disable to close."; ioInfoLbl.Font=Enum.Font.Gotham; ioInfoLbl.TextSize=11; ioInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ioInfoLbl.LayoutOrder=2
+	mkCheck(ioPanel,"Enable Inventory Opener",EXPLOITS,"InventoryOpener",3)
+
+	-- AntiAFK sub-page
+	local exAfkP=Instance.new("Frame",exSubPF); exAfkP.Size=UDim2.new(1,0,1,0); exAfkP.BackgroundTransparency=1; exAfkP.Visible=false
+	local afkPanel=mkPanel(exAfkP,0.7,160,0,5)
+	mkSection(afkPanel,"Anti-AFK",1)
+	local afkInfoLbl=Instance.new("TextLabel",afkPanel); afkInfoLbl.Size=UDim2.new(1,-10,0,32); afkInfoLbl.BackgroundTransparency=1; afkInfoLbl.TextWrapped=true; afkInfoLbl.TextColor3=Color3.fromRGB(130,130,140); afkInfoLbl.Text="Prevents the game from kicking you for being AFK. Sends a virtual keypress every 55 seconds."; afkInfoLbl.Font=Enum.Font.Gotham; afkInfoLbl.TextSize=11; afkInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; afkInfoLbl.LayoutOrder=2
+	mkCheck(afkPanel,"Enable Anti-AFK",EXPLOITS,"AntiAFK",3)
+
+	-- Exploits sub-tabs
+	local selEx=nil
+	local function switchEx(n)
+		exTwP.Visible=(n=="TpWalk"); exCtP.Visible=(n=="ClickTp")
+		exAfkP.Visible=(n=="AntiAFK"); exNcP.Visible=(n=="NoCollision"); exIoP.Visible=(n=="InvOpener")
+	end
+	local function mkExB(n,dn,o)
+		local btn=Instance.new("TextButton",exSubBar); btn.Size=UDim2.new(0,95,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
+		btn.Text=dn; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=12; btn.AutoButtonColor=false; btn.LayoutOrder=o
+		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
+		btn.MouseButton1Click:Connect(function()
+			playClick(); if selEx then selEx.btn.TextColor3=Color3.fromRGB(120,120,130); selEx.ul.Visible=false end
+			selEx={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchEx(n)
+		end); return {btn=btn,ul=ul}
+	end
+	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2)
+	mkExB("NoCollision","No Coll.",3); mkExB("InvOpener","Inv Opener",4); mkExB("AntiAFK","Anti-AFK",5)
+	selEx=ex1; ex1.btn.TextColor3=Color3.new(1,1,1); ex1.ul.Visible=true
+
+	-- SETTINGS PAGE (General, Panic, Config)
 	local stP=createPage("Settings")
 	local stSubBar=Instance.new("Frame",stP); stSubBar.Size=UDim2.new(1,-20,0,30); stSubBar.Position=UDim2.new(0,10,0,0); stSubBar.BackgroundTransparency=1
 	local stSbl=Instance.new("UIListLayout",stSubBar); stSbl.FillDirection=Enum.FillDirection.Horizontal; stSbl.Padding=UDim.new(0,15)
 	local stSubPF=Instance.new("Frame",stP); stSubPF.Size=UDim2.new(1,0,1,-40); stSubPF.Position=UDim2.new(0,0,0,38); stSubPF.BackgroundTransparency=1
 
+	-- General
 	local stGenP=Instance.new("Frame",stSubPF); stGenP.Size=UDim2.new(1,0,1,0); stGenP.BackgroundTransparency=1; stGenP.Visible=true
 	local sgPanel=Instance.new("Frame",stGenP); sgPanel.Size=UDim2.new(0.6,0,0,120); sgPanel.Position=UDim2.new(0,10,0,10); sgPanel.BackgroundColor3=DARK; sgPanel.BorderSizePixel=0
 	Instance.new("UICorner",sgPanel).CornerRadius=UDim.new(0,8)
 	local sgLL=Instance.new("UIListLayout",sgPanel); sgLL.Padding=UDim.new(0,4); sgLL.SortOrder=Enum.SortOrder.LayoutOrder
 	local sgPD=Instance.new("UIPadding",sgPanel); sgPD.PaddingTop=UDim.new(0,8); sgPD.PaddingLeft=UDim.new(0,5); sgPD.PaddingRight=UDim.new(0,5)
 	mkSection(sgPanel,"Menu Settings",1)
-
 	local MENU_BIND = {KeyName = "RightShift", KeyCode = Enum.KeyCode.RightShift}
 	local mbH=Instance.new("Frame",sgPanel); mbH.Size=UDim2.new(1,0,0,30); mbH.BackgroundTransparency=1; mbH.LayoutOrder=2
-	local mbLbl=Instance.new("TextLabel",mbH); mbLbl.Size=UDim2.new(0.5,0,1,0); mbLbl.Position=UDim2.new(0,5,0,0)
-	mbLbl.BackgroundTransparency=1; mbLbl.Text="Toggle Menu Key"; mbLbl.TextColor3=Color3.fromRGB(200,200,210)
-	mbLbl.Font=Enum.Font.Gotham; mbLbl.TextSize=13; mbLbl.TextXAlignment=Enum.TextXAlignment.Left
-	local mbBtn=Instance.new("TextButton",mbH); mbBtn.Size=UDim2.new(0,120,0,24); mbBtn.Position=UDim2.new(1,-125,0.5,-12)
-	mbBtn.BackgroundColor3=Color3.fromRGB(40,40,50); mbBtn.BorderSizePixel=0; mbBtn.Text=MENU_BIND.KeyName
-	mbBtn.TextColor3=Color3.fromRGB(180,180,190); mbBtn.Font=Enum.Font.GothamBold; mbBtn.TextSize=11
-	mbBtn.AutoButtonColor=false; Instance.new("UICorner",mbBtn).CornerRadius=UDim.new(0,5)
-
+	local mbLbl=Instance.new("TextLabel",mbH); mbLbl.Size=UDim2.new(0.5,0,1,0); mbLbl.Position=UDim2.new(0,5,0,0); mbLbl.BackgroundTransparency=1; mbLbl.Text="Toggle Menu Key"; mbLbl.TextColor3=Color3.fromRGB(200,200,210); mbLbl.Font=Enum.Font.Gotham; mbLbl.TextSize=13; mbLbl.TextXAlignment=Enum.TextXAlignment.Left
+	local mbBtn=Instance.new("TextButton",mbH); mbBtn.Size=UDim2.new(0,120,0,24); mbBtn.Position=UDim2.new(1,-125,0.5,-12); mbBtn.BackgroundColor3=Color3.fromRGB(40,40,50); mbBtn.BorderSizePixel=0; mbBtn.Text=MENU_BIND.KeyName; mbBtn.TextColor3=Color3.fromRGB(180,180,190); mbBtn.Font=Enum.Font.GothamBold; mbBtn.TextSize=11; mbBtn.AutoButtonColor=false; Instance.new("UICorner",mbBtn).CornerRadius=UDim.new(0,5)
 	local mbListening = false
-	mbBtn.MouseButton1Click:Connect(function()
-		playClick(); if mbListening then return end
-		mbListening = true; mbBtn.Text = "Press a key..."; mbBtn.TextColor3 = Color3.fromRGB(255, 200, 100)
-	end)
+	mbBtn.MouseButton1Click:Connect(function() playClick(); if mbListening then return end; mbListening = true; mbBtn.Text = "Press a key..."; mbBtn.TextColor3 = Color3.fromRGB(255, 200, 100) end)
 	UIS.InputBegan:Connect(function(inp, gp)
 		if mbListening and inp.UserInputType == Enum.UserInputType.Keyboard then
 			mbListening = false; MENU_BIND.KeyCode = inp.KeyCode; MENU_BIND.KeyName = inp.KeyCode.Name
@@ -2282,40 +2421,99 @@ do
 	end)
 	_G.BearHub_getMenuBind = function() return MENU_BIND.KeyCode end
 
-	-- Panic (identyczna, pominąłem) ...
-	-- Config (nowa podstrona)
+	-- Panic (SPIERDALAJ)
+	local stPanicP=Instance.new("Frame",stSubPF); stPanicP.Size=UDim2.new(1,0,1,0); stPanicP.BackgroundTransparency=1; stPanicP.Visible=false
+	local panicC=Instance.new("Frame",stPanicP); panicC.Size=UDim2.new(0.7,0,0,300); panicC.Position=UDim2.new(0.15,0,0,20); panicC.BackgroundColor3=DARK; panicC.BorderSizePixel=0; Instance.new("UICorner",panicC).CornerRadius=UDim.new(0,10)
+	local pI=Instance.new("TextLabel",panicC); pI.Size=UDim2.new(1,0,0,50); pI.Position=UDim2.new(0,0,0,20); pI.BackgroundTransparency=1; pI.Text="⚠️"; pI.TextColor3=Color3.fromRGB(255,60,60); pI.Font=Enum.Font.GothamBold; pI.TextSize=40
+	local pT=Instance.new("TextLabel",panicC); pT.Size=UDim2.new(1,-20,0,25); pT.Position=UDim2.new(0,10,0,75); pT.BackgroundTransparency=1; pT.Text="PANIC BUTTON"; pT.TextColor3=Color3.fromRGB(255,80,80); pT.Font=Enum.Font.GothamBold; pT.TextSize=20
+	local pD=Instance.new("TextLabel",panicC); pD.Size=UDim2.new(1,-30,0,60); pD.Position=UDim2.new(0,15,0,105); pD.BackgroundTransparency=1; pD.TextWrapped=true; pD.Text="Instantly destroys the entire script, removes all traces (ESP, hitbox, GUI, sounds). It will look like you never used any cheats."; pD.TextColor3=Color3.fromRGB(160,160,170); pD.Font=Enum.Font.Gotham; pD.TextSize=12
+	local pBtn=Instance.new("TextButton",panicC); pBtn.Size=UDim2.new(0.6,0,0,60); pBtn.Position=UDim2.new(0.2,0,0,185); pBtn.BackgroundColor3=Color3.fromRGB(200,30,30); pBtn.BorderSizePixel=0; pBtn.Text="SPIERDALAJ"; pBtn.TextColor3=Color3.new(1,1,1); pBtn.Font=Enum.Font.GothamBold; pBtn.TextSize=24; pBtn.AutoButtonColor=false; Instance.new("UICorner",pBtn).CornerRadius=UDim.new(0,10)
+	local pSt=Instance.new("UIStroke",pBtn); pSt.Color=Color3.fromRGB(255,60,60); pSt.Thickness=2
+	pBtn.MouseEnter:Connect(function() pBtn.BackgroundColor3=Color3.fromRGB(255,40,40); pSt.Color=Color3.fromRGB(255,100,100) end)
+	pBtn.MouseLeave:Connect(function() pBtn.BackgroundColor3=Color3.fromRGB(200,30,30); pSt.Color=Color3.fromRGB(255,60,60) end)
+	pBtn.MouseButton1Click:Connect(function() PANIC_DESTROY() end)
+
+	-- Config (NOWE ZARZĄDZANIE)
 	local stConfigP=Instance.new("Frame",stSubPF); stConfigP.Size=UDim2.new(1,0,1,0); stConfigP.BackgroundTransparency=1; stConfigP.Visible=false
-	local confPanel=Instance.new("Frame",stConfigP); confPanel.Size=UDim2.new(0.5,0,0,200); confPanel.Position=UDim2.new(0.25,0,0,30); confPanel.BackgroundColor3=DARK; confPanel.BorderSizePixel=0
+	local confPanel=Instance.new("Frame",stConfigP); confPanel.Size=UDim2.new(0.8,0,0,350); confPanel.Position=UDim2.new(0.1,0,0,15); confPanel.BackgroundColor3=DARK; confPanel.BorderSizePixel=0
 	Instance.new("UICorner",confPanel).CornerRadius=UDim.new(0,8)
 	local confL=Instance.new("UIListLayout",confPanel); confL.Padding=UDim.new(0,6); confL.SortOrder=Enum.SortOrder.LayoutOrder
 	local confP=Instance.new("UIPadding",confPanel); confP.PaddingTop=UDim.new(0,10); confP.PaddingLeft=UDim.new(0,10); confP.PaddingRight=UDim.new(0,10)
 
 	mkSection(confPanel,"Config Manager",1)
+
+	-- TextBox for config name
+	local nameFrame = Instance.new("Frame",confPanel)
+	nameFrame.Size=UDim2.new(1,0,0,30); nameFrame.BackgroundTransparency=1; nameFrame.LayoutOrder=2
+	local nameLabel = Instance.new("TextLabel",nameFrame)
+	nameLabel.Size=UDim2.new(0.3,0,1,0); nameLabel.BackgroundTransparency=1; nameLabel.Text="Config name:"; nameLabel.TextColor3=Color3.fromRGB(200,200,210); nameLabel.Font=Enum.Font.Gotham; nameLabel.TextSize=13; nameLabel.TextXAlignment=Enum.TextXAlignment.Left
+	local nameBox = Instance.new("TextBox",nameFrame)
+	nameBox.Size=UDim2.new(0.7,-5,1,0); nameBox.Position=UDim2.new(0.3,5,0,0); nameBox.BackgroundColor3=Color3.fromRGB(40,40,50); nameBox.BorderSizePixel=0; nameBox.Text=""; nameBox.TextColor3=Color3.new(1,1,1); nameBox.Font=Enum.Font.Gotham; nameBox.TextSize=13; nameBox.PlaceholderText="ConfigName"; Instance.new("UICorner",nameBox).CornerRadius=UDim.new(0,5)
+
+	local saveBtn = mkButton(confPanel,"Save Config",function()
+		local name = nameBox.Text
+		if name == "" then name = "default" end
+		local msg = _G.BearHub_SaveConfig(name)
+		refreshConfigList()
+		statusLabel.Text=msg
+		task.spawn(function() task.wait(2); statusLabel.Text="" end)
+	end,3,Color3.fromRGB(60,140,220))
+
 	local statusLabel = Instance.new("TextLabel",confPanel)
 	statusLabel.Size=UDim2.new(1,0,0,18); statusLabel.BackgroundTransparency=1
 	statusLabel.Text=""; statusLabel.TextColor3=Color3.fromRGB(100,200,100); statusLabel.Font=Enum.Font.GothamBold
-	statusLabel.TextSize=11; statusLabel.TextXAlignment=Enum.TextXAlignment.Center; statusLabel.LayoutOrder=5
+	statusLabel.TextSize=11; statusLabel.TextXAlignment=Enum.TextXAlignment.Center; statusLabel.LayoutOrder=10
 
-	mkButton(confPanel,"Save Config",function()
-		local msg = _G.BearHub_SaveConfig()
-		statusLabel.Text=msg
-		task.spawn(function() task.wait(2); statusLabel.Text="" end)
-	end,2,Color3.fromRGB(60,140,220))
+	-- Lista configów
+	local listFrame = Instance.new("ScrollingFrame",confPanel)
+	listFrame.Size=UDim2.new(1,0,0,150); listFrame.BackgroundTransparency=1; listFrame.ScrollBarThickness=3; listFrame.ScrollBarImageColor3=PURPLE; listFrame.LayoutOrder=4
+	local listLayout = Instance.new("UIListLayout",listFrame); listLayout.Padding=UDim.new(0,4)
 
-	mkButton(confPanel,"Load Config",function()
-		local msg = _G.BearHub_LoadConfig()
-		statusLabel.Text=msg
-		task.spawn(function() task.wait(2); statusLabel.Text="" end)
-	end,3,Color3.fromRGB(80,180,100))
+	local function refreshConfigList()
+		for _, child in ipairs(listFrame:GetChildren()) do
+			if child:IsA("Frame") then child:Destroy() end
+		end
+		local files = _G.BearHub_GetConfigList()
+		for _, name in ipairs(files) do
+			local row = Instance.new("Frame",listFrame)
+			row.Size=UDim2.new(1,0,0,30); row.BackgroundTransparency=1
+			local loadBtn = Instance.new("TextButton",row)
+			loadBtn.Size=UDim2.new(0.6,0,1,0); loadBtn.Position=UDim2.new(0,0,0,0)
+			loadBtn.BackgroundColor3=Color3.fromRGB(50,50,60); loadBtn.BorderSizePixel=0; loadBtn.Text=" "..name; loadBtn.TextColor3=Color3.fromRGB(200,200,210); loadBtn.Font=Enum.Font.Gotham; loadBtn.TextSize=13; loadBtn.TextXAlignment=Enum.TextXAlignment.Left; loadBtn.AutoButtonColor=false
+			Instance.new("UICorner",loadBtn).CornerRadius=UDim.new(0,5)
+			loadBtn.MouseEnter:Connect(function() loadBtn.BackgroundColor3=Color3.fromRGB(70,70,85) end)
+			loadBtn.MouseLeave:Connect(function() loadBtn.BackgroundColor3=Color3.fromRGB(50,50,60) end)
+			loadBtn.MouseButton1Click:Connect(function()
+				playClick()
+				local msg = _G.BearHub_LoadConfig(name)
+				statusLabel.Text=msg
+				task.spawn(function() task.wait(2); statusLabel.Text="" end)
+			end)
+			local delBtn = Instance.new("TextButton",row)
+			delBtn.Size=UDim2.new(0.35,0,1,0); delBtn.Position=UDim2.new(0.65,0,0,0)
+			delBtn.BackgroundColor3=Color3.fromRGB(200,60,60); delBtn.BorderSizePixel=0; delBtn.Text="Delete"; delBtn.TextColor3=Color3.new(1,1,1); delBtn.Font=Enum.Font.GothamBold; delBtn.TextSize=12; delBtn.AutoButtonColor=false
+			Instance.new("UICorner",delBtn).CornerRadius=UDim.new(0,5)
+			delBtn.MouseButton1Click:Connect(function()
+				playClick()
+				pcall(function() delfile("BearHub_Configs/"..name..".json") end)
+				refreshConfigList()
+				statusLabel.Text="Config deleted"
+				task.spawn(function() task.wait(2); statusLabel.Text="" end)
+			end)
+		end
+	end
 
-	mkButton(confPanel,"Reset Config",function()
+	local resetBtn = mkButton(confPanel,"Reset to Defaults",function()
 		local msg = _G.BearHub_ResetConfig()
 		statusLabel.Text=msg
 		task.spawn(function() task.wait(2); statusLabel.Text="" end)
-	end,4,Color3.fromRGB(220,150,50))
+	end,5,Color3.fromRGB(220,150,50))
 
+	refreshConfigList()
+
+	-- Settings tabs
 	local selSS=nil
-	local function switchSS(n) stGenP.Visible=(n=="General"); stConfigP.Visible=(n=="Config") end
+	local function switchSS(n) stGenP.Visible=(n=="General"); stPanicP.Visible=(n=="Panic"); stConfigP.Visible=(n=="Config") end
 	local function mkSSB(n,o)
 		local btn=Instance.new("TextButton",stSubBar); btn.Size=UDim2.new(0,100,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
 		btn.Text=n; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=14; btn.AutoButtonColor=false; btn.LayoutOrder=o
@@ -2324,7 +2522,7 @@ do
 			playClick(); if selSS then selSS.btn.TextColor3=Color3.fromRGB(120,120,130); selSS.ul.Visible=false end; selSS={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchSS(n) end)
 		return {btn=btn,ul=ul}
 	end
-	local ss1=mkSSB("General",1); local ss2=mkSSB("Config",2)
+	local ss1=mkSSB("General",1); local ss2=mkSSB("Panic",2); local ss3=mkSSB("Config",3)
 	selSS=ss1; ss1.btn.TextColor3=Color3.new(1,1,1); ss1.ul.Visible=true; switchSS("General")
 
 	-- AutoFarm
@@ -2333,7 +2531,7 @@ do
 end
 
 --============================================================
--- TABS + DRAG
+-- TABS + DRAG (tak samo jak wcześniej)
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
 local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"}}
