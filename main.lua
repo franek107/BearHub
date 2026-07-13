@@ -66,8 +66,6 @@ local EXPLOITS = {
 	TeleportWalk = false, TeleportWalkDistance = 5,
 	ClickTeleport = false, ClickTeleportKeyName = "NONE", ClickTeleportKeyCheck = nil,
 	AntiAFK = false,
-	NoCollision = false,
-	InventoryOpener = false,
 }
 
 local SPECTATE = {Target = nil, Active = false}
@@ -76,7 +74,7 @@ local mbHeld = {[1]=false,[2]=false,[3]=false,[4]=false,[5]=false}
 
 pcall(function()
 	for _, g in ipairs(playerGui:GetChildren()) do
-		if g.Name == "BearHub" or g.Name == "BearHub_ESP" or g.Name == "BearHub_FOV" or g.Name == "BearHub_InventoryOpener" then
+		if g.Name == "BearHub" or g.Name == "BearHub_ESP" or g.Name == "BearHub_FOV" then
 			g:Destroy()
 		end
 	end
@@ -89,10 +87,6 @@ espGui.DisplayOrder = 100; espGui.Parent = playerGui
 local fovGui = Instance.new("ScreenGui")
 fovGui.Name = "BearHub_FOV"; fovGui.ResetOnSpawn = false; fovGui.IgnoreGuiInset = true
 fovGui.DisplayOrder = 99; fovGui.Parent = playerGui
-
-local invOpenerGui = Instance.new("ScreenGui")
-invOpenerGui.Name = "BearHub_InventoryOpener"; invOpenerGui.ResetOnSpawn = false; invOpenerGui.IgnoreGuiInset = true
-invOpenerGui.DisplayOrder = 200; invOpenerGui.Parent = playerGui
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "BearHub"; gui.ResetOnSpawn = false; gui.IgnoreGuiInset = true
@@ -110,7 +104,6 @@ local function PANIC_DESTROY()
 	MISC.NoClip = false; MISC.RapidFire = false; MISC.SuperPunch = false
 	MISC.WalkSpeedEnabled = false; MISC.JumpPowerEnabled = false; MISC.FreeCam = false
 	EXPLOITS.TeleportWalk = false; EXPLOITS.ClickTeleport = false; EXPLOITS.AntiAFK = false
-	EXPLOITS.NoCollision = false; EXPLOITS.InventoryOpener = false
 	SPECTATE.Active = false; SPECTATE.Target = nil
 	pcall(function()
 		local myChar = player.Character
@@ -148,11 +141,10 @@ local function PANIC_DESTROY()
 	end)
 	pcall(function() espGui:Destroy() end)
 	pcall(function() fovGui:Destroy() end)
-	pcall(function() invOpenerGui:Destroy() end)
 	pcall(function() gui:Destroy() end)
 	pcall(function()
 		for _, g in ipairs(playerGui:GetChildren()) do
-			if g.Name == "BearHub" or g.Name == "BearHub_ESP" or g.Name == "BearHub_FOV" or g.Name == "BearHub_InventoryOpener" then g:Destroy() end
+			if g.Name == "BearHub" or g.Name == "BearHub_ESP" or g.Name == "BearHub_FOV" then g:Destroy() end
 		end
 	end)
 	pcall(function()
@@ -915,7 +907,7 @@ do
 		if h then pcall(function() h.Health = h.MaxHealth end) end
 	end
 
-	_G.BearHub_deleteItem = function()
+	_G.BearHub_copyItem = function()
 		if PANIC_TRIGGERED then return false, "Disabled" end
 		local char = player.Character
 		if not char then return false, "No character" end
@@ -924,12 +916,15 @@ do
 			if child:IsA("Tool") then equippedTool = child; break end
 		end
 		if not equippedTool then return false, "No tool equipped" end
-		local toolName = equippedTool.Name
 		local success, err = pcall(function()
-			equippedTool:Destroy()
+			local clone = equippedTool:Clone()
+			if clone then
+				local backpack = player:FindFirstChildOfClass("Backpack")
+				if backpack then clone.Parent = backpack else clone.Parent = char end
+			end
 		end)
-		if success then return true, "Deleted: " .. toolName
-		else return false, "Failed to delete: " .. tostring(err) end
+		if success then return true, "Copied: " .. equippedTool.Name
+		else return false, "Failed to copy: " .. tostring(err) end
 	end
 
 	local lastWSEnabled, lastJPEnabled = false, false
@@ -1207,7 +1202,7 @@ do
 end
 
 local healPlayer = _G.BearHub_healPlayer
-local deleteItem = _G.BearHub_deleteItem  -- usunięto copyItem
+local copyItem = _G.BearHub_copyItem
 
 --============================================================
 -- EXPLOITS LOGIC
@@ -1301,135 +1296,6 @@ do
 			end
 		end)
 	end)
-
-	-- NO COLLISION
-	local wasNoCollision = false
-	RunService.Stepped:Connect(function()
-		if PANIC_TRIGGERED then return end
-		local char = player.Character
-		if EXPLOITS.NoCollision then
-			if char then
-				for _, part in ipairs(char:GetDescendants()) do
-					if part:IsA("BasePart") then
-						pcall(function() part.CanCollide = false end)
-					end
-				end
-			end
-			wasNoCollision = true
-		elseif wasNoCollision then
-			if char then
-				for _, part in ipairs(char:GetDescendants()) do
-					if part:IsA("BasePart") then
-						pcall(function() part.CanCollide = true end)
-					end
-				end
-			end
-			wasNoCollision = false
-		end
-	end)
-
-	-- INVENTORY OPENER (teraz usuwa przedmiot zamiast kraść)
-	local invOpenerFrame = Instance.new("Frame", invOpenerGui)
-	invOpenerFrame.Size = UDim2.new(0, 250, 0, 300)
-	invOpenerFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
-	invOpenerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-	invOpenerFrame.BorderSizePixel = 0; invOpenerFrame.Visible = false
-	invOpenerFrame.ClipsDescendants = true
-	Instance.new("UICorner", invOpenerFrame).CornerRadius = UDim.new(0, 10)
-	Instance.new("UIStroke", invOpenerFrame).Color = PURPLE
-
-	local invTitle = Instance.new("TextLabel", invOpenerFrame)
-	invTitle.Size = UDim2.new(1, -20, 0, 30); invTitle.Position = UDim2.new(0, 10, 0, 5)
-	invTitle.BackgroundTransparency = 1; invTitle.Text = "Inventory Opener"
-	invTitle.TextColor3 = Color3.fromRGB(180, 140, 255); invTitle.Font = Enum.Font.GothamBold; invTitle.TextSize = 16
-
-	local invScroll = Instance.new("ScrollingFrame", invOpenerFrame)
-	invScroll.Size = UDim2.new(1, -20, 1, -50); invScroll.Position = UDim2.new(0, 10, 0, 40)
-	invScroll.BackgroundTransparency = 1; invScroll.ScrollBarThickness = 3
-	invScroll.ScrollBarImageColor3 = PURPLE; invScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-	invScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-	local invLayout = Instance.new("UIListLayout", invScroll)
-	invLayout.Padding = UDim.new(0, 4)
-
-	local function getNearestPlayer(maxDist)
-		local best, bestDist = nil, maxDist or 20
-		local myChar = player.Character
-		local myRoot = myChar and (myChar:FindFirstChild("HumanoidRootPart") or myChar:FindFirstChild("Torso"))
-		if not myRoot then return nil end
-		for _, plr in ipairs(Players:GetPlayers()) do
-			if plr ~= player and plr.Character then
-				local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-				local root = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
-				if hum and hum.Health > 0 and root then
-					local dist = (myRoot.Position - root.Position).Magnitude
-					if dist < bestDist then
-						best, bestDist = plr, dist
-					end
-				end
-			end
-		end
-		return best
-	end
-
-	local function updateInvOpener()
-		if not EXPLOITS.InventoryOpener or PANIC_TRIGGERED then
-			invOpenerFrame.Visible = false
-			return
-		end
-		local target = getNearestPlayer(20)
-		if not target then
-			invTitle.Text = "Inventory Opener (no player)"
-			for _, child in ipairs(invScroll:GetChildren()) do
-				if child:IsA("TextButton") then child:Destroy() end
-			end
-			invOpenerFrame.Visible = true
-			return
-		end
-		invTitle.Text = "Inventory - " .. (target.DisplayName or target.Name)
-		local tools = {}
-		local seen = {}
-		if target.Character then
-			for _, item in ipairs(target.Character:GetChildren()) do
-				if item:IsA("Tool") and not seen[item.Name] then
-					seen[item.Name] = true
-					table.insert(tools, item)
-				end
-			end
-		end
-		local bp = target:FindFirstChildOfClass("Backpack")
-		if bp then
-			for _, item in ipairs(bp:GetChildren()) do
-				if item:IsA("Tool") and not seen[item.Name] then
-					seen[item.Name] = true
-					table.insert(tools, item)
-				end
-			end
-		end
-		for _, child in ipairs(invScroll:GetChildren()) do
-			if child:IsA("TextButton") then child:Destroy() end
-		end
-		for _, tool in ipairs(tools) do
-			local btn = Instance.new("TextButton", invScroll)
-			btn.Size = UDim2.new(1, -6, 0, 28); btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-			btn.BorderSizePixel = 0; btn.Text = " " .. tool.Name
-			btn.TextColor3 = Color3.fromRGB(200, 200, 210); btn.Font = Enum.Font.Gotham; btn.TextSize = 13
-			btn.TextXAlignment = Enum.TextXAlignment.Left; btn.AutoButtonColor = false
-			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-			btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(60, 60, 75) end)
-			btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50) end)
-			btn.MouseButton1Click:Connect(function()
-				playClick()
-				-- usuwamy przedmiot z ekwipunku gracza (client-side)
-				pcall(function() tool:Destroy() end)
-			end)
-		end
-		invOpenerFrame.Visible = true
-	end
-
-	RunService.RenderStepped:Connect(function()
-		if PANIC_TRIGGERED then return end
-		pcall(updateInvOpener)
-	end)
 end
 
 --============================================================
@@ -1438,10 +1304,10 @@ end
 local main, sidebar, contentTitle, pagesFrame, colorPickerGui, openCP, cpGrid, hueBar
 
 do
-	local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)  -- powiększone o 80px
+	local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
 	main = Instance.new("Frame", gui)
 	main.Name = "Main"; main.Size = ORIGINAL_SIZE
-	main.Position = UDim2.new(0.5, -390, 0.5, -265)  -- wyśrodkowane dla 780x530
+	main.Position = UDim2.new(0.5, -350, 0.5, -225)
 	main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	main.BorderSizePixel = 0; main.ClipsDescendants = true; main.Active = true
 	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
@@ -1750,7 +1616,7 @@ do
 		end)
 	end
 
-	-- SPECIAL KEYBIND FOR CLICK TELEPORT
+	-- SPECIAL KEYBIND FOR CLICK TELEPORT (no enable checkbox, just key selector)
 	local function mkClickTeleportKeybind(p, o)
 		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,30); h.BackgroundTransparency=1; h.LayoutOrder=o or 0
 		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,-130,1,0); lb.Position=UDim2.new(0,5,0,0)
@@ -1889,21 +1755,21 @@ do
 	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
 	local mSubPF=Instance.new("Frame",miscP); mSubPF.Size=UDim2.new(1,0,1,-40); mSubPF.Position=UDim2.new(0,0,0,38); mSubPF.BackgroundTransparency=1
 
-	-- Actions sub-page (bez Copy Item)
+	-- Actions sub-page
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
-	local qaPanel=mkPanel(mqaP,0.48,170,0,5)  -- zmniejszona wysokość
+	local qaPanel=mkPanel(mqaP,0.48,200,0,5)
 	mkSection(qaPanel,"Quick Actions",1)
 	mkButton(qaPanel,"Heal",healPlayer,2)
 
 	local copyStatusLabel=Instance.new("TextLabel",qaPanel); copyStatusLabel.Size=UDim2.new(1,-10,0,18); copyStatusLabel.BackgroundTransparency=1
 	copyStatusLabel.Text=""; copyStatusLabel.TextColor3=Color3.fromRGB(100,200,100); copyStatusLabel.Font=Enum.Font.GothamBold
-	copyStatusLabel.TextSize=11; copyStatusLabel.TextXAlignment=Enum.TextXAlignment.Center; copyStatusLabel.LayoutOrder=5
+	copyStatusLabel.TextSize=11; copyStatusLabel.TextXAlignment=Enum.TextXAlignment.Center; copyStatusLabel.LayoutOrder=4
 
-	mkButton(qaPanel,"Delete Item (in hand)",function()
-		local ok,msg=deleteItem()
-		copyStatusLabel.Text=msg; copyStatusLabel.TextColor3=ok and Color3.fromRGB(255,100,100) or Color3.fromRGB(255,60,60)
+	mkButton(qaPanel,"Copy Item (in hand)",function()
+		local ok,msg=copyItem()
+		copyStatusLabel.Text=msg; copyStatusLabel.TextColor3=ok and Color3.fromRGB(100,200,100) or Color3.fromRGB(255,100,100)
 		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
-	end,4,Color3.fromRGB(220,60,60))
+	end,3,Color3.fromRGB(60,140,220))
 
 	-- Combat sub-page
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
@@ -2162,7 +2028,7 @@ do
 	-- EXPLOITS PAGE
 	local exP=createPage("Exploits")
 	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
-	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,10)
+	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,15)
 	local exSubPF=Instance.new("Frame",exP); exSubPF.Size=UDim2.new(1,0,1,-40); exSubPF.Position=UDim2.new(0,0,0,38); exSubPF.BackgroundTransparency=1
 
 	-- TeleportWalk sub-page
@@ -2247,41 +2113,19 @@ do
 	afkInfoLbl.Text="Prevents the game from kicking you for being AFK. Sends a virtual keypress every 55 seconds."; afkInfoLbl.Font=Enum.Font.Gotham; afkInfoLbl.TextSize=11; afkInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; afkInfoLbl.LayoutOrder=2
 	mkCheck(afkPanel,"Enable Anti-AFK",EXPLOITS,"AntiAFK",3)
 
-	-- No Collision sub-page
-	local exNcP=Instance.new("Frame",exSubPF); exNcP.Size=UDim2.new(1,0,1,0); exNcP.BackgroundTransparency=1; exNcP.Visible=false
-	local ncPanel=mkPanel(exNcP,0.7,160,0,5)
-	mkSection(ncPanel,"No Collision",1)
-	local ncInfoLbl=Instance.new("TextLabel",ncPanel); ncInfoLbl.Size=UDim2.new(1,-10,0,32); ncInfoLbl.BackgroundTransparency=1
-	ncInfoLbl.TextWrapped=true; ncInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
-	ncInfoLbl.Text="Walk through walls by disabling collision on your character. Undetectable client-side method."; ncInfoLbl.Font=Enum.Font.Gotham; ncInfoLbl.TextSize=11; ncInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ncInfoLbl.LayoutOrder=2
-	mkCheck(ncPanel,"Enable No Collision",EXPLOITS,"NoCollision",3)
-
-	-- Inventory Opener sub-page (usuwa przedmiot)
-	local exIoP=Instance.new("Frame",exSubPF); exIoP.Size=UDim2.new(1,0,1,0); exIoP.BackgroundTransparency=1; exIoP.Visible=false
-	local ioPanel=mkPanel(exIoP,0.7,160,0,5)
-	mkSection(ioPanel,"Inventory Opener",1)
-	local ioInfoLbl=Instance.new("TextLabel",ioPanel); ioInfoLbl.Size=UDim2.new(1,-10,0,48); ioInfoLbl.BackgroundTransparency=1
-	ioInfoLbl.TextWrapped=true; ioInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
-	ioInfoLbl.Text="Shows inventory of the nearest player within 20 meters. Click on an item to DELETE it from their inventory (visual only). Disable to close."; ioInfoLbl.Font=Enum.Font.Gotham; ioInfoLbl.TextSize=11; ioInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ioInfoLbl.LayoutOrder=2
-	mkCheck(ioPanel,"Enable Inventory Opener",EXPLOITS,"InventoryOpener",3)
-
 	-- Exploits sub-tabs
 	local selEx=nil
-	local function switchEx(n)
-		exTwP.Visible=(n=="TpWalk"); exCtP.Visible=(n=="ClickTp")
-		exAfkP.Visible=(n=="AntiAFK"); exNcP.Visible=(n=="NoCollision"); exIoP.Visible=(n=="InvOpener")
-	end
+	local function switchEx(n) exTwP.Visible=(n=="TpWalk"); exCtP.Visible=(n=="ClickTp"); exAfkP.Visible=(n=="AntiAFK") end
 	local function mkExB(n,dn,o)
-		local btn=Instance.new("TextButton",exSubBar); btn.Size=UDim2.new(0,95,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
-		btn.Text=dn; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=12; btn.AutoButtonColor=false; btn.LayoutOrder=o
+		local btn=Instance.new("TextButton",exSubBar); btn.Size=UDim2.new(0,100,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
+		btn.Text=dn; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=13; btn.AutoButtonColor=false; btn.LayoutOrder=o
 		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
 		btn.MouseButton1Click:Connect(function()
 			playClick(); if selEx then selEx.btn.TextColor3=Color3.fromRGB(120,120,130); selEx.ul.Visible=false end
 			selEx={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchEx(n)
 		end); return {btn=btn,ul=ul}
 	end
-	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2)
-	mkExB("NoCollision","No Coll.",3); mkExB("InvOpener","Inv Opener",4); mkExB("AntiAFK","Anti-AFK",5)
+	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2); mkExB("AntiAFK","Anti-AFK",3)
 	selEx=ex1; ex1.btn.TextColor3=Color3.new(1,1,1); ex1.ul.Visible=true
 
 	-- SETTINGS PAGE
@@ -2382,7 +2226,7 @@ for i, tab in ipairs(tabsData) do
 	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
-local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)  -- nowy rozmiar
+local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
 local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 
 local miniBall = Instance.new("ImageButton", gui)
