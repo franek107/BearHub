@@ -1,4 +1,3 @@
-
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
@@ -67,6 +66,7 @@ local EXPLOITS = {
 	TeleportWalk = false, TeleportWalkDistance = 5,
 	ClickTeleport = false, ClickTeleportKeyName = "NONE", ClickTeleportKeyCheck = nil,
 	AntiAFK = false,
+	NoCollision = false,  -- NOWA OPCJA
 }
 
 local SPECTATE = {Target = nil, Active = false}
@@ -105,6 +105,7 @@ local function PANIC_DESTROY()
 	MISC.NoClip = false; MISC.RapidFire = false; MISC.SuperPunch = false
 	MISC.WalkSpeedEnabled = false; MISC.JumpPowerEnabled = false; MISC.FreeCam = false
 	EXPLOITS.TeleportWalk = false; EXPLOITS.ClickTeleport = false; EXPLOITS.AntiAFK = false
+	EXPLOITS.NoCollision = false  -- przywróć na wypadek paniki
 	SPECTATE.Active = false; SPECTATE.Target = nil
 	pcall(function()
 		local myChar = player.Character
@@ -1297,6 +1298,32 @@ do
 			end
 		end)
 	end)
+
+	-- NO COLLISION (WALK THROUGH WALLS)
+	local wasNoCollision = false
+	RunService.Stepped:Connect(function()
+		if PANIC_TRIGGERED then return end
+		local char = player.Character
+		if EXPLOITS.NoCollision then
+			if char then
+				for _, part in ipairs(char:GetDescendants()) do
+					if part:IsA("BasePart") then
+						pcall(function() part.CanCollide = false end)
+					end
+				end
+			end
+			wasNoCollision = true
+		elseif wasNoCollision then
+			if char then
+				for _, part in ipairs(char:GetDescendants()) do
+					if part:IsA("BasePart") then
+						pcall(function() part.CanCollide = true end)
+					end
+				end
+			end
+			wasNoCollision = false
+		end
+	end)
 end
 
 --============================================================
@@ -2114,9 +2141,18 @@ do
 	afkInfoLbl.Text="Prevents the game from kicking you for being AFK. Sends a virtual keypress every 55 seconds."; afkInfoLbl.Font=Enum.Font.Gotham; afkInfoLbl.TextSize=11; afkInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; afkInfoLbl.LayoutOrder=2
 	mkCheck(afkPanel,"Enable Anti-AFK",EXPLOITS,"AntiAFK",3)
 
+	-- No Collision sub-page (NOWY)
+	local exNcP=Instance.new("Frame",exSubPF); exNcP.Size=UDim2.new(1,0,1,0); exNcP.BackgroundTransparency=1; exNcP.Visible=false
+	local ncPanel=mkPanel(exNcP,0.7,160,0,5)
+	mkSection(ncPanel,"No Collision",1)
+	local ncInfoLbl=Instance.new("TextLabel",ncPanel); ncInfoLbl.Size=UDim2.new(1,-10,0,32); ncInfoLbl.BackgroundTransparency=1
+	ncInfoLbl.TextWrapped=true; ncInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
+	ncInfoLbl.Text="Walk through walls by disabling collision on your character. Undetectable client-side method."; ncInfoLbl.Font=Enum.Font.Gotham; ncInfoLbl.TextSize=11; ncInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ncInfoLbl.LayoutOrder=2
+	mkCheck(ncPanel,"Enable No Collision",EXPLOITS,"NoCollision",3)
+
 	-- Exploits sub-tabs
 	local selEx=nil
-	local function switchEx(n) exTwP.Visible=(n=="TpWalk"); exCtP.Visible=(n=="ClickTp"); exAfkP.Visible=(n=="AntiAFK") end
+	local function switchEx(n) exTwP.Visible=(n=="TpWalk"); exCtP.Visible=(n=="ClickTp"); exAfkP.Visible=(n=="AntiAFK"); exNcP.Visible=(n=="NoCollision") end
 	local function mkExB(n,dn,o)
 		local btn=Instance.new("TextButton",exSubBar); btn.Size=UDim2.new(0,100,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
 		btn.Text=dn; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=13; btn.AutoButtonColor=false; btn.LayoutOrder=o
@@ -2126,7 +2162,7 @@ do
 			selEx={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchEx(n)
 		end); return {btn=btn,ul=ul}
 	end
-	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2); mkExB("AntiAFK","Anti-AFK",3)
+	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2); mkExB("NoCollision","No Coll.",3); mkExB("AntiAFK","Anti-AFK",4)
 	selEx=ex1; ex1.btn.TextColor3=Color3.new(1,1,1); ex1.ul.Visible=true
 
 	-- SETTINGS PAGE
