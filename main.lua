@@ -67,7 +67,7 @@ local EXPLOITS = {
 	ClickTeleport = false, ClickTeleportKeyName = "NONE", ClickTeleportKeyCheck = nil,
 	AntiAFK = false,
 	NoCollision = false,
-	InventoryOpener = false,   -- NOWA OPCJA
+	InventoryOpener = false,
 }
 
 local SPECTATE = {Target = nil, Active = false}
@@ -915,28 +915,6 @@ do
 		if h then pcall(function() h.Health = h.MaxHealth end) end
 	end
 
-	_G.BearHub_copyItem = function()
-		if PANIC_TRIGGERED then return false, "Disabled" end
-		local char = player.Character
-		if not char then return false, "No character" end
-		local equippedTool = nil
-		for _, child in ipairs(char:GetChildren()) do
-			if child:IsA("Tool") then equippedTool = child; break end
-		end
-		if not equippedTool then return false, "No tool equipped" end
-		local success, err = pcall(function()
-			local clone = equippedTool:Clone()
-			-- ustawiamy, aby skrypty były włączone (domyślnie w Backpack mogą być wyłączone)
-			for _, v in ipairs(clone:GetDescendants()) do
-				if v:IsA("BaseScript") then v.Disabled = false end
-			end
-			local backpack = player:FindFirstChildOfClass("Backpack")
-			if backpack then clone.Parent = backpack else clone.Parent = char end
-		end)
-		if success then return true, "Copied: " .. equippedTool.Name
-		else return false, "Failed to copy: " .. tostring(err) end
-	end
-
 	_G.BearHub_deleteItem = function()
 		if PANIC_TRIGGERED then return false, "Disabled" end
 		local char = player.Character
@@ -1229,8 +1207,7 @@ do
 end
 
 local healPlayer = _G.BearHub_healPlayer
-local copyItem = _G.BearHub_copyItem
-local deleteItem = _G.BearHub_deleteItem
+local deleteItem = _G.BearHub_deleteItem  -- usunięto copyItem
 
 --============================================================
 -- EXPLOITS LOGIC
@@ -1351,7 +1328,7 @@ do
 		end
 	end)
 
-	-- INVENTORY OPENER
+	-- INVENTORY OPENER (teraz usuwa przedmiot zamiast kraść)
 	local invOpenerFrame = Instance.new("Frame", invOpenerGui)
 	invOpenerFrame.Size = UDim2.new(0, 250, 0, 300)
 	invOpenerFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
@@ -1402,7 +1379,6 @@ do
 		local target = getNearestPlayer(20)
 		if not target then
 			invTitle.Text = "Inventory Opener (no player)"
-			-- wyczyść listę
 			for _, child in ipairs(invScroll:GetChildren()) do
 				if child:IsA("TextButton") then child:Destroy() end
 			end
@@ -1410,7 +1386,6 @@ do
 			return
 		end
 		invTitle.Text = "Inventory - " .. (target.DisplayName or target.Name)
-		-- pobierz narzędzia z backpack i character (tylko client-side)
 		local tools = {}
 		local seen = {}
 		if target.Character then
@@ -1430,7 +1405,6 @@ do
 				end
 			end
 		end
-		-- aktualizuj przyciski
 		for _, child in ipairs(invScroll:GetChildren()) do
 			if child:IsA("TextButton") then child:Destroy() end
 		end
@@ -1445,17 +1419,8 @@ do
 			btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50) end)
 			btn.MouseButton1Click:Connect(function()
 				playClick()
-				-- kradnij przedmiot (klient-side: usuń z tamtego, dodaj do nas)
-				pcall(function()
-					local clone = tool:Clone()
-					-- włącz skrypty
-					for _, v in ipairs(clone:GetDescendants()) do
-						if v:IsA("BaseScript") then v.Disabled = false end
-					end
-					local myBackpack = player:FindFirstChildOfClass("Backpack")
-					if myBackpack then clone.Parent = myBackpack else clone.Parent = player.Character end
-				end)
-				pcall(function() tool:Destroy() end)  -- usuń z tamtego (wizualnie)
+				-- usuwamy przedmiot z ekwipunku gracza (client-side)
+				pcall(function() tool:Destroy() end)
 			end)
 		end
 		invOpenerFrame.Visible = true
@@ -1473,10 +1438,10 @@ end
 local main, sidebar, contentTitle, pagesFrame, colorPickerGui, openCP, cpGrid, hueBar
 
 do
-	local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
+	local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)  -- powiększone o 80px
 	main = Instance.new("Frame", gui)
 	main.Name = "Main"; main.Size = ORIGINAL_SIZE
-	main.Position = UDim2.new(0.5, -350, 0.5, -225)
+	main.Position = UDim2.new(0.5, -390, 0.5, -265)  -- wyśrodkowane dla 780x530
 	main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	main.BorderSizePixel = 0; main.ClipsDescendants = true; main.Active = true
 	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
@@ -1924,27 +1889,21 @@ do
 	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
 	local mSubPF=Instance.new("Frame",miscP); mSubPF.Size=UDim2.new(1,0,1,-40); mSubPF.Position=UDim2.new(0,0,0,38); mSubPF.BackgroundTransparency=1
 
-	-- Actions sub-page
+	-- Actions sub-page (bez Copy Item)
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
-	local qaPanel=mkPanel(mqaP,0.48,260,0,5)
+	local qaPanel=mkPanel(mqaP,0.48,170,0,5)  -- zmniejszona wysokość
 	mkSection(qaPanel,"Quick Actions",1)
 	mkButton(qaPanel,"Heal",healPlayer,2)
 
 	local copyStatusLabel=Instance.new("TextLabel",qaPanel); copyStatusLabel.Size=UDim2.new(1,-10,0,18); copyStatusLabel.BackgroundTransparency=1
 	copyStatusLabel.Text=""; copyStatusLabel.TextColor3=Color3.fromRGB(100,200,100); copyStatusLabel.Font=Enum.Font.GothamBold
-	copyStatusLabel.TextSize=11; copyStatusLabel.TextXAlignment=Enum.TextXAlignment.Center; copyStatusLabel.LayoutOrder=6
-
-	mkButton(qaPanel,"Copy Item (in hand)",function()
-		local ok,msg=copyItem()
-		copyStatusLabel.Text=msg; copyStatusLabel.TextColor3=ok and Color3.fromRGB(100,200,100) or Color3.fromRGB(255,100,100)
-		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
-	end,3,Color3.fromRGB(60,140,220))
+	copyStatusLabel.TextSize=11; copyStatusLabel.TextXAlignment=Enum.TextXAlignment.Center; copyStatusLabel.LayoutOrder=5
 
 	mkButton(qaPanel,"Delete Item (in hand)",function()
 		local ok,msg=deleteItem()
 		copyStatusLabel.Text=msg; copyStatusLabel.TextColor3=ok and Color3.fromRGB(255,100,100) or Color3.fromRGB(255,60,60)
 		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
-	end,5,Color3.fromRGB(220,60,60))
+	end,4,Color3.fromRGB(220,60,60))
 
 	-- Combat sub-page
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
@@ -2297,13 +2256,13 @@ do
 	ncInfoLbl.Text="Walk through walls by disabling collision on your character. Undetectable client-side method."; ncInfoLbl.Font=Enum.Font.Gotham; ncInfoLbl.TextSize=11; ncInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ncInfoLbl.LayoutOrder=2
 	mkCheck(ncPanel,"Enable No Collision",EXPLOITS,"NoCollision",3)
 
-	-- Inventory Opener sub-page (NOWA)
+	-- Inventory Opener sub-page (usuwa przedmiot)
 	local exIoP=Instance.new("Frame",exSubPF); exIoP.Size=UDim2.new(1,0,1,0); exIoP.BackgroundTransparency=1; exIoP.Visible=false
 	local ioPanel=mkPanel(exIoP,0.7,160,0,5)
 	mkSection(ioPanel,"Inventory Opener",1)
 	local ioInfoLbl=Instance.new("TextLabel",ioPanel); ioInfoLbl.Size=UDim2.new(1,-10,0,48); ioInfoLbl.BackgroundTransparency=1
 	ioInfoLbl.TextWrapped=true; ioInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
-	ioInfoLbl.Text="Shows inventory of the nearest player within 20 meters. Click on an item to steal it (visual only). Disable to close."; ioInfoLbl.Font=Enum.Font.Gotham; ioInfoLbl.TextSize=11; ioInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ioInfoLbl.LayoutOrder=2
+	ioInfoLbl.Text="Shows inventory of the nearest player within 20 meters. Click on an item to DELETE it from their inventory (visual only). Disable to close."; ioInfoLbl.Font=Enum.Font.Gotham; ioInfoLbl.TextSize=11; ioInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ioInfoLbl.LayoutOrder=2
 	mkCheck(ioPanel,"Enable Inventory Opener",EXPLOITS,"InventoryOpener",3)
 
 	-- Exploits sub-tabs
@@ -2423,7 +2382,7 @@ for i, tab in ipairs(tabsData) do
 	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
-local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
+local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)  -- nowy rozmiar
 local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 
 local miniBall = Instance.new("ImageButton", gui)
