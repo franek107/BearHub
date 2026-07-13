@@ -30,7 +30,6 @@ local ESP = {
 	Snaplines = {Enabled=false, Color=Color3.fromRGB(100,70,200)},
 	Inventory = {Enabled=false, Color=Color3.fromRGB(255,200,100)},
 	HeadDot = {Enabled=false, Color=Color3.fromRGB(255,0,0)},
-	Charms = {Enabled=false, Color=Color3.fromRGB(255, 0, 0), Transparency=0.3},
 }
 
 local FOV_SCALE_TRIGGER = 1
@@ -206,72 +205,6 @@ local startDragSound = _G.BearHub_startDragSound
 local stopDragSound = _G.BearHub_stopDragSound
 
 --============================================================
--- CONFIG SYSTEM (saved configurations)
---============================================================
-if not _G.BearHub_Configs then _G.BearHub_Configs = {} end
-local savedConfigs = _G.BearHub_Configs
-
-local function deepCopy(orig)
-	if type(orig) == "table" then
-		local copy = {}
-		for k, v in pairs(orig) do copy[k] = deepCopy(v) end
-		return copy
-	else
-		return orig
-	end
-end
-
-local function getCurrentSettings()
-	return {
-		ESP = deepCopy(ESP),
-		AIMBOT = deepCopy(AIMBOT),
-		TRIGGERBOT = deepCopy(TRIGGERBOT),
-		HITBOX = deepCopy(HITBOX),
-		MISC = deepCopy(MISC),
-		EXPLOITS = deepCopy(EXPLOITS),
-	}
-end
-
-local function applySettings(settings)
-	if not settings then return end
-	for k, v in pairs(settings.ESP or {}) do ESP[k] = v end
-	for k, v in pairs(settings.AIMBOT or {}) do AIMBOT[k] = v end
-	for k, v in pairs(settings.TRIGGERBOT or {}) do TRIGGERBOT[k] = v end
-	for k, v in pairs(settings.HITBOX or {}) do HITBOX[k] = v end
-	for k, v in pairs(settings.MISC or {}) do MISC[k] = v end
-	for k, v in pairs(settings.EXPLOITS or {}) do EXPLOITS[k] = v end
-	fullRefresh()
-end
-
-local function refreshConfigListUI()
-	if not _G.BearHub_ConfigListFrame then return end
-	for _, child in ipairs(_G.BearHub_ConfigListFrame:GetChildren()) do
-		if child:IsA("TextButton") then child:Destroy() end
-	end
-	local i = 0
-	for name, _ in pairs(savedConfigs) do
-		i = i + 1
-		local btn = Instance.new("TextButton")
-		btn.Name = name
-		btn.Size = UDim2.new(1, 0, 0, 24)
-		btn.BackgroundColor3 = Color3.fromRGB(45,45,55)
-		btn.Text = name
-		btn.TextColor3 = Color3.new(1,1,1)
-		btn.Font = Enum.Font.Gotham
-		btn.TextSize = 12
-		btn.AutoButtonColor = false
-		btn.BorderSizePixel = 0
-		btn.Parent = _G.BearHub_ConfigListFrame
-		btn.LayoutOrder = i
-		btn.MouseButton1Click:Connect(function()
-			_G.BearHub_SelectedConfig = name
-		end)
-		Instance.new("UICorner", btn).CornerRadius = UDim.new(0,4)
-	end
-	_G.BearHub_ConfigListFrame.CanvasSize = UDim2.new(0,0,0, i * 26)
-end
-
---============================================================
 -- SPECTATE + TELEPORT/BRING/SWITCH
 --============================================================
 do
@@ -431,7 +364,7 @@ UIS.InputEnded:Connect(function(inp)
 end)
 
 --============================================================
--- ESP + FOV (full implementation with Charms)
+-- ESP + FOV
 --============================================================
 do
 	local fovCircle = Instance.new("Frame")
@@ -494,13 +427,11 @@ do
 			snapline=makeLine(h), healthBg=makeLine(h), healthFill=makeLine(h),
 			name=makeText(h, 14), id=makeText(h, 12),
 			distance=makeText(h, 12), inventory=makeText(h, 11),
-			inventory2=makeText(h, 11),
-			headDot = nil,
-			charmsFill = nil
+			inventory2=makeText(h, 11)
 		}
 		for i = 1, 12 do d.skeleton[i] = makeLine(h) end
 
-		-- Head Dot
+		-- HEAD DOT
 		local headDot = Instance.new("Frame", h)
 		headDot.Size = UDim2.new(0, 8, 0, 8)
 		headDot.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -510,15 +441,6 @@ do
 		Instance.new("UICorner", headDot).CornerRadius = UDim.new(1, 0)
 		headDot.ZIndex = 5
 		d.headDot = headDot
-
-		-- Charms fill (semi‑transparent rectangle)
-		local charmsFill = Instance.new("Frame", h)
-		charmsFill.BackgroundColor3 = ESP.Charms.Color
-		charmsFill.BackgroundTransparency = 1 - ESP.Charms.Transparency
-		charmsFill.BorderSizePixel = 0
-		charmsFill.Visible = false
-		charmsFill.ZIndex = 2
-		d.charmsFill = charmsFill
 
 		espObjects[plr] = d; return d
 	end
@@ -635,7 +557,6 @@ do
 									local bW = bH * 0.55
 									local tY, bY = hp2.Y, lp.Y
 									local lX, rX = sp.X - bW/2, sp.X + bW/2
-									-- Box
 									if ESP.Box.Enabled then
 										drawLine(d.boxTop, Vector2.new(lX,tY), Vector2.new(rX,tY), 1)
 										drawLine(d.boxBot, Vector2.new(lX,bY), Vector2.new(rX,bY), 1)
@@ -646,22 +567,6 @@ do
 										end
 									else
 										for _, f in pairs({d.boxTop,d.boxBot,d.boxLeft,d.boxRight}) do f.Visible = false end
-									end
-									-- Charms fill (under box)
-									if ESP.Charms.Enabled then
-										local fillW = rX - lX
-										local fillH = bY - tY
-										if fillW > 0 and fillH > 0 then
-											d.charmsFill.Position = UDim2.new(0, lX, 0, tY)
-											d.charmsFill.Size = UDim2.new(0, fillW, 0, fillH)
-											d.charmsFill.BackgroundColor3 = ESP.Charms.Color
-											d.charmsFill.BackgroundTransparency = 1 - ESP.Charms.Transparency
-											d.charmsFill.Visible = true
-										else
-											d.charmsFill.Visible = false
-										end
-									else
-										d.charmsFill.Visible = false
 									end
 									local bo = 0
 									if ESP.Name.Enabled then d.name.Text = plr.DisplayName or plr.Name; d.name.Position = UDim2.new(0, sp.X, 0, tY - 15); d.name.TextColor3 = ESP.Name.Color; d.name.Visible = true else d.name.Visible = false end
@@ -726,7 +631,7 @@ do
 										end
 									else for i = 1, 12 do if d.skeleton[i] then d.skeleton[i].Visible = false end end end
 
-									-- Head Dot
+									-- HEAD DOT
 									if ESP.HeadDot.Enabled then
 										local headPos, onScreen, depth = w2s(head.Position)
 										if onScreen and headPos and depth > 0 then
@@ -774,7 +679,7 @@ local getPos = _G.BearHub_getPos
 local visCheck = _G.BearHub_visCheck
 
 --============================================================
--- TRIGGERBOT + AIMBOT + HITBOX (unchanged, provided here)
+-- TRIGGERBOT + AIMBOT + HITBOX
 --============================================================
 do
 	local lastShot = 0
@@ -995,7 +900,7 @@ do
 end
 
 --============================================================
--- MISC (unchanged, provided here)
+-- MISC
 --============================================================
 do
 	task.spawn(function()
@@ -1420,17 +1325,16 @@ do
 	end)
 end
 
--- KONIEC CZĘŚCI 1
 --============================================================
 -- GUI MAIN + COLOR PICKER
 --============================================================
 local main, sidebar, contentTitle, pagesFrame, colorPickerGui, openCP, cpGrid, hueBar
 
 do
-	local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)
+	local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)   -- ZWIĘKSZONY o 80px
 	main = Instance.new("Frame", gui)
 	main.Name = "Main"; main.Size = ORIGINAL_SIZE
-	main.Position = UDim2.new(0.5, -390, 0.5, -265)
+	main.Position = UDim2.new(0.5, -390, 0.5, -265)   -- nowe wyśrodkowanie
 	main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	main.BorderSizePixel = 0; main.ClipsDescendants = true; main.Active = true
 	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
@@ -1739,6 +1643,51 @@ do
 		end)
 	end
 
+	-- SPECIAL KEYBIND FOR CLICK TELEPORT (no enable checkbox, just key selector)
+	local function mkClickTeleportKeybind(p, o)
+		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,30); h.BackgroundTransparency=1; h.LayoutOrder=o or 0
+		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,-130,1,0); lb.Position=UDim2.new(0,5,0,0)
+		lb.BackgroundTransparency=1; lb.Text="Teleport Key (hold + LMB)"; lb.TextColor3=Color3.fromRGB(200,200,210)
+		lb.Font=Enum.Font.Gotham; lb.TextSize=12; lb.TextXAlignment=Enum.TextXAlignment.Left
+		local keyBtn=Instance.new("TextButton",h); keyBtn.Size=UDim2.new(0,110,0,24); keyBtn.Position=UDim2.new(1,-115,0.5,-12)
+		keyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); keyBtn.BorderSizePixel=0; keyBtn.Text=EXPLOITS.ClickTeleportKeyName
+		keyBtn.TextColor3=Color3.fromRGB(180,180,190); keyBtn.Font=Enum.Font.GothamBold; keyBtn.TextSize=11
+		keyBtn.AutoButtonColor=false; Instance.new("UICorner",keyBtn).CornerRadius=UDim.new(0,5)
+		local to=#BIND_OPTIONS+1
+		local ddF=Instance.new("Frame",h); ddF.Size=UDim2.new(0,170,0,math.min(to,8)*28); ddF.Position=UDim2.new(1,-175,1,2)
+		ddF.BackgroundColor3=Color3.fromRGB(30,30,38); ddF.BorderSizePixel=0; ddF.Visible=false
+		ddF.ZIndex=200; ddF.ClipsDescendants=true; Instance.new("UICorner",ddF).CornerRadius=UDim.new(0,6)
+		Instance.new("UIStroke",ddF).Color=PURPLE
+		local ddS=Instance.new("ScrollingFrame",ddF); ddS.Size=UDim2.new(1,0,1,0); ddS.BackgroundTransparency=1
+		ddS.ScrollBarThickness=3; ddS.ScrollBarImageColor3=PURPLE; ddS.CanvasSize=UDim2.new(0,0,0,to*28)
+		ddS.ZIndex=201; Instance.new("UIListLayout",ddS)
+		local nb=Instance.new("TextButton",ddS); nb.Size=UDim2.new(1,0,0,28); nb.BackgroundColor3=Color3.fromRGB(30,30,38)
+		nb.Text=" NONE"; nb.TextColor3=Color3.fromRGB(150,150,160); nb.Font=Enum.Font.Gotham; nb.TextSize=12
+		nb.TextXAlignment=Enum.TextXAlignment.Left; nb.AutoButtonColor=false; nb.ZIndex=202; nb.BorderSizePixel=0; nb.LayoutOrder=0
+		nb.MouseEnter:Connect(function() nb.BackgroundColor3=Color3.fromRGB(50,50,65) end)
+		nb.MouseLeave:Connect(function() nb.BackgroundColor3=Color3.fromRGB(30,30,38) end)
+		nb.MouseButton1Click:Connect(function()
+			playClick(); EXPLOITS.ClickTeleportKeyName="NONE"; EXPLOITS.ClickTeleportKeyCheck=nil
+			keyBtn.Text="NONE"; ddF.Visible=false
+		end)
+		for i,opt in ipairs(BIND_OPTIONS) do
+			local name=opt[1]; local cfn=opt[2]
+			local ob=Instance.new("TextButton",ddS); ob.Size=UDim2.new(1,0,0,28); ob.BackgroundColor3=Color3.fromRGB(30,30,38)
+			ob.Text=" "..name; ob.TextColor3=Color3.fromRGB(180,180,190); ob.Font=Enum.Font.Gotham; ob.TextSize=12
+			ob.TextXAlignment=Enum.TextXAlignment.Left; ob.AutoButtonColor=false; ob.ZIndex=202; ob.BorderSizePixel=0; ob.LayoutOrder=i
+			ob.MouseEnter:Connect(function() ob.BackgroundColor3=Color3.fromRGB(50,50,65) end)
+			ob.MouseLeave:Connect(function() ob.BackgroundColor3=Color3.fromRGB(30,30,38) end)
+			ob.MouseButton1Click:Connect(function()
+				playClick(); EXPLOITS.ClickTeleportKeyName=name; EXPLOITS.ClickTeleportKeyCheck=cfn
+				keyBtn.Text=name; ddF.Visible=false
+			end)
+		end
+		local ddO=false
+		keyBtn.MouseButton1Click:Connect(function() playClick(); ddO=not ddO; ddF.Visible=ddO end)
+		_G.BearHub_mkClickTpKeybind = mkClickTeleportKeybind
+	end
+	_G.BearHub_mkClickTpKeybind = mkClickTeleportKeybind
+
 	mkButton = function(p,t,cb,o,cc)
 		local btn=Instance.new("TextButton",p); btn.Size=UDim2.new(1,-10,0,36)
 		btn.BackgroundColor3=cc or PURPLE; btn.BorderSizePixel=0; btn.Text=t
@@ -1761,7 +1710,7 @@ do
 end
 
 --============================================================
--- PAGES (Visualization, Aim, Misc, Players, Exploits, Settings, AutoFarm)
+-- PAGES
 --============================================================
 do
 	local function mkPanel(parent, w, h2, xPos, yPos)
@@ -1775,9 +1724,9 @@ do
 		return f
 	end
 
-	-- VISUALIZATION PAGE (z Charms)
+	-- VISUALIZATION PAGE
 	local vizP=createPage("Visualization")
-	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,420,0.5,5); vR.Position=UDim2.new(0.5,5,0,5)
+	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,400,0.5,5); vR.Position=UDim2.new(0.5,5,0,5)
 	mkSection(vL,"Visualization",1); mkCheck(vL,"Enable",ESP,"Enabled",2)
 	mkSlider(vL,"Max Distance",0,1000,300,"m",ESP,"MaxDistance",3)
 	mkCheck(vL,"Show LocalPlayer",ESP,"ShowLocalPlayer",4); mkCheck(vL,"Visible Only",ESP,"VisibleOnly",5)
@@ -1786,7 +1735,6 @@ do
 	mkCheckColor(vR,"Health Bar",nil,"HealthBar",nil,6); mkCheckColor(vR,"Distance",nil,"Distance",nil,7)
 	mkCheckColor(vR,"Snaplines",nil,"Snaplines",nil,8); mkCheckColor(vR,"Inventory",nil,"Inventory",nil,9)
 	mkCheckColor(vR,"Head Dot",nil,"HeadDot",nil,10)
-	mkCheckColor(vR,"Charms",nil,"Charms",nil,11)  -- NOWA OPCJA
 
 	-- AIM PAGE
 	local aimP=createPage("AimAssistance")
@@ -1829,12 +1777,13 @@ do
 	end
 	local s1=mkSB("TriggerBot",1); mkSB("Aimbot",2); mkSB("Hitbox",3); selSub=s1; s1.btn.TextColor3=Color3.new(1,1,1); s1.ul.Visible=true
 
-	-- MISC PAGE (bez zmian)
+	-- MISC PAGE
 	local miscP=createPage("Miscellaneous")
 	local mSubBar=Instance.new("Frame",miscP); mSubBar.Size=UDim2.new(1,-20,0,30); mSubBar.Position=UDim2.new(0,10,0,0); mSubBar.BackgroundTransparency=1
 	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
 	local mSubPF=Instance.new("Frame",miscP); mSubPF.Size=UDim2.new(1,0,1,-40); mSubPF.Position=UDim2.new(0,0,0,38); mSubPF.BackgroundTransparency=1
 
+	-- Actions sub-page
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
 	local qaPanel=mkPanel(mqaP,0.48,200,0,5)
 	mkSection(qaPanel,"Quick Actions",1)
@@ -1850,6 +1799,7 @@ do
 		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
 	end,3,Color3.fromRGB(60,140,220))
 
+	-- Combat sub-page
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
 	local cbPanel=mkPanel(mcbP,0.48,290,0,5)
 	mkSection(cbPanel,"Combat Cheats",1)
@@ -1859,6 +1809,7 @@ do
 	mkCheck(cbPanel,"No Spread",MISC,"NoSpread",5)
 	mkCheck(cbPanel,"Infinity Ammo",MISC,"InfAmmo",6)
 
+	-- Movement sub-page
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
 	local mvPanel=mkPanel(mmvP,0.6,380,0,5)
 	mkSection(mvPanel,"Movement",1)
@@ -1869,19 +1820,21 @@ do
 	mkCheck(mvPanel,"Jump Power",MISC,"JumpPowerEnabled",6)
 	mkSlider(mvPanel,"Jump Power Value",1,500,50," m",MISC,"JumpPower",7)
 
+	-- RapidFire sub-page
 	local mrfP=Instance.new("Frame",mSubPF); mrfP.Size=UDim2.new(1,0,1,0); mrfP.BackgroundTransparency=1; mrfP.Visible=false
 	local rfPanel=mkPanel(mrfP,0.48,200,0,5)
 	mkSection(rfPanel,"Rapid Fire",1)
 	mkCheck(rfPanel,"Enable Rapid Fire",MISC,"RapidFire",2)
 	mkSlider(rfPanel,"Fire Speed",0,20,20,"",MISC,"RapidFireLevel",3)
 
+	-- FreeCam sub-page
 	local mfcP=Instance.new("Frame",mSubPF); mfcP.Size=UDim2.new(1,0,1,0); mfcP.BackgroundTransparency=1; mfcP.Visible=false
 	local fcPanel=mkPanel(mfcP,0.6,200,0,5)
 	mkSection(fcPanel,"Free Camera",1)
 	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
 	mkSlider(fcPanel,"FreeCam Speed",1,200,30," m/s",MISC,"FreeCamSpeed",3)
 
-	-- FREECAM HUD (bez zmian)
+	-- FREECAM HUD
 	local freecamActive = false
 	local oldMouseBehavior = Enum.MouseBehavior.Default
 	local oldMouseIconEnabled = true
@@ -2033,7 +1986,7 @@ do
 	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
 	selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
-	-- PLAYERS PAGE (bez zmian)
+	-- PLAYERS PAGE
 	local plP=createPage("Players")
 	local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8)
 	local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=Color3.fromRGB(160,160,170); plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
@@ -2100,33 +2053,41 @@ do
 	plSW.MouseEnter:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(240,170,70) end); plSW.MouseLeave:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(220,150,50) end)
 	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and Color3.fromRGB(255,180,80) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 
-	-- EXPLOITS PAGE (bez zmian)
+	-- EXPLOITS PAGE
 	local exP=createPage("Exploits")
 	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
 	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,15)
 	local exSubPF=Instance.new("Frame",exP); exSubPF.Size=UDim2.new(1,0,1,-40); exSubPF.Position=UDim2.new(0,0,0,38); exSubPF.BackgroundTransparency=1
 
+	-- TeleportWalk sub-page
 	local exTwP=Instance.new("Frame",exSubPF); exTwP.Size=UDim2.new(1,0,1,0); exTwP.BackgroundTransparency=1; exTwP.Visible=true
 	local twPanel=mkPanel(exTwP,0.7,200,0,5)
 	mkSection(twPanel,"Teleport Walk",1)
+
 	local twInfoLbl=Instance.new("TextLabel",twPanel); twInfoLbl.Size=UDim2.new(1,-10,0,32); twInfoLbl.BackgroundTransparency=1
 	twInfoLbl.TextWrapped=true; twInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
 	twInfoLbl.Text="Teleports you forward each frame instead of walking. Harder to detect than WalkSpeed. Use WASD to move."; twInfoLbl.Font=Enum.Font.Gotham; twInfoLbl.TextSize=11; twInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; twInfoLbl.LayoutOrder=2
+
 	mkCheck(twPanel,"Enable Teleport Walk",EXPLOITS,"TeleportWalk",3)
 	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,nil,true)
 
+	-- ClickTeleport sub-page
 	local exCtP=Instance.new("Frame",exSubPF); exCtP.Size=UDim2.new(1,0,1,0); exCtP.BackgroundTransparency=1; exCtP.Visible=false
 	local ctPanel=mkPanel(exCtP,0.7,220,0,5)
 	mkSection(ctPanel,"Click Teleport",1)
+
 	local ctInfoLbl=Instance.new("TextLabel",ctPanel); ctInfoLbl.Size=UDim2.new(1,-10,0,32); ctInfoLbl.BackgroundTransparency=1
 	ctInfoLbl.TextWrapped=true; ctInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
 	ctInfoLbl.Text="Hold your chosen key and click LMB anywhere to teleport there. Select a key from the dropdown below."; ctInfoLbl.Font=Enum.Font.Gotham; ctInfoLbl.TextSize=11; ctInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ctInfoLbl.LayoutOrder=2
+
 	mkCheck(ctPanel,"Enable Click Teleport",EXPLOITS,"ClickTeleport",3)
 
+	-- Click teleport keybind selector
 	local ctKH=Instance.new("Frame",ctPanel); ctKH.Size=UDim2.new(1,0,0,30); ctKH.BackgroundTransparency=1; ctKH.LayoutOrder=4
 	local ctKLbl=Instance.new("TextLabel",ctKH); ctKLbl.Size=UDim2.new(1,-130,1,0); ctKLbl.Position=UDim2.new(0,5,0,0)
 	ctKLbl.BackgroundTransparency=1; ctKLbl.Text="Teleport Key (hold + LMB)"; ctKLbl.TextColor3=Color3.fromRGB(200,200,210)
 	ctKLbl.Font=Enum.Font.Gotham; ctKLbl.TextSize=12; ctKLbl.TextXAlignment=Enum.TextXAlignment.Left
+
 	local ctKeyBtn=Instance.new("TextButton",ctKH); ctKeyBtn.Size=UDim2.new(0,110,0,24); ctKeyBtn.Position=UDim2.new(1,-115,0.5,-12)
 	ctKeyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); ctKeyBtn.BorderSizePixel=0; ctKeyBtn.Text=EXPLOITS.ClickTeleportKeyName
 	ctKeyBtn.TextColor3=Color3.fromRGB(180,180,190); ctKeyBtn.Font=Enum.Font.GothamBold; ctKeyBtn.TextSize=11
@@ -2171,6 +2132,7 @@ do
 	local ctDdO=false
 	ctKeyBtn.MouseButton1Click:Connect(function() playClick(); ctDdO=not ctDdO; ctDdF.Visible=ctDdO end)
 
+	-- AntiAFK sub-page
 	local exAfkP=Instance.new("Frame",exSubPF); exAfkP.Size=UDim2.new(1,0,1,0); exAfkP.BackgroundTransparency=1; exAfkP.Visible=false
 	local afkPanel=mkPanel(exAfkP,0.7,160,0,5)
 	mkSection(afkPanel,"Anti-AFK",1)
@@ -2179,6 +2141,7 @@ do
 	afkInfoLbl.Text="Prevents the game from kicking you for being AFK. Sends a virtual keypress every 55 seconds."; afkInfoLbl.Font=Enum.Font.Gotham; afkInfoLbl.TextSize=11; afkInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; afkInfoLbl.LayoutOrder=2
 	mkCheck(afkPanel,"Enable Anti-AFK",EXPLOITS,"AntiAFK",3)
 
+	-- Exploits sub-tabs
 	local selEx=nil
 	local function switchEx(n) exTwP.Visible=(n=="TpWalk"); exCtP.Visible=(n=="ClickTp"); exAfkP.Visible=(n=="AntiAFK") end
 	local function mkExB(n,dn,o)
@@ -2193,7 +2156,7 @@ do
 	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2); mkExB("AntiAFK","Anti-AFK",3)
 	selEx=ex1; ex1.btn.TextColor3=Color3.new(1,1,1); ex1.ul.Visible=true
 
-	-- SETTINGS PAGE (z Config)
+	-- SETTINGS PAGE
 	local stP=createPage("Settings")
 	local stSubBar=Instance.new("Frame",stP); stSubBar.Size=UDim2.new(1,-20,0,30); stSubBar.Position=UDim2.new(0,10,0,0); stSubBar.BackgroundTransparency=1
 	local stSbl=Instance.new("UIListLayout",stSubBar); stSbl.FillDirection=Enum.FillDirection.Horizontal; stSbl.Padding=UDim.new(0,15)
@@ -2240,76 +2203,15 @@ do
 	pBtn.MouseLeave:Connect(function() pBtn.BackgroundColor3=Color3.fromRGB(200,30,30); pSt.Color=Color3.fromRGB(255,60,60) end)
 	pBtn.MouseButton1Click:Connect(function() PANIC_DESTROY() end)
 
-	-- Config sub‑page
-	local stConfP=Instance.new("Frame",stSubPF); stConfP.Size=UDim2.new(1,0,1,0); stConfP.BackgroundTransparency=1; stConfP.Visible=false
-	local confPanel=mkPanel(stConfP,0.7,330,0,5)
-	mkSection(confPanel,"Config Manager",1)
-
-	local configListFrame = Instance.new("ScrollingFrame", confPanel)
-	configListFrame.Size = UDim2.new(1,-10,0,140); configListFrame.Position = UDim2.new(0,5,0,40)
-	configListFrame.BackgroundColor3 = Color3.fromRGB(30,30,35)
-	configListFrame.BorderSizePixel = 0; configListFrame.ScrollBarThickness = 3
-	configListFrame.ScrollBarImageColor3 = PURPLE
-	configListFrame.CanvasSize = UDim2.new(0,0,0,0)
-	Instance.new("UICorner", configListFrame).CornerRadius = UDim.new(0,6)
-	Instance.new("UIListLayout", configListFrame).Padding = UDim.new(0,2)
-	_G.BearHub_ConfigListFrame = configListFrame
-
-	local btnPanel = Instance.new("Frame", confPanel)
-	btnPanel.Size = UDim2.new(1,-10,0,30); btnPanel.Position = UDim2.new(0,5,0,190)
-	btnPanel.BackgroundTransparency = 1
-	local btnLayout = Instance.new("UIListLayout", btnPanel)
-	btnLayout.FillDirection = Enum.FillDirection.Horizontal; btnLayout.Padding = UDim.new(0,5)
-
-	local function createCfgBtn(text, callback, color)
-		local b = Instance.new("TextButton", btnPanel)
-		b.Size = UDim2.new(0,80,1,0); b.BackgroundColor3 = color or PURPLE
-		b.Text = text; b.TextColor3 = Color3.new(1,1,1)
-		b.Font = Enum.Font.GothamBold; b.TextSize = 12; b.AutoButtonColor = false
-		b.BorderSizePixel = 0; Instance.new("UICorner", b).CornerRadius = UDim.new(0,5)
-		b.MouseButton1Click:Connect(function() playClick(); pcall(callback) end)
-		return b
-	end
-
-	local function getSelectedName() return _G.BearHub_SelectedConfig end
-
-	createCfgBtn("Create", function()
-		local name = "Config" .. os.time()
-		savedConfigs[name] = getCurrentSettings()
-		refreshConfigListUI()
-	end, Color3.fromRGB(60,140,220))
-	createCfgBtn("Save", function()
-		local name = getSelectedName()
-		if name and savedConfigs[name] then
-			savedConfigs[name] = getCurrentSettings()
-		end
-	end, Color3.fromRGB(80,180,100))
-	createCfgBtn("Load", function()
-		local name = getSelectedName()
-		if name and savedConfigs[name] then
-			applySettings(savedConfigs[name])
-		end
-	end, Color3.fromRGB(255,180,50))
-	createCfgBtn("Delete", function()
-		local name = getSelectedName()
-		if name and savedConfigs[name] then
-			savedConfigs[name] = nil
-			_G.BearHub_SelectedConfig = nil
-			refreshConfigListUI()
-		end
-	end, Color3.fromRGB(200,60,60))
-
-	refreshConfigListUI()
-
 	local selSS=nil
-	local function switchSS(n) stGenP.Visible=(n=="General"); stPanicP.Visible=(n=="Panic"); stConfP.Visible=(n=="Config") end
+	local function switchSS(n) stGenP.Visible=(n=="General"); stPanicP.Visible=(n=="Panic") end
 	local function mkSSB(n,o)
 		local btn=Instance.new("TextButton",stSubBar); btn.Size=UDim2.new(0,100,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0; btn.Text=n; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=14; btn.AutoButtonColor=false; btn.LayoutOrder=o
 		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
 		btn.MouseButton1Click:Connect(function() playClick(); if selSS then selSS.btn.TextColor3=Color3.fromRGB(120,120,130); selSS.ul.Visible=false end; selSS={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchSS(n) end)
 		return {btn=btn,ul=ul}
 	end
-	local ss1=mkSSB("General",1); mkSSB("Panic",2); mkSSB("Config",3); selSS=ss1; ss1.btn.TextColor3=Color3.new(1,1,1); ss1.ul.Visible=true
+	local ss1=mkSSB("General",1); mkSSB("Panic",2); selSS=ss1; ss1.btn.TextColor3=Color3.new(1,1,1); ss1.ul.Visible=true
 
 	local afP=createPage("AutoFarm")
 	local afL=Instance.new("TextLabel",afP); afL.Size=UDim2.new(1,-20,0,40); afL.Position=UDim2.new(0,10,0,10); afL.BackgroundTransparency=1; afL.Text="AutoFarm - Coming Soon"; afL.TextColor3=Color3.fromRGB(100,100,110); afL.Font=Enum.Font.Gotham; afL.TextSize=16
