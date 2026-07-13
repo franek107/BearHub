@@ -53,14 +53,16 @@ local AIMBOT = {
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 
+-- 🔥 ZMIANA: dodano SpinBot oraz zmieniono RapidFireLevel na RapidFireMultiplier (1–100)
 local MISC = {
 	SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false,
 	SuperPunch = false,
 	NoClip = false, NoClipSpeed = 30,
-	RapidFire = false, RapidFireLevel = 20,
+	RapidFire = false, RapidFireMultiplier = 20,  -- domyślnie 20 (czyli bez zmian)
 	WalkSpeedEnabled = false, WalkSpeed = 16,
 	JumpPowerEnabled = false, JumpPower = 50,
 	FreeCam = false, FreeCamSpeed = 30,
+	SpinBot = false, SpinBotSpeed = 50,  -- nowe
 }
 
 local EXPLOITS = {
@@ -104,6 +106,7 @@ local function PANIC_DESTROY()
 	MISC.SemiGod = false; MISC.NoRecoil = false; MISC.NoSpread = false; MISC.InfAmmo = false
 	MISC.NoClip = false; MISC.RapidFire = false; MISC.SuperPunch = false
 	MISC.WalkSpeedEnabled = false; MISC.JumpPowerEnabled = false; MISC.FreeCam = false
+	MISC.SpinBot = false  -- wyłącz SpinBot
 	EXPLOITS.TeleportWalk = false; EXPLOITS.ClickTeleport = false; EXPLOITS.AntiAFK = false
 	SPECTATE.Active = false; SPECTATE.Target = nil
 	pcall(function()
@@ -980,6 +983,25 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false end)
 
+	-- 🌀 SpinBot
+	task.spawn(function()
+		while true do
+			RunService.RenderStepped:Wait()
+			if PANIC_TRIGGERED then break end
+			if MISC.SpinBot then
+				local char = player.Character
+				if char then
+					local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
+					if root then
+						local speed = MISC.SpinBotSpeed or 50
+						-- obrót wokół osi Y, mnożnik dopasowany do zakresu 1–100
+						root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(speed * 0.5), 0)
+					end
+				end
+			end
+		end
+	end)
+
 	local flyBV, flyBG, flying = nil, nil, false
 	local function stopFly()
 		flying = false
@@ -1046,6 +1068,7 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
 
+	-- 🔥 NAPRAWIONY Rapid Fire (mnożnik 1–100)
 	local hookedTools = {}
 	local function hookTool(tool)
 		if not tool or not tool:IsA("Tool") or hookedTools[tool] then return end
@@ -1055,6 +1078,7 @@ do
 				task.wait(0.05); if PANIC_TRIGGERED then break end
 				if MISC.NoRecoil or MISC.NoSpread or MISC.InfAmmo or MISC.RapidFire then
 					pcall(function()
+						local mult = (MISC.RapidFireMultiplier or 20) / 20  -- przelicznik 0.05–5
 						for _, v in ipairs(tool:GetDescendants()) do
 							if v:IsA("NumberValue") or v:IsA("IntValue") then
 								local n = v.Name:lower()
@@ -1065,12 +1089,13 @@ do
 								end
 								if MISC.InfAmmo and (n == "ammo" or n == "currentammo" or n == "bullets" or n:find("magazine") or n:find("clip") or n == "maxammo" or n == "reserveammo") then v.Value = 999 end
 								if MISC.RapidFire then
-									local rf = MISC.RapidFireLevel or 20; local rm = rf / 20
 									if n:find("firerate") or n:find("rateof") then
-										if rm > 0 then if v.Value < 9000 then v.Value = v.Value / math.max(rm, 0.01) end
+										if mult > 0 then if v.Value < 9000 then v.Value = v.Value / math.max(mult, 0.01) end
 										else v.Value = 99999 end
 									end
-									if n:find("firedelay") or n:find("delay") or n:find("cooldown") or n:find("shotdelay") or n:find("interval") or n:find("attackdelay") or n:find("shootdelay") then v.Value = v.Value * rm end
+									if n:find("firedelay") or n:find("delay") or n:find("cooldown") or n:find("shotdelay") or n:find("interval") or n:find("attackdelay") or n:find("shootdelay") then
+										v.Value = v.Value * mult
+									end
 								end
 							end
 							if v:IsA("BoolValue") then
@@ -1106,6 +1131,27 @@ do
 			task.wait(3); if PANIC_TRIGGERED then break end
 			if player.Character then pcall(function() scanTools(player.Character) end) end
 			pcall(scanBP)
+		end
+	end)
+
+	-- 🔥 Rapid Fire Auto‑Clicker (opóźnienie zależne od mnożnika)
+	task.spawn(function()
+		while true do
+			if PANIC_TRIGGERED then break end
+			if MISC.RapidFire and mbHeld[1] then
+				-- im wyższy mnożnik, tym krótsze opóźnienie
+				local mult = MISC.RapidFireMultiplier or 20
+				-- 0.05s (max szybkość) przy mult=100, 0.5s przy mult=1
+				local delay = 0.05 + (0.45 * (100 - mult) / 100)
+				if not isMouseOverGui() then
+					pcall(function()
+						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
+						task.wait(0.01)
+						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
+					end)
+					task.wait(delay)
+				else task.wait(0.05) end
+			else task.wait(0.05) end
 		end
 	end)
 
@@ -1207,25 +1253,6 @@ do
 		end
 		return false
 	end
-	task.spawn(function()
-		while true do
-			if PANIC_TRIGGERED then break end
-			if MISC.RapidFire and mbHeld[1] then
-				local rf = MISC.RapidFireLevel or 20
-				if rf < 20 then
-					if not isMouseOverGui() then
-						pcall(function()
-							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
-							task.wait(0.01)
-							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
-						end)
-						local d2 = (rf / 20) * 0.15
-						task.wait(math.max(d2, 0.01))
-					else task.wait(0.05) end
-				else task.wait(0.05) end
-			else task.wait(0.05) end
-		end
-	end)
 end
 
 local healPlayer = _G.BearHub_healPlayer
@@ -1811,7 +1838,7 @@ do
 
 	-- Movement sub-page
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
-	local mvPanel=mkPanel(mmvP,0.6,380,0,5)
+	local mvPanel=mkPanel(mmvP,0.6,440,0,5)  -- zwiększona wysokość, żeby pomieścić SpinBot
 	mkSection(mvPanel,"Movement",1)
 	mkCheck(mvPanel,"NoClip (Fly + No Collision)",MISC,"NoClip",2)
 	mkSlider(mvPanel,"NoClip Fly Speed",1,100,30," m/s",MISC,"NoClipSpeed",3)
@@ -1819,13 +1846,17 @@ do
 	mkSlider(mvPanel,"Walk Speed Value",0,250,16," m/s",MISC,"WalkSpeed",5)
 	mkCheck(mvPanel,"Jump Power",MISC,"JumpPowerEnabled",6)
 	mkSlider(mvPanel,"Jump Power Value",1,500,50," m",MISC,"JumpPower",7)
+	-- 🔥 NOWE: SpinBot
+	mkCheck(mvPanel,"Enable SpinBot",MISC,"SpinBot",8)
+	mkSlider(mvPanel,"Spin Speed",1,100,50,"",MISC,"SpinBotSpeed",9)
 
 	-- RapidFire sub-page
 	local mrfP=Instance.new("Frame",mSubPF); mrfP.Size=UDim2.new(1,0,1,0); mrfP.BackgroundTransparency=1; mrfP.Visible=false
 	local rfPanel=mkPanel(mrfP,0.48,200,0,5)
 	mkSection(rfPanel,"Rapid Fire",1)
 	mkCheck(rfPanel,"Enable Rapid Fire",MISC,"RapidFire",2)
-	mkSlider(rfPanel,"Fire Speed",0,20,20,"",MISC,"RapidFireLevel",3)
+	-- 🔥 NOWY slider: mnożnik 1–100 (wyższa wartość = szybciej)
+	mkSlider(rfPanel,"Multiplier",1,100,20,"x",MISC,"RapidFireMultiplier",3)
 
 	-- FreeCam sub-page
 	local mfcP=Instance.new("Frame",mSubPF); mfcP.Size=UDim2.new(1,0,1,0); mfcP.BackgroundTransparency=1; mfcP.Visible=false
