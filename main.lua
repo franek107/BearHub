@@ -29,7 +29,7 @@ local ESP = {
 	Distance = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
 	Snaplines = {Enabled=false, Color=Color3.fromRGB(100,70,200)},
 	Inventory = {Enabled=false, Color=Color3.fromRGB(255,200,100)},
-	HeadDot = {Enabled=false, Color=Color3.fromRGB(255,0,0)},   -- NOWA OPCJA
+	HeadDot = {Enabled=false, Color=Color3.fromRGB(255,0,0)},
 }
 
 local FOV_SCALE_TRIGGER = 1
@@ -431,7 +431,7 @@ do
 		}
 		for i = 1, 12 do d.skeleton[i] = makeLine(h) end
 
-		-- HEAD DOT (nowy element)
+		-- HEAD DOT
 		local headDot = Instance.new("Frame", h)
 		headDot.Size = UDim2.new(0, 8, 0, 8)
 		headDot.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -444,7 +444,6 @@ do
 
 		espObjects[plr] = d; return d
 	end
-
 	local function hideAll(d)
 		if not d then return end
 		for k, v in pairs(d) do
@@ -1332,10 +1331,10 @@ end
 local main, sidebar, contentTitle, pagesFrame, colorPickerGui, openCP, cpGrid, hueBar
 
 do
-	local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
+	local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)   -- ZWIĘKSZONY o 80px
 	main = Instance.new("Frame", gui)
 	main.Name = "Main"; main.Size = ORIGINAL_SIZE
-	main.Position = UDim2.new(0.5, -350, 0.5, -225)
+	main.Position = UDim2.new(0.5, -390, 0.5, -265)   -- nowe wyśrodkowanie
 	main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	main.BorderSizePixel = 0; main.ClipsDescendants = true; main.Active = true
 	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
@@ -1727,7 +1726,7 @@ do
 
 	-- VISUALIZATION PAGE
 	local vizP=createPage("Visualization")
-	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,400,0.5,5); vR.Position=UDim2.new(0.5,5,0,5) -- increased height for new option
+	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,400,0.5,5); vR.Position=UDim2.new(0.5,5,0,5)
 	mkSection(vL,"Visualization",1); mkCheck(vL,"Enable",ESP,"Enabled",2)
 	mkSlider(vL,"Max Distance",0,1000,300,"m",ESP,"MaxDistance",3)
 	mkCheck(vL,"Show LocalPlayer",ESP,"ShowLocalPlayer",4); mkCheck(vL,"Visible Only",ESP,"VisibleOnly",5)
@@ -1735,7 +1734,7 @@ do
 	mkCheckColor(vR,"Name",nil,"Name",nil,4); mkCheckColor(vR,"ID",nil,"ID",nil,5)
 	mkCheckColor(vR,"Health Bar",nil,"HealthBar",nil,6); mkCheckColor(vR,"Distance",nil,"Distance",nil,7)
 	mkCheckColor(vR,"Snaplines",nil,"Snaplines",nil,8); mkCheckColor(vR,"Inventory",nil,"Inventory",nil,9)
-	mkCheckColor(vR,"Head Dot",nil,"HeadDot",nil,10)   -- NOWA OPCJA
+	mkCheckColor(vR,"Head Dot",nil,"HeadDot",nil,10)
 
 	-- AIM PAGE
 	local aimP=createPage("AimAssistance")
@@ -2255,7 +2254,7 @@ for i, tab in ipairs(tabsData) do
 	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
-local ORIGINAL_SIZE = UDim2.new(0, 700, 0, 450)
+local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)   -- ZWIĘKSZONY
 local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 
 local miniBall = Instance.new("ImageButton", gui)
