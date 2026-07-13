@@ -1,3 +1,6 @@
+-- Czekamy, aż gra i interfejs będą gotowe
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer and game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
@@ -1023,7 +1026,7 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false end)
 
-	-- FIXED INFINITE JUMP
+	-- INFINITE JUMP (poprawiony)
 	RunService.Heartbeat:Connect(function()
 		if PANIC_TRIGGERED then return end
 		if MISC.InfiniteJump then
@@ -1264,13 +1267,12 @@ do
 		end
 		return false
 	end
-	-- FIXED RAPIDFIRE
+	-- RAPID FIRE (poprawiony)
 	task.spawn(function()
 		while true do
 			if PANIC_TRIGGERED then break end
 			if MISC.RapidFire and mbHeld[1] then
 				local rf = MISC.RapidFireLevel or 20
-				-- rf od 0 (normalna szybkość) do 20 (maksymalna szybkość)
 				if rf > 0 then
 					if not isMouseOverGui() then
 						pcall(function()
@@ -1278,13 +1280,13 @@ do
 							task.wait(0.01)
 							VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, false, game, 0)
 						end)
-						local delay = (1 - rf/20) * 0.15  -- im większe rf, tym mniejszy delay
+						local delay = (1 - rf/20) * 0.15
 						task.wait(math.max(delay, 0.01))
 					else
 						task.wait(0.05)
 					end
 				else
-					task.wait(0.05)  -- rf=0 -> brak rapid fire, czekamy normalnie
+					task.wait(0.05)
 				end
 			else
 				task.wait(0.05)
@@ -1297,7 +1299,7 @@ local healPlayer = _G.BearHub_healPlayer
 local deleteItem = _G.BearHub_deleteItem
 
 --============================================================
--- CONFIG SYSTEM (zapis/odczyt wielu konfiguracji)
+-- CONFIG SYSTEM
 --============================================================
 do
 	local CONFIG_FOLDER = "BearHub_Configs"
@@ -1520,7 +1522,7 @@ do
 		end
 	end)
 
-	-- INVENTORY OPENER (usuwa przedmiot)
+	-- INVENTORY OPENER
 	local invOpenerFrame = Instance.new("Frame", invOpenerGui)
 	invOpenerFrame.Size = UDim2.new(0, 250, 0, 300)
 	invOpenerFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
@@ -2007,7 +2009,7 @@ do
 end
 
 --============================================================
--- PAGES (COMPLETE)
+-- PAGES
 --============================================================
 do
 	local function mkPanel(parent, w, h2, xPos, yPos)
@@ -2329,7 +2331,7 @@ do
 	plSW.MouseEnter:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(240,170,70) end); plSW.MouseLeave:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(220,150,50) end)
 	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and Color3.fromRGB(255,180,80) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 
-	-- EXPLOITS PAGE (COMPLETE)
+	-- EXPLOITS PAGE
 	local exP=createPage("Exploits")
 	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
 	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,10)
@@ -2352,7 +2354,7 @@ do
 	local ctKH=Instance.new("Frame",ctPanel); ctKH.Size=UDim2.new(1,0,0,30); ctKH.BackgroundTransparency=1; ctKH.LayoutOrder=4
 	local ctKLbl=Instance.new("TextLabel",ctKH); ctKLbl.Size=UDim2.new(1,-130,1,0); ctKLbl.Position=UDim2.new(0,5,0,0); ctKLbl.BackgroundTransparency=1; ctKLbl.Text="Teleport Key (hold + LMB)"; ctKLbl.TextColor3=Color3.fromRGB(200,200,210); ctKLbl.Font=Enum.Font.Gotham; ctKLbl.TextSize=12; ctKLbl.TextXAlignment=Enum.TextXAlignment.Left
 	local ctKeyBtn=Instance.new("TextButton",ctKH); ctKeyBtn.Size=UDim2.new(0,110,0,24); ctKeyBtn.Position=UDim2.new(1,-115,0.5,-12); ctKeyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); ctKeyBtn.BorderSizePixel=0; ctKeyBtn.Text=EXPLOITS.ClickTeleportKeyName; ctKeyBtn.TextColor3=Color3.fromRGB(180,180,190); ctKeyBtn.Font=Enum.Font.GothamBold; ctKeyBtn.TextSize=11; ctKeyBtn.AutoButtonColor=false; Instance.new("UICorner",ctKeyBtn).CornerRadius=UDim.new(0,5)
-	-- (skrócona wersja keybinda, pełna jak wcześniej)
+	-- (keybind menu identyczne jak wcześniej, pominąłem szczegóły)
 
 	-- No Collision sub-page
 	local exNcP=Instance.new("Frame",exSubPF); exNcP.Size=UDim2.new(1,0,1,0); exNcP.BackgroundTransparency=1; exNcP.Visible=false
@@ -2433,7 +2435,7 @@ do
 	pBtn.MouseLeave:Connect(function() pBtn.BackgroundColor3=Color3.fromRGB(200,30,30); pSt.Color=Color3.fromRGB(255,60,60) end)
 	pBtn.MouseButton1Click:Connect(function() PANIC_DESTROY() end)
 
-	-- Config (NOWE ZARZĄDZANIE)
+	-- Config (NOWE)
 	local stConfigP=Instance.new("Frame",stSubPF); stConfigP.Size=UDim2.new(1,0,1,0); stConfigP.BackgroundTransparency=1; stConfigP.Visible=false
 	local confPanel=Instance.new("Frame",stConfigP); confPanel.Size=UDim2.new(0.8,0,0,350); confPanel.Position=UDim2.new(0.1,0,0,15); confPanel.BackgroundColor3=DARK; confPanel.BorderSizePixel=0
 	Instance.new("UICorner",confPanel).CornerRadius=UDim.new(0,8)
@@ -2442,7 +2444,6 @@ do
 
 	mkSection(confPanel,"Config Manager",1)
 
-	-- TextBox for config name
 	local nameFrame = Instance.new("Frame",confPanel)
 	nameFrame.Size=UDim2.new(1,0,0,30); nameFrame.BackgroundTransparency=1; nameFrame.LayoutOrder=2
 	local nameLabel = Instance.new("TextLabel",nameFrame)
@@ -2464,7 +2465,6 @@ do
 	statusLabel.Text=""; statusLabel.TextColor3=Color3.fromRGB(100,200,100); statusLabel.Font=Enum.Font.GothamBold
 	statusLabel.TextSize=11; statusLabel.TextXAlignment=Enum.TextXAlignment.Center; statusLabel.LayoutOrder=10
 
-	-- Lista configów
 	local listFrame = Instance.new("ScrollingFrame",confPanel)
 	listFrame.Size=UDim2.new(1,0,0,150); listFrame.BackgroundTransparency=1; listFrame.ScrollBarThickness=3; listFrame.ScrollBarImageColor3=PURPLE; listFrame.LayoutOrder=4
 	local listLayout = Instance.new("UIListLayout",listFrame); listLayout.Padding=UDim.new(0,4)
@@ -2531,7 +2531,7 @@ do
 end
 
 --============================================================
--- TABS + DRAG (tak samo jak wcześniej)
+-- TABS + DRAG
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
 local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"}}
