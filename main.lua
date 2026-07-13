@@ -29,6 +29,7 @@ local ESP = {
 	Distance = {Enabled=false, Color=Color3.fromRGB(255,255,255)},
 	Snaplines = {Enabled=false, Color=Color3.fromRGB(100,70,200)},
 	Inventory = {Enabled=false, Color=Color3.fromRGB(255,200,100)},
+	HeadDot = {Enabled=false, Color=Color3.fromRGB(255,0,0)},   -- NOWA OPCJA
 }
 
 local FOV_SCALE_TRIGGER = 1
@@ -429,8 +430,21 @@ do
 			inventory2=makeText(h, 11)
 		}
 		for i = 1, 12 do d.skeleton[i] = makeLine(h) end
+
+		-- HEAD DOT (nowy element)
+		local headDot = Instance.new("Frame", h)
+		headDot.Size = UDim2.new(0, 8, 0, 8)
+		headDot.AnchorPoint = Vector2.new(0.5, 0.5)
+		headDot.BackgroundColor3 = ESP.HeadDot.Color
+		headDot.BorderSizePixel = 0
+		headDot.Visible = false
+		Instance.new("UICorner", headDot).CornerRadius = UDim.new(1, 0)
+		headDot.ZIndex = 5
+		d.headDot = headDot
+
 		espObjects[plr] = d; return d
 	end
+
 	local function hideAll(d)
 		if not d then return end
 		for k, v in pairs(d) do
@@ -617,6 +631,20 @@ do
 											end
 										end
 									else for i = 1, 12 do if d.skeleton[i] then d.skeleton[i].Visible = false end end end
+
+									-- HEAD DOT
+									if ESP.HeadDot.Enabled then
+										local headPos, onScreen, depth = w2s(head.Position)
+										if onScreen and headPos and depth > 0 then
+											d.headDot.Position = UDim2.new(0, headPos.X, 0, headPos.Y)
+											d.headDot.BackgroundColor3 = ESP.HeadDot.Color
+											d.headDot.Visible = true
+										else
+											d.headDot.Visible = false
+										end
+									else
+										d.headDot.Visible = false
+									end
 								end
 							end
 						end
@@ -1699,7 +1727,7 @@ do
 
 	-- VISUALIZATION PAGE
 	local vizP=createPage("Visualization")
-	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,360,0.5,5); vR.Position=UDim2.new(0.5,5,0,5)
+	local vL=mkPanel(vizP,0.48,260,0,5); local vR=mkPanel(vizP,0.48,400,0.5,5); vR.Position=UDim2.new(0.5,5,0,5) -- increased height for new option
 	mkSection(vL,"Visualization",1); mkCheck(vL,"Enable",ESP,"Enabled",2)
 	mkSlider(vL,"Max Distance",0,1000,300,"m",ESP,"MaxDistance",3)
 	mkCheck(vL,"Show LocalPlayer",ESP,"ShowLocalPlayer",4); mkCheck(vL,"Visible Only",ESP,"VisibleOnly",5)
@@ -1707,6 +1735,7 @@ do
 	mkCheckColor(vR,"Name",nil,"Name",nil,4); mkCheckColor(vR,"ID",nil,"ID",nil,5)
 	mkCheckColor(vR,"Health Bar",nil,"HealthBar",nil,6); mkCheckColor(vR,"Distance",nil,"Distance",nil,7)
 	mkCheckColor(vR,"Snaplines",nil,"Snaplines",nil,8); mkCheckColor(vR,"Inventory",nil,"Inventory",nil,9)
+	mkCheckColor(vR,"Head Dot",nil,"HeadDot",nil,10)   -- NOWA OPCJA
 
 	-- AIM PAGE
 	local aimP=createPage("AimAssistance")
