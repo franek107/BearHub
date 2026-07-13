@@ -66,7 +66,7 @@ local EXPLOITS = {
 	TeleportWalk = false, TeleportWalkDistance = 5,
 	ClickTeleport = false, ClickTeleportKeyName = "NONE", ClickTeleportKeyCheck = nil,
 	AntiAFK = false,
-	NoCollision = false,  -- NOWA OPCJA
+	NoCollision = false,
 }
 
 local SPECTATE = {Target = nil, Active = false}
@@ -105,7 +105,7 @@ local function PANIC_DESTROY()
 	MISC.NoClip = false; MISC.RapidFire = false; MISC.SuperPunch = false
 	MISC.WalkSpeedEnabled = false; MISC.JumpPowerEnabled = false; MISC.FreeCam = false
 	EXPLOITS.TeleportWalk = false; EXPLOITS.ClickTeleport = false; EXPLOITS.AntiAFK = false
-	EXPLOITS.NoCollision = false  -- przywróć na wypadek paniki
+	EXPLOITS.NoCollision = false
 	SPECTATE.Active = false; SPECTATE.Target = nil
 	pcall(function()
 		local myChar = player.Character
@@ -929,6 +929,23 @@ do
 		else return false, "Failed to copy: " .. tostring(err) end
 	end
 
+	_G.BearHub_deleteItem = function()
+		if PANIC_TRIGGERED then return false, "Disabled" end
+		local char = player.Character
+		if not char then return false, "No character" end
+		local equippedTool = nil
+		for _, child in ipairs(char:GetChildren()) do
+			if child:IsA("Tool") then equippedTool = child; break end
+		end
+		if not equippedTool then return false, "No tool equipped" end
+		local toolName = equippedTool.Name
+		local success, err = pcall(function()
+			equippedTool:Destroy()
+		end)
+		if success then return true, "Deleted: " .. toolName
+		else return false, "Failed to delete: " .. tostring(err) end
+	end
+
 	local lastWSEnabled, lastJPEnabled = false, false
 	task.spawn(function()
 		while true do
@@ -1205,6 +1222,7 @@ end
 
 local healPlayer = _G.BearHub_healPlayer
 local copyItem = _G.BearHub_copyItem
+local deleteItem = _G.BearHub_deleteItem
 
 --============================================================
 -- EXPLOITS LOGIC
@@ -1299,7 +1317,7 @@ do
 		end)
 	end)
 
-	-- NO COLLISION (WALK THROUGH WALLS)
+	-- NO COLLISION
 	local wasNoCollision = false
 	RunService.Stepped:Connect(function()
 		if PANIC_TRIGGERED then return end
@@ -1644,7 +1662,7 @@ do
 		end)
 	end
 
-	-- SPECIAL KEYBIND FOR CLICK TELEPORT (no enable checkbox, just key selector)
+	-- SPECIAL KEYBIND FOR CLICK TELEPORT
 	local function mkClickTeleportKeybind(p, o)
 		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,30); h.BackgroundTransparency=1; h.LayoutOrder=o or 0
 		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,-130,1,0); lb.Position=UDim2.new(0,5,0,0)
@@ -1785,19 +1803,25 @@ do
 
 	-- Actions sub-page
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
-	local qaPanel=mkPanel(mqaP,0.48,200,0,5)
+	local qaPanel=mkPanel(mqaP,0.48,260,0,5)  -- zwiększona wysokość
 	mkSection(qaPanel,"Quick Actions",1)
 	mkButton(qaPanel,"Heal",healPlayer,2)
 
 	local copyStatusLabel=Instance.new("TextLabel",qaPanel); copyStatusLabel.Size=UDim2.new(1,-10,0,18); copyStatusLabel.BackgroundTransparency=1
 	copyStatusLabel.Text=""; copyStatusLabel.TextColor3=Color3.fromRGB(100,200,100); copyStatusLabel.Font=Enum.Font.GothamBold
-	copyStatusLabel.TextSize=11; copyStatusLabel.TextXAlignment=Enum.TextXAlignment.Center; copyStatusLabel.LayoutOrder=4
+	copyStatusLabel.TextSize=11; copyStatusLabel.TextXAlignment=Enum.TextXAlignment.Center; copyStatusLabel.LayoutOrder=6
 
 	mkButton(qaPanel,"Copy Item (in hand)",function()
 		local ok,msg=copyItem()
 		copyStatusLabel.Text=msg; copyStatusLabel.TextColor3=ok and Color3.fromRGB(100,200,100) or Color3.fromRGB(255,100,100)
 		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
 	end,3,Color3.fromRGB(60,140,220))
+
+	mkButton(qaPanel,"Delete Item (in hand)",function()
+		local ok,msg=deleteItem()
+		copyStatusLabel.Text=msg; copyStatusLabel.TextColor3=ok and Color3.fromRGB(255,100,100) or Color3.fromRGB(255,60,60)
+		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
+	end,5,Color3.fromRGB(220,60,60))
 
 	-- Combat sub-page
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
@@ -2141,7 +2165,7 @@ do
 	afkInfoLbl.Text="Prevents the game from kicking you for being AFK. Sends a virtual keypress every 55 seconds."; afkInfoLbl.Font=Enum.Font.Gotham; afkInfoLbl.TextSize=11; afkInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; afkInfoLbl.LayoutOrder=2
 	mkCheck(afkPanel,"Enable Anti-AFK",EXPLOITS,"AntiAFK",3)
 
-	-- No Collision sub-page (NOWY)
+	-- No Collision sub-page
 	local exNcP=Instance.new("Frame",exSubPF); exNcP.Size=UDim2.new(1,0,1,0); exNcP.BackgroundTransparency=1; exNcP.Visible=false
 	local ncPanel=mkPanel(exNcP,0.7,160,0,5)
 	mkSection(ncPanel,"No Collision",1)
