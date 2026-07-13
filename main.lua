@@ -53,16 +53,17 @@ local AIMBOT = {
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 
--- 🔥 ZMIANA: dodano SpinBot oraz zmieniono RapidFireLevel na RapidFireMultiplier (1–100)
+-- 🔥 ZMIANA: Dodano RemoveJumpDelay
 local MISC = {
 	SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false,
 	SuperPunch = false,
 	NoClip = false, NoClipSpeed = 30,
-	RapidFire = false, RapidFireMultiplier = 20,  -- domyślnie 20 (czyli bez zmian)
+	RapidFire = false, RapidFireMultiplier = 20,
 	WalkSpeedEnabled = false, WalkSpeed = 16,
 	JumpPowerEnabled = false, JumpPower = 50,
 	FreeCam = false, FreeCamSpeed = 30,
-	SpinBot = false, SpinBotSpeed = 50,  -- nowe
+	SpinBot = false, SpinBotSpeed = 50,
+	RemoveJumpDelay = false,
 }
 
 local EXPLOITS = {
@@ -106,7 +107,7 @@ local function PANIC_DESTROY()
 	MISC.SemiGod = false; MISC.NoRecoil = false; MISC.NoSpread = false; MISC.InfAmmo = false
 	MISC.NoClip = false; MISC.RapidFire = false; MISC.SuperPunch = false
 	MISC.WalkSpeedEnabled = false; MISC.JumpPowerEnabled = false; MISC.FreeCam = false
-	MISC.SpinBot = false  -- wyłącz SpinBot
+	MISC.SpinBot = false; MISC.RemoveJumpDelay = false
 	EXPLOITS.TeleportWalk = false; EXPLOITS.ClickTeleport = false; EXPLOITS.AntiAFK = false
 	SPECTATE.Active = false; SPECTATE.Target = nil
 	pcall(function()
@@ -994,8 +995,24 @@ do
 					local root = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso")
 					if root then
 						local speed = MISC.SpinBotSpeed or 50
-						-- obrót wokół osi Y, mnożnik dopasowany do zakresu 1–100
 						root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(speed * 0.5), 0)
+					end
+				end
+			end
+		end
+	end)
+
+	-- 🔥 Remove Jump Delay
+	task.spawn(function()
+		while true do
+			RunService.RenderStepped:Wait()
+			if PANIC_TRIGGERED then break end
+			if MISC.RemoveJumpDelay then
+				local char = player.Character
+				if char then
+					local hum = char:FindFirstChildOfClass("Humanoid")
+					if hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
+						hum.Jump = true
 					end
 				end
 			end
@@ -1068,7 +1085,7 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
 
-	-- 🔥 NAPRAWIONY Rapid Fire (mnożnik 1–100)
+	-- 🔥 NAPRAWIONY Rapid Fire (mnożnik 1–100, opóźnienie znika wraz ze wzrostem wartości)
 	local hookedTools = {}
 	local function hookTool(tool)
 		if not tool or not tool:IsA("Tool") or hookedTools[tool] then return end
@@ -1078,7 +1095,7 @@ do
 				task.wait(0.05); if PANIC_TRIGGERED then break end
 				if MISC.NoRecoil or MISC.NoSpread or MISC.InfAmmo or MISC.RapidFire then
 					pcall(function()
-						local mult = (MISC.RapidFireMultiplier or 20) / 20  -- przelicznik 0.05–5
+						local mult = (MISC.RapidFireMultiplier or 20) / 20
 						for _, v in ipairs(tool:GetDescendants()) do
 							if v:IsA("NumberValue") or v:IsA("IntValue") then
 								local n = v.Name:lower()
@@ -1134,15 +1151,14 @@ do
 		end
 	end)
 
-	-- 🔥 Rapid Fire Auto‑Clicker (opóźnienie zależne od mnożnika)
+	-- Rapid Fire Auto‑Clicker (opóźnienie maleje wraz z mnożnikiem)
 	task.spawn(function()
 		while true do
 			if PANIC_TRIGGERED then break end
 			if MISC.RapidFire and mbHeld[1] then
-				-- im wyższy mnożnik, tym krótsze opóźnienie
 				local mult = MISC.RapidFireMultiplier or 20
-				-- 0.05s (max szybkość) przy mult=100, 0.5s przy mult=1
-				local delay = 0.05 + (0.45 * (100 - mult) / 100)
+				-- Opóźnienie: od 0.05 s (mult=1) do praktycznie 0.001 s (mult=100)
+				local delay = math.max(0.001, 0.05 * (1 - mult/100))
 				if not isMouseOverGui() then
 					pcall(function()
 						VIM:SendMouseButtonEvent(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2, 0, true, game, 0)
@@ -1358,10 +1374,10 @@ end
 local main, sidebar, contentTitle, pagesFrame, colorPickerGui, openCP, cpGrid, hueBar
 
 do
-	local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)   -- ZWIĘKSZONY o 80px
+	local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)
 	main = Instance.new("Frame", gui)
 	main.Name = "Main"; main.Size = ORIGINAL_SIZE
-	main.Position = UDim2.new(0.5, -390, 0.5, -265)   -- nowe wyśrodkowanie
+	main.Position = UDim2.new(0.5, -390, 0.5, -265)
 	main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	main.BorderSizePixel = 0; main.ClipsDescendants = true; main.Active = true
 	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
@@ -1838,7 +1854,7 @@ do
 
 	-- Movement sub-page
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
-	local mvPanel=mkPanel(mmvP,0.6,440,0,5)  -- zwiększona wysokość, żeby pomieścić SpinBot
+	local mvPanel=mkPanel(mmvP,0.6,480,0,5)  -- zwiększona wysokość dla nowej opcji
 	mkSection(mvPanel,"Movement",1)
 	mkCheck(mvPanel,"NoClip (Fly + No Collision)",MISC,"NoClip",2)
 	mkSlider(mvPanel,"NoClip Fly Speed",1,100,30," m/s",MISC,"NoClipSpeed",3)
@@ -1846,16 +1862,16 @@ do
 	mkSlider(mvPanel,"Walk Speed Value",0,250,16," m/s",MISC,"WalkSpeed",5)
 	mkCheck(mvPanel,"Jump Power",MISC,"JumpPowerEnabled",6)
 	mkSlider(mvPanel,"Jump Power Value",1,500,50," m",MISC,"JumpPower",7)
-	-- 🔥 NOWE: SpinBot
 	mkCheck(mvPanel,"Enable SpinBot",MISC,"SpinBot",8)
 	mkSlider(mvPanel,"Spin Speed",1,100,50,"",MISC,"SpinBotSpeed",9)
+	-- 🔥 NOWA OPCJA: Remove Jump Delay
+	mkCheck(mvPanel,"Remove Jump Delay",MISC,"RemoveJumpDelay",10)
 
 	-- RapidFire sub-page
 	local mrfP=Instance.new("Frame",mSubPF); mrfP.Size=UDim2.new(1,0,1,0); mrfP.BackgroundTransparency=1; mrfP.Visible=false
 	local rfPanel=mkPanel(mrfP,0.48,200,0,5)
 	mkSection(rfPanel,"Rapid Fire",1)
 	mkCheck(rfPanel,"Enable Rapid Fire",MISC,"RapidFire",2)
-	-- 🔥 NOWY slider: mnożnik 1–100 (wyższa wartość = szybciej)
 	mkSlider(rfPanel,"Multiplier",1,100,20,"x",MISC,"RapidFireMultiplier",3)
 
 	-- FreeCam sub-page
@@ -2285,7 +2301,7 @@ for i, tab in ipairs(tabsData) do
 	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
-local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)   -- ZWIĘKSZONY
+local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)
 local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 
 local miniBall = Instance.new("ImageButton", gui)
