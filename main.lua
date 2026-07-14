@@ -64,6 +64,7 @@ local MISC = {
 	FreeCam = false, FreeCamSpeed = 30,
 	SpinBot = false, SpinBotSpeed = 50,
 	RemoveJumpDelay = false,
+	InfiniteJump = false,
 }
 
 local EXPLOITS = {
@@ -1019,6 +1020,23 @@ do
 		end
 	end)
 
+	-- 🔥 Infinite Jump (hold Space to keep jumping)
+task.spawn(function()
+	while true do
+		RunService.RenderStepped:Wait()
+		if PANIC_TRIGGERED then break end
+		if MISC.InfiniteJump then
+			local char = player.Character
+			if char then
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				if hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
+					hum.Jump = true  -- pozwala skakać w powietrzu bez końca
+				end
+			end
+		end
+	end
+end)
+	
 	local flyBV, flyBG, flying = nil, nil, false
 	local function stopFly()
 		flying = false
@@ -1866,6 +1884,7 @@ do
 	mkSlider(mvPanel,"Spin Speed",1,100,50,"",MISC,"SpinBotSpeed",9)
 	-- 🔥 NOWA OPCJA: Remove Jump Delay
 	mkCheck(mvPanel,"Remove Jump Delay",MISC,"RemoveJumpDelay",10)
+	mkCheck(mvPanel,"Infinite Jump (hold Space)",MISC,"InfiniteJump",11)
 
 	-- RapidFire sub-page
 	local mrfP=Instance.new("Frame",mSubPF); mrfP.Size=UDim2.new(1,0,1,0); mrfP.BackgroundTransparency=1; mrfP.Visible=false
@@ -2341,13 +2360,25 @@ local function updateLineNumbers()
 	if text ~= "" then
 		lineCount = select(2, text:gsub("\n", "\n")) + 1
 	end
+
+	-- Generowanie numerów linii
 	local nums = {}
 	for i = 1, lineCount do
 		nums[i] = tostring(i)
 	end
 	lineNums.Text = table.concat(nums, "\n")
-	local lineHeight = 20
-	local totalHeight = math.max(lineCount, 1) * lineHeight + 10
+
+	-- Dynamiczna szerokość – ok. 10 pikseli na cyfrę + margines
+	local digits = #tostring(lineCount)
+	local numWidth = math.max(35, digits * 10 + 10)  -- minimum 35 px
+
+	lineNums.Size = UDim2.new(0, numWidth, 1, 0)
+	codeBox.Position = UDim2.new(0, numWidth + 5, 0, 0)
+	codeBox.Size = UDim2.new(1, -(numWidth + 10), 1, 0)
+
+	-- Wysokość canvasa – większa, żeby nic nie ucinało
+	local lineHeight = 22
+	local totalHeight = math.max(lineCount * lineHeight + 20, 100)  -- minimum 100 px
 	canvasFrame.Size = UDim2.new(1, 0, 0, totalHeight)
 	codeScroll.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
 end
