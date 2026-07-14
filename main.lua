@@ -355,8 +355,6 @@ UIS.InputBegan:Connect(function(inp, gameProcessed)
 	if uit == Enum.UserInputType.MouseButton1 then mbHeld[1] = true
 	elseif uit == Enum.UserInputType.MouseButton2 then mbHeld[2] = true
 	elseif uit == Enum.UserInputType.MouseButton3 then mbHeld[3] = true
-	elseif uit == Enum.UserInputType.MouseButton4 then mbHeld[4] = true
-	elseif uit == Enum.UserInputType.MouseButton5 then mbHeld[5] = true end
 end)
 UIS.InputEnded:Connect(function(inp)
 	local uit = inp.UserInputType
@@ -1623,11 +1621,9 @@ do
 	end
 
 	local BIND_OPTIONS = {
-		{"LPM (MB1)",function() return mbHeld[1] end},
-		{"PPM (MB2)",function() return mbHeld[2] end},
-		{"Scroll (MB3)",function() return mbHeld[3] end},
-		{"Side Back (MB4)",function() return mbHeld[4] end},
-		{"Side Front (MB5)",function() return mbHeld[5] end},
+    {"LPM (MB1)",function() return mbHeld[1] end},
+    {"PPM (MB2)",function() return mbHeld[2] end},
+    {"Scroll (MB3)",function() return mbHeld[3] end},
 	}
 	local KB={Enum.KeyCode.E,Enum.KeyCode.F,Enum.KeyCode.G,Enum.KeyCode.H,Enum.KeyCode.Q,Enum.KeyCode.R,Enum.KeyCode.T,Enum.KeyCode.X,Enum.KeyCode.Z,Enum.KeyCode.C,Enum.KeyCode.V,Enum.KeyCode.B,Enum.KeyCode.CapsLock,Enum.KeyCode.Tab,Enum.KeyCode.LeftAlt,Enum.KeyCode.RightAlt,Enum.KeyCode.LeftControl,Enum.KeyCode.RightControl,Enum.KeyCode.LeftShift,Enum.KeyCode.F1,Enum.KeyCode.F2,Enum.KeyCode.F3,Enum.KeyCode.F4,Enum.KeyCode.F5,Enum.KeyCode.F6,Enum.KeyCode.F7,Enum.KeyCode.F8}
 	for _,kc in ipairs(KB) do local kcc=kc; table.insert(BIND_OPTIONS,{kc.Name,function() return UIS:IsKeyDown(kcc) end}) end
@@ -2079,10 +2075,8 @@ do
 	ctKeyBtn.AutoButtonColor=false; Instance.new("UICorner",ctKeyBtn).CornerRadius=UDim.new(0,5)
 
 	local BIND_OPTIONS_CT = {
-		{"LPM (MB1)",function() return mbHeld[1] end},
-		{"PPM (MB2)",function() return mbHeld[2] end},
-		{"Side Back (MB4)",function() return mbHeld[4] end},
-		{"Side Front (MB5)",function() return mbHeld[5] end},
+    {"LPM (MB1)",function() return mbHeld[1] end},
+    {"PPM (MB2)",function() return mbHeld[2] end},,
 	}
 	local KB2={Enum.KeyCode.E,Enum.KeyCode.F,Enum.KeyCode.G,Enum.KeyCode.H,Enum.KeyCode.Q,Enum.KeyCode.R,Enum.KeyCode.T,Enum.KeyCode.X,Enum.KeyCode.Z,Enum.KeyCode.C,Enum.KeyCode.V,Enum.KeyCode.B,Enum.KeyCode.CapsLock,Enum.KeyCode.LeftAlt,Enum.KeyCode.RightAlt,Enum.KeyCode.LeftControl,Enum.KeyCode.RightControl,Enum.KeyCode.LeftShift,Enum.KeyCode.F1,Enum.KeyCode.F2,Enum.KeyCode.F3,Enum.KeyCode.F4,Enum.KeyCode.F5,Enum.KeyCode.F6,Enum.KeyCode.F7,Enum.KeyCode.F8}
 	for _,kc in ipairs(KB2) do local kcc=kc; table.insert(BIND_OPTIONS_CT,{kc.Name,function() return UIS:IsKeyDown(kcc) end}) end
