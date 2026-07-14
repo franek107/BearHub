@@ -2296,55 +2296,59 @@ do
 	statusCfg.LayoutOrder = 5
 
 	local function refreshCfgList()
-		for _, child in ipairs(cfgList:GetChildren()) do
-			if child:IsA("TextButton") then child:Destroy() end
-		end
-		local files = {}
-		pcall(function()
-			local raw = listfiles("BearHub_Configs/")
-			if raw then
-				for _, f in ipairs(raw) do
-					if f:match("%.json$") then
-						local name = f:match("([^/]+)%.json$")
-						if name then table.insert(files, name) end
-					end
-				end
-			end
-		end)
-		if #files == 0 then
-			local empty = Instance.new("TextLabel", cfgList)
-			empty.Size = UDim2.new(1, -10, 0, 30)
-			empty.BackgroundTransparency = 1
-			empty.Text = "No configs found"
-			empty.TextColor3 = Color3.fromRGB(150,150,160)
-			empty.Font = Enum.Font.Gotham
-			empty.TextSize = 13
-			empty.TextXAlignment = Enum.TextXAlignment.Center
-			empty.LayoutOrder = 1
-		else
-			table.sort(files)
-			for i, name in ipairs(files) do
-				local btn = Instance.new("TextButton", cfgList)
-				btn.Size = UDim2.new(1, -10, 0, 30)
-				btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
-				btn.BorderSizePixel = 0
-				btn.Text = name
-				btn.TextColor3 = Color3.new(1,1,1)
-				btn.Font = Enum.Font.Gotham
-				btn.TextSize = 13
-				btn.AutoButtonColor = false
-				btn.LayoutOrder = i
-				Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-				btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(60,60,75) end)
-				btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(40,40,50) end)
-				btn.MouseButton1Click:Connect(function()
-					playClick()
-					nameBox.Text = name
-				end)
-			end
-		end
-		cfgList.CanvasSize = UDim2.new(0, 0, 0, #files * 34 + 10)
-	end
+    -- wyczyść starą listę
+    for _, child in ipairs(cfgList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    -- pobierz listę plików (tylko .json)
+    local files = {}
+    pcall(function()
+        local raw = listfiles("BearHub_Configs/")
+        if raw then
+            for _, f in ipairs(raw) do
+                if f:match("%.json$") then
+                    local name = f:match("([^/]+)%.json$")
+                    if name then table.insert(files, name) end
+                end
+            end
+        end
+    end)   -- <--- WAŻNE: tutaj zamykamy pcall
+    -- jeśli pusta lista
+    if #files == 0 then
+        local empty = Instance.new("TextLabel", cfgList)
+        empty.Size = UDim2.new(1, -10, 0, 30)
+        empty.BackgroundTransparency = 1
+        empty.Text = "No configs found"
+        empty.TextColor3 = Color3.fromRGB(150,150,160)
+        empty.Font = Enum.Font.Gotham
+        empty.TextSize = 13
+        empty.TextXAlignment = Enum.TextXAlignment.Center
+        empty.LayoutOrder = 1
+    else
+        -- sortuj alfabetycznie
+        table.sort(files)
+        for i, name in ipairs(files) do
+            local btn = Instance.new("TextButton", cfgList)
+            btn.Size = UDim2.new(1, -10, 0, 30)
+            btn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+            btn.BorderSizePixel = 0
+            btn.Text = name
+            btn.TextColor3 = Color3.new(1,1,1)
+            btn.Font = Enum.Font.Gotham
+            btn.TextSize = 13
+            btn.AutoButtonColor = false
+            btn.LayoutOrder = i
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+            btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(60,60,75) end)
+            btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(40,40,50) end)
+            btn.MouseButton1Click:Connect(function()
+                playClick()
+                nameBox.Text = name
+            end)
+        end
+    end
+    cfgList.CanvasSize = UDim2.new(0, 0, 0, #files * 34 + 10)
+end
 
 	local function saveConfig(name)
 		local data = {
