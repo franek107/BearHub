@@ -1828,7 +1828,7 @@ do
 	end
 	local s1=mkSB("TriggerBot",1); mkSB("Aimbot",2); mkSB("Hitbox",3); selSub=s1; s1.btn.TextColor3=Color3.new(1,1,1); s1.ul.Visible=true
 
-	-- MISC PAGE
+	-- MISC PAGE (bez zmian)
 	local miscP=createPage("Miscellaneous")
 	local mSubBar=Instance.new("Frame",miscP); mSubBar.Size=UDim2.new(1,-20,0,30); mSubBar.Position=UDim2.new(0,10,0,0); mSubBar.BackgroundTransparency=1
 	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
@@ -1888,7 +1888,7 @@ do
 	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
 	mkSlider(fcPanel,"FreeCam Speed",1,200,30," m/s",MISC,"FreeCamSpeed",3)
 
-	-- FREECAM HUD
+	-- FREECAM HUD (skopiowany z poprzedniej wersji)
 	local freecamActive = false
 	local oldMouseBehavior = Enum.MouseBehavior.Default
 	local oldMouseIconEnabled = true
@@ -2040,7 +2040,7 @@ do
 	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
 	selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
-	-- PLAYERS PAGE
+	-- PLAYERS PAGE (bez zmian)
 	local plP=createPage("Players")
 	local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8)
 	local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=Color3.fromRGB(160,160,170); plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
@@ -2107,7 +2107,7 @@ do
 	plSW.MouseEnter:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(240,170,70) end); plSW.MouseLeave:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(220,150,50) end)
 	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and Color3.fromRGB(255,180,80) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 
-	-- EXPLOITS PAGE
+	-- EXPLOITS PAGE (bez zmian)
 	local exP=createPage("Exploits")
 	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
 	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,15)
@@ -2210,7 +2210,7 @@ do
 	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2); mkExB("AntiAFK","Anti-AFK",3)
 	selEx=ex1; ex1.btn.TextColor3=Color3.new(1,1,1); ex1.ul.Visible=true
 
-	-- SETTINGS PAGE
+	-- SETTINGS PAGE (bez zmian)
 	local stP=createPage("Settings")
 	local stSubBar=Instance.new("Frame",stP); stSubBar.Size=UDim2.new(1,-20,0,30); stSubBar.Position=UDim2.new(0,10,0,0); stSubBar.BackgroundTransparency=1
 	local stSbl=Instance.new("UIListLayout",stSubBar); stSbl.FillDirection=Enum.FillDirection.Horizontal; stSbl.Padding=UDim.new(0,15)
@@ -2270,20 +2270,36 @@ do
 	local afP=createPage("AutoFarm")
 	local afL=Instance.new("TextLabel",afP); afL.Size=UDim2.new(1,-20,0,40); afL.Position=UDim2.new(0,10,0,10); afL.BackgroundTransparency=1; afL.Text="AutoFarm - Coming Soon"; afL.TextColor3=Color3.fromRGB(100,100,110); afL.Font=Enum.Font.Gotham; afL.TextSize=16
 
-	-- ====== EXECUTOR PAGE ======
+	-- ====== EXECUTOR PAGE (POPRAWIONY Z PRZEWIJANIEM) ======
 	local execP=createPage("Executor")
-	local execPanel=mkPanel(execP,1,400,0,5)
+	local execPanel=mkPanel(execP,1,420,0,5)  -- zwiększona wysokość
 	mkSection(execPanel,"Lua Executor",1)
 
-	local scriptBox = Instance.new("TextBox", execPanel)
-	scriptBox.Size = UDim2.new(1,-20,0,200); scriptBox.Position = UDim2.new(0,10,0,40)
-	scriptBox.BackgroundColor3 = Color3.fromRGB(30,30,38); scriptBox.BorderSizePixel = 0
+	-- Kontener z przewijaniem dla pola tekstowego
+	local scriptScroll = Instance.new("ScrollingFrame", execPanel)
+	scriptScroll.Size = UDim2.new(1,-20,0,220); scriptScroll.Position = UDim2.new(0,10,0,40)
+	scriptScroll.BackgroundColor3 = Color3.fromRGB(30,30,38); scriptScroll.BorderSizePixel = 0
+	scriptScroll.CanvasSize = UDim2.new(0,0,0,0)
+	scriptScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scriptScroll.ScrollBarThickness = 5
+	scriptScroll.ScrollBarImageColor3 = PURPLE
+	scriptScroll.LayoutOrder = 2
+	Instance.new("UICorner", scriptScroll).CornerRadius = UDim.new(0,6)
+
+	local scriptBox = Instance.new("TextBox", scriptScroll)
+	scriptBox.Size = UDim2.new(1,0,1,0)
+	scriptBox.BackgroundTransparency = 1
 	scriptBox.Text = ""; scriptBox.TextColor3 = Color3.new(1,1,1)
 	scriptBox.Font = Enum.Font.Code; scriptBox.TextSize = 14
 	scriptBox.TextXAlignment = Enum.TextXAlignment.Left; scriptBox.TextYAlignment = Enum.TextYAlignment.Top
 	scriptBox.ClearTextOnFocus = false; scriptBox.MultiLine = true
-	Instance.new("UICorner", scriptBox).CornerRadius = UDim.new(0,6)
-	scriptBox.LayoutOrder = 2
+	scriptBox.TextWrapped = true
+	scriptBox.AutomaticSize = Enum.AutomaticSize.Y  -- rośnie w dół
+
+	-- Przy zmianie tekstu aktualizuj CanvasSize
+	scriptBox:GetPropertyChangedSignal("Text"):Connect(function()
+		scriptScroll.CanvasSize = UDim2.new(0,0,0,scriptBox.TextBounds.Y + 20)
+	end)
 
 	local btnFrame = Instance.new("Frame", execPanel)
 	btnFrame.Size = UDim2.new(1,-20,0,40); btnFrame.BackgroundTransparency = 1; btnFrame.LayoutOrder = 3
@@ -2343,13 +2359,143 @@ do
 			end
 		end)
 	end)
+
+	-- ====== RESOURCES PAGE (STOPPER) ======
+	local resP=createPage("Resources")
+	local resSubBar=Instance.new("Frame",resP); resSubBar.Size=UDim2.new(1,-20,0,30); resSubBar.Position=UDim2.new(0,10,0,0); resSubBar.BackgroundTransparency=1
+	local resSbl=Instance.new("UIListLayout",resSubBar); resSbl.FillDirection=Enum.FillDirection.Horizontal; resSbl.Padding=UDim.new(0,15)
+	local resSubPF=Instance.new("Frame",resP); resSubPF.Size=UDim2.new(1,0,1,-40); resSubPF.Position=UDim2.new(0,0,0,38); resSubPF.BackgroundTransparency=1
+
+	-- Strona Stopper
+	local stopP=Instance.new("Frame",resSubPF); stopP.Size=UDim2.new(1,0,1,0); stopP.BackgroundTransparency=1; stopP.Visible=true
+
+	-- Panel wyszukiwania
+	local stopPanel=mkPanel(stopP,1,500,0,5)
+	mkSection(stopPanel,"Remote Stopper",1)
+
+	local searchFrame = Instance.new("Frame", stopPanel)
+	searchFrame.Size = UDim2.new(1,-20,0,40); searchFrame.BackgroundTransparency = 1; searchFrame.LayoutOrder = 2
+	local searchBox = Instance.new("TextBox", searchFrame)
+	searchBox.Size = UDim2.new(0,200,0,30); searchBox.Position = UDim2.new(0,0,0,5)
+	searchBox.BackgroundColor3 = Color3.fromRGB(40,40,50); searchBox.BorderSizePixel = 0
+	searchBox.Text = ""; searchBox.PlaceholderText = "Search (e.g. p)"
+	searchBox.TextColor3 = Color3.new(1,1,1); searchBox.PlaceholderColor3 = Color3.fromRGB(100,100,110)
+	searchBox.Font = Enum.Font.Gotham; searchBox.TextSize = 13
+	searchBox.ClearTextOnFocus = false
+	Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0,6)
+
+	local searchBtn = Instance.new("TextButton", searchFrame)
+	searchBtn.Size = UDim2.new(0,80,0,30); searchBtn.Position = UDim2.new(0,210,0,5)
+	searchBtn.BackgroundColor3 = PURPLE; searchBtn.BorderSizePixel = 0
+	searchBtn.Text = "Search"; searchBtn.TextColor3 = Color3.new(1,1,1); searchBtn.Font = Enum.Font.GothamBold; searchBtn.TextSize = 13
+	searchBtn.AutoButtonColor = false; Instance.new("UICorner", searchBtn).CornerRadius = UDim.new(0,6)
+
+	local resultsList = Instance.new("ScrollingFrame", stopPanel)
+	resultsList.Size = UDim2.new(1,-20,0,300); resultsList.Position = UDim2.new(0,10,0,0)
+	resultsList.BackgroundColor3 = Color3.fromRGB(20,20,25); resultsList.BorderSizePixel = 0
+	resultsList.CanvasSize = UDim2.new(0,0,0,0); resultsList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	resultsList.ScrollBarThickness = 5; resultsList.ScrollBarImageColor3 = PURPLE
+	resultsList.Visible = true; resultsList.LayoutOrder = 3
+	Instance.new("UICorner", resultsList).CornerRadius = UDim.new(0,6)
+	Instance.new("UIListLayout", resultsList).Padding = UDim.new(0,4)
+
+	local function refreshStopResults(query)
+		-- Wyczyść poprzednie wyniki
+		for _, v in ipairs(resultsList:GetChildren()) do
+			if v:IsA("TextButton") or v:IsA("Frame") then v:Destroy() end
+		end
+		query = query and query:lower() or ""
+		local targets = {"RemoteEvent", "RemoteFunction", "BindableEvent", "BindableFunction"}
+		local found = {}
+		-- Przeszukaj ReplicatedStorage, workspace i inne serwisy
+		for _, service in ipairs({ReplicatedStorage, workspace, game:GetService("ServerScriptService"), game:GetService("ServerStorage")}) do
+			pcall(function()
+				for _, obj in ipairs(service:GetDescendants()) do
+					if table.find(targets, obj.ClassName) and (query == "" or obj.Name:lower():find(query)) then
+						table.insert(found, obj)
+					end
+				end
+			end)
+		end
+		-- Dodaj także z innych miejsc jeśli potrzeba
+		-- Wyświetl wyniki
+		for _, obj in ipairs(found) do
+			local item = Instance.new("Frame", resultsList)
+			item.Size = UDim2.new(1,-10,0,36); item.BackgroundColor3 = Color3.fromRGB(30,30,38); item.BorderSizePixel = 0
+			Instance.new("UICorner", item).CornerRadius = UDim.new(0,6)
+
+			local lbl = Instance.new("TextLabel", item)
+			lbl.Size = UDim2.new(0,250,1,0); lbl.Position = UDim2.new(0,8,0,0)
+			lbl.BackgroundTransparency = 1; lbl.Text = obj.Name .. " [" .. obj.ClassName .. "]"
+			lbl.TextColor3 = Color3.new(1,1,1); lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 12
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+			local pathLbl = Instance.new("TextLabel", item)
+			pathLbl.Size = UDim2.new(0,250,0,18); pathLbl.Position = UDim2.new(0,8,0,18)
+			pathLbl.BackgroundTransparency = 1; pathLbl.Text = obj:GetFullName()
+			pathLbl.TextColor3 = Color3.fromRGB(120,120,130); pathLbl.Font = Enum.Font.Gotham; pathLbl.TextSize = 9
+			pathLbl.TextXAlignment = Enum.TextXAlignment.Left
+			pathLbl.TextTruncate = Enum.TextTruncate.AtEnd
+
+			local stopBtn = Instance.new("TextButton", item)
+			stopBtn.Size = UDim2.new(0,60,0,24); stopBtn.Position = UDim2.new(1,-70,0.5,-12)
+			stopBtn.BackgroundColor3 = Color3.fromRGB(180,60,60); stopBtn.BorderSizePixel = 0
+			stopBtn.Text = "Stop"; stopBtn.TextColor3 = Color3.new(1,1,1); stopBtn.Font = Enum.Font.GothamBold; stopBtn.TextSize = 12
+			stopBtn.AutoButtonColor = false; Instance.new("UICorner", stopBtn).CornerRadius = UDim.new(0,4)
+			stopBtn.MouseEnter:Connect(function() stopBtn.BackgroundColor3 = Color3.fromRGB(210,80,80) end)
+			stopBtn.MouseLeave:Connect(function() stopBtn.BackgroundColor3 = Color3.fromRGB(180,60,60) end)
+
+			stopBtn.MouseButton1Click:Connect(function()
+				playClick()
+				pcall(function()
+					if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") or obj:IsA("BindableEvent") or obj:IsA("BindableFunction") then
+						obj:Destroy()
+					end
+				end)
+				item:Destroy()
+			end)
+		end
+		if #found == 0 then
+			local empty = Instance.new("TextLabel", resultsList)
+			empty.Size = UDim2.new(1,0,0,30); empty.BackgroundTransparency = 1
+			empty.Text = "No results found."; empty.TextColor3 = Color3.fromRGB(100,100,110)
+			empty.Font = Enum.Font.Gotham; empty.TextSize = 13
+		end
+	end
+
+	searchBtn.MouseButton1Click:Connect(function()
+		playClick()
+		refreshStopResults(searchBox.Text)
+	end)
+
+	-- Automatyczne wyszukiwanie przy pisaniu (opcjonalnie)
+	searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+		refreshStopResults(searchBox.Text)
+	end)
+
+	-- Inicjalnie załaduj wszystkie
+	task.spawn(function() refreshStopResults("") end)
+
+	-- Sub-tabs dla Resources (na razie tylko Stopper)
+	local selRes=nil
+	local function switchRes(n) stopP.Visible=(n=="Stopper") end
+	local function mkResB(n,o)
+		local btn=Instance.new("TextButton",resSubBar); btn.Size=UDim2.new(0,100,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0
+		btn.Text=n; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=14; btn.AutoButtonColor=false; btn.LayoutOrder=o
+		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
+		btn.MouseButton1Click:Connect(function()
+			playClick(); if selRes then selRes.btn.TextColor3=Color3.fromRGB(120,120,130); selRes.ul.Visible=false end
+			selRes={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchRes(n)
+		end); return {btn=btn,ul=ul}
+	end
+	local res1=mkResB("Stopper",1); selRes=res1; res1.btn.TextColor3=Color3.new(1,1,1); res1.ul.Visible=true
 end
 
 --============================================================
--- TABS + DRAG
+-- TABS + DRAG (zaktualizowana lista)
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
-local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"},{"Executor"}}
+local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"Resources"},{"AutoFarm"},{"Executor"}}
 local selTab = nil
 
 local function switchPage(name)
@@ -2382,6 +2528,7 @@ for i, tab in ipairs(tabsData) do
 	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
+-- reszta kodu GUI (minimalizacja, drag) identyczna jak poprzednio
 local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)
 local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 
