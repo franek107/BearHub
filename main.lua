@@ -1606,7 +1606,7 @@ do
 		ci.BackgroundColor3=colRef; ci.Text=""; ci.AutoButtonColor=false; ci.BorderSizePixel=0
 		Instance.new("UICorner",ci).CornerRadius=UDim.new(1,0); Instance.new("UIStroke",ci).Color=Color3.fromRGB(80,80,90)
 		ci.MouseButton1Click:Connect(function()
-			playClick(); openCP(ci.BackgroundColor3,function(nc)
+			playClick(); _G.BearHub_openCP(ci.BackgroundColor3,function(nc)
 				ci.BackgroundColor3=nc
 				if isSub then ESP[k].Color=nc else tbl[ck2]=nc end
 			end)
