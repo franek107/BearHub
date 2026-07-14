@@ -53,7 +53,6 @@ local AIMBOT = {
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 
--- 🔥 ZMIANA: Dodano RemoveJumpDelay
 local MISC = {
 	SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false,
 	SuperPunch = false,
@@ -683,7 +682,7 @@ local getPos = _G.BearHub_getPos
 local visCheck = _G.BearHub_visCheck
 
 --============================================================
--- TRIGGERBOT + AIMBOT + HITBOX
+-- TRIGGERBOT + AIMBOT + HITBOX (NAPRAWIONY)
 --============================================================
 do
 	local lastShot = 0
@@ -810,7 +809,10 @@ do
 		end
 	end)
 
-	local savedMS, savedMO, hitHL = {}, {}, {}
+	-- 🔥 Nowy, naprawiony system powiększania hitboxów
+	local originalSizes = {}
+	local hitHL = {}
+
 	local HBM = {
 		Head={R15={"Head"},R6={"Head"}},
 		Torso={R15={"UpperTorso","LowerTorso"},R6={"Torso"}},
@@ -827,44 +829,88 @@ do
 		end
 		return parts
 	end
-	local function findMesh(p) return p:FindFirstChildOfClass("SpecialMesh") or p:FindFirstChildOfClass("BlockMesh") or p:FindFirstChildOfClass("CylinderMesh") end
-	local function saveMD(p) local m = findMesh(p); if m and not savedMS[m] then savedMS[m] = m.Scale; if m:IsA("SpecialMesh") then savedMO[m] = m.Offset end end end
-	local function restoreM(p)
-		local m = findMesh(p)
-		if m and savedMS[m] then
-			pcall(function() m.Scale = savedMS[m]; if m:IsA("SpecialMesh") and savedMO[m] then m.Offset = savedMO[m] end end)
-			savedMS[m] = nil; savedMO[m] = nil
+
+	local function saveOriginal(p)
+		if not originalSizes[p] then
+			if p:IsA("MeshPart") then
+				originalSizes[p] = {type="MeshPart", scale=p.Scale}
+			else
+				originalSizes[p] = {type="Part", size=p.Size}
+			end
 		end
 	end
-	local function createHL(p)
-		if hitHL[p] and hitHL[p].Parent then return hitHL[p] end
-		local c = p.Parent; if not c then return nil end
-		local hn = "BearHub_HL" .. p.Name
-		local ex = c:FindFirstChild(hn); if ex then ex:Destroy() end
-		local s = Instance.new("SelectionSphere")
-		s.Name = hn; s.Adornee = p
-		s.Color3 = Color3.fromRGB(255,60,60); s.SurfaceColor3 = Color3.fromRGB(255,60,60)
-		s.SurfaceTransparency = 0.7; s.Transparency = 0.5; s.Parent = c
-		hitHL[p] = s; return s
+
+	local function restoreOriginal(p)
+		local data = originalSizes[p]
+		if not data then return end
+		pcall(function()
+			if data.type == "MeshPart" then
+				p.Scale = data.scale
+			else
+				p.Size = data.size
+			end
+		end)
+		originalSizes[p] = nil
 	end
-	local function removeHL(p) if hitHL[p] then pcall(function() hitHL[p]:Destroy() end); hitHL[p] = nil end end
+
 	local function expandP(p)
 		if not p or not p.Parent then return end
 		local sc = 1 + (HITBOX.Size * 0.15)
-		local m = findMesh(p)
-		if m then saveMD(p); pcall(function() m.Scale = savedMS[m] * sc end) end
-		createHL(p)
+		saveOriginal(p)
+		if p:IsA("MeshPart") then
+			pcall(function()
+				local original = originalSizes[p].scale
+				p.Scale = original * sc
+			end)
+		else
+			pcall(function()
+				local original = originalSizes[p].size
+				p.Size = original * sc
+			end)
+		end
+		-- znacznik wizualny (kula)
+		if not hitHL[p] or not hitHL[p].Parent then
+			local c = p.Parent
+			if c then
+				local hn = "BearHub_HL" .. p.Name
+				local ex = c:FindFirstChild(hn); if ex then ex:Destroy() end
+				local s = Instance.new("SelectionSphere")
+				s.Name = hn; s.Adornee = p
+				s.Color3 = Color3.fromRGB(255,60,60); s.SurfaceColor3 = Color3.fromRGB(255,60,60)
+				s.SurfaceTransparency = 0.7; s.Transparency = 0.5; s.Parent = c
+				hitHL[p] = s
+			end
+		end
 	end
-	local function restoreP(p) if not p or not p.Parent then return end; restoreM(p); removeHL(p) end
+
+	local function restoreP(p)
+		restoreOriginal(p)
+		if hitHL[p] then
+			pcall(function() hitHL[p]:Destroy() end)
+			hitHL[p] = nil
+		end
+	end
+
 	local function restoreAllC(c)
 		if not c then return end
-		for _, p in ipairs(c:GetChildren()) do if p:IsA("BasePart") then restoreP(p) end end
-		for _, ch in ipairs(c:GetChildren()) do if ch.Name:find("BearHub_HL") then pcall(function() ch:Destroy() end) end end
+		for _, p in ipairs(c:GetChildren()) do
+			if p:IsA("BasePart") then restoreP(p) end
+		end
+		for _, ch in ipairs(c:GetChildren()) do
+			if ch.Name:find("BearHub_HL") then pcall(function() ch:Destroy() end) end
+		end
 	end
+
 	local function cleanDead()
-		local tr = {}; for m in pairs(savedMS) do if not m or not m.Parent then table.insert(tr, m) end end
-		for _, m in ipairs(tr) do savedMS[m] = nil; savedMO[m] = nil end
-		local tr2 = {}; for p in pairs(hitHL) do if not p or not p.Parent then table.insert(tr2, p) end end
+		local tr = {}
+		for p in pairs(originalSizes) do
+			if not p or not p.Parent then table.insert(tr, p) end
+		end
+		for _, p in ipairs(tr) do originalSizes[p] = nil end
+		local tr2 = {}
+		for p in pairs(hitHL) do
+			if not p or not p.Parent then table.insert(tr2, p) end
+		end
 		for _, p in ipairs(tr2) do hitHL[p] = nil end
 	end
 
@@ -879,18 +925,26 @@ do
 				if c then
 					if HITBOX.Enabled and HITBOX.Size > 0 then
 						if bc then restoreAllC(c) end
-						local tp = getHBParts(c); local ts = {}
+						local tp = getHBParts(c)
+						local ts = {}
 						for _, p in ipairs(tp) do ts[p] = true end
+						-- przywracaj te, które nie powinny być powiększone
 						for _, p in ipairs(c:GetChildren()) do
-							if p:IsA("BasePart") and hitHL[p] and not ts[p] then restoreP(p) end
+							if p:IsA("BasePart") and originalSizes[p] and not ts[p] then
+								restoreP(p)
+							end
 						end
+						-- powiększ potrzebne
 						for _, p in ipairs(tp) do pcall(function() expandP(p) end) end
-					else if ec then restoreAllC(c) end end
+					else
+						if ec then restoreAllC(c) end
+					end
 				end
 			end
 		end
 		cleanDead()
 	end)
+
 	Players.PlayerAdded:Connect(function(p)
 		p.CharacterAdded:Connect(function() task.wait(1); cleanDead() end)
 		p.CharacterRemoving:Connect(function() if p.Character then restoreAllC(p.Character) end end)
@@ -1085,7 +1139,7 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
 
-	-- 🔥 NAPRAWIONY Rapid Fire (mnożnik 1–100, opóźnienie znika wraz ze wzrostem wartości)
+	-- 🔥 NAPRAWIONY Rapid Fire
 	local hookedTools = {}
 	local function hookTool(tool)
 		if not tool or not tool:IsA("Tool") or hookedTools[tool] then return end
@@ -1151,13 +1205,12 @@ do
 		end
 	end)
 
-	-- Rapid Fire Auto‑Clicker (opóźnienie maleje wraz z mnożnikiem)
+	-- Rapid Fire Auto‑Clicker
 	task.spawn(function()
 		while true do
 			if PANIC_TRIGGERED then break end
 			if MISC.RapidFire and mbHeld[1] then
 				local mult = MISC.RapidFireMultiplier or 20
-				-- Opóźnienie: od 0.05 s (mult=1) do praktycznie 0.001 s (mult=100)
 				local delay = math.max(0.001, 0.05 * (1 - mult/100))
 				if not isMouseOverGui() then
 					pcall(function()
@@ -1686,51 +1739,6 @@ do
 		end)
 	end
 
-	-- SPECIAL KEYBIND FOR CLICK TELEPORT (no enable checkbox, just key selector)
-	local function mkClickTeleportKeybind(p, o)
-		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,30); h.BackgroundTransparency=1; h.LayoutOrder=o or 0
-		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,-130,1,0); lb.Position=UDim2.new(0,5,0,0)
-		lb.BackgroundTransparency=1; lb.Text="Teleport Key (hold + LMB)"; lb.TextColor3=Color3.fromRGB(200,200,210)
-		lb.Font=Enum.Font.Gotham; lb.TextSize=12; lb.TextXAlignment=Enum.TextXAlignment.Left
-		local keyBtn=Instance.new("TextButton",h); keyBtn.Size=UDim2.new(0,110,0,24); keyBtn.Position=UDim2.new(1,-115,0.5,-12)
-		keyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); keyBtn.BorderSizePixel=0; keyBtn.Text=EXPLOITS.ClickTeleportKeyName
-		keyBtn.TextColor3=Color3.fromRGB(180,180,190); keyBtn.Font=Enum.Font.GothamBold; keyBtn.TextSize=11
-		keyBtn.AutoButtonColor=false; Instance.new("UICorner",keyBtn).CornerRadius=UDim.new(0,5)
-		local to=#BIND_OPTIONS+1
-		local ddF=Instance.new("Frame",h); ddF.Size=UDim2.new(0,170,0,math.min(to,8)*28); ddF.Position=UDim2.new(1,-175,1,2)
-		ddF.BackgroundColor3=Color3.fromRGB(30,30,38); ddF.BorderSizePixel=0; ddF.Visible=false
-		ddF.ZIndex=200; ddF.ClipsDescendants=true; Instance.new("UICorner",ddF).CornerRadius=UDim.new(0,6)
-		Instance.new("UIStroke",ddF).Color=PURPLE
-		local ddS=Instance.new("ScrollingFrame",ddF); ddS.Size=UDim2.new(1,0,1,0); ddS.BackgroundTransparency=1
-		ddS.ScrollBarThickness=3; ddS.ScrollBarImageColor3=PURPLE; ddS.CanvasSize=UDim2.new(0,0,0,to*28)
-		ddS.ZIndex=201; Instance.new("UIListLayout",ddS)
-		local nb=Instance.new("TextButton",ddS); nb.Size=UDim2.new(1,0,0,28); nb.BackgroundColor3=Color3.fromRGB(30,30,38)
-		nb.Text=" NONE"; nb.TextColor3=Color3.fromRGB(150,150,160); nb.Font=Enum.Font.Gotham; nb.TextSize=12
-		nb.TextXAlignment=Enum.TextXAlignment.Left; nb.AutoButtonColor=false; nb.ZIndex=202; nb.BorderSizePixel=0; nb.LayoutOrder=0
-		nb.MouseEnter:Connect(function() nb.BackgroundColor3=Color3.fromRGB(50,50,65) end)
-		nb.MouseLeave:Connect(function() nb.BackgroundColor3=Color3.fromRGB(30,30,38) end)
-		nb.MouseButton1Click:Connect(function()
-			playClick(); EXPLOITS.ClickTeleportKeyName="NONE"; EXPLOITS.ClickTeleportKeyCheck=nil
-			keyBtn.Text="NONE"; ddF.Visible=false
-		end)
-		for i,opt in ipairs(BIND_OPTIONS) do
-			local name=opt[1]; local cfn=opt[2]
-			local ob=Instance.new("TextButton",ddS); ob.Size=UDim2.new(1,0,0,28); ob.BackgroundColor3=Color3.fromRGB(30,30,38)
-			ob.Text=" "..name; ob.TextColor3=Color3.fromRGB(180,180,190); ob.Font=Enum.Font.Gotham; ob.TextSize=12
-			ob.TextXAlignment=Enum.TextXAlignment.Left; ob.AutoButtonColor=false; ob.ZIndex=202; ob.BorderSizePixel=0; ob.LayoutOrder=i
-			ob.MouseEnter:Connect(function() ob.BackgroundColor3=Color3.fromRGB(50,50,65) end)
-			ob.MouseLeave:Connect(function() ob.BackgroundColor3=Color3.fromRGB(30,30,38) end)
-			ob.MouseButton1Click:Connect(function()
-				playClick(); EXPLOITS.ClickTeleportKeyName=name; EXPLOITS.ClickTeleportKeyCheck=cfn
-				keyBtn.Text=name; ddF.Visible=false
-			end)
-		end
-		local ddO=false
-		keyBtn.MouseButton1Click:Connect(function() playClick(); ddO=not ddO; ddF.Visible=ddO end)
-		_G.BearHub_mkClickTpKeybind = mkClickTeleportKeybind
-	end
-	_G.BearHub_mkClickTpKeybind = mkClickTeleportKeybind
-
 	mkButton = function(p,t,cb,o,cc)
 		local btn=Instance.new("TextButton",p); btn.Size=UDim2.new(1,-10,0,36)
 		btn.BackgroundColor3=cc or PURPLE; btn.BorderSizePixel=0; btn.Text=t
@@ -1854,7 +1862,7 @@ do
 
 	-- Movement sub-page
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
-	local mvPanel=mkPanel(mmvP,0.6,480,0,5)  -- zwiększona wysokość dla nowej opcji
+	local mvPanel=mkPanel(mmvP,0.6,480,0,5)
 	mkSection(mvPanel,"Movement",1)
 	mkCheck(mvPanel,"NoClip (Fly + No Collision)",MISC,"NoClip",2)
 	mkSlider(mvPanel,"NoClip Fly Speed",1,100,30," m/s",MISC,"NoClipSpeed",3)
@@ -1864,7 +1872,6 @@ do
 	mkSlider(mvPanel,"Jump Power Value",1,500,50," m",MISC,"JumpPower",7)
 	mkCheck(mvPanel,"Enable SpinBot",MISC,"SpinBot",8)
 	mkSlider(mvPanel,"Spin Speed",1,100,50,"",MISC,"SpinBotSpeed",9)
-	-- 🔥 NOWA OPCJA: Remove Jump Delay
 	mkCheck(mvPanel,"Remove Jump Delay",MISC,"RemoveJumpDelay",10)
 
 	-- RapidFire sub-page
@@ -2262,13 +2269,87 @@ do
 
 	local afP=createPage("AutoFarm")
 	local afL=Instance.new("TextLabel",afP); afL.Size=UDim2.new(1,-20,0,40); afL.Position=UDim2.new(0,10,0,10); afL.BackgroundTransparency=1; afL.Text="AutoFarm - Coming Soon"; afL.TextColor3=Color3.fromRGB(100,100,110); afL.Font=Enum.Font.Gotham; afL.TextSize=16
+
+	-- ====== EXECUTOR PAGE ======
+	local execP=createPage("Executor")
+	local execPanel=mkPanel(execP,1,400,0,5)
+	mkSection(execPanel,"Lua Executor",1)
+
+	local scriptBox = Instance.new("TextBox", execPanel)
+	scriptBox.Size = UDim2.new(1,-20,0,200); scriptBox.Position = UDim2.new(0,10,0,40)
+	scriptBox.BackgroundColor3 = Color3.fromRGB(30,30,38); scriptBox.BorderSizePixel = 0
+	scriptBox.Text = ""; scriptBox.TextColor3 = Color3.new(1,1,1)
+	scriptBox.Font = Enum.Font.Code; scriptBox.TextSize = 14
+	scriptBox.TextXAlignment = Enum.TextXAlignment.Left; scriptBox.TextYAlignment = Enum.TextYAlignment.Top
+	scriptBox.ClearTextOnFocus = false; scriptBox.MultiLine = true
+	Instance.new("UICorner", scriptBox).CornerRadius = UDim.new(0,6)
+	scriptBox.LayoutOrder = 2
+
+	local btnFrame = Instance.new("Frame", execPanel)
+	btnFrame.Size = UDim2.new(1,-20,0,40); btnFrame.BackgroundTransparency = 1; btnFrame.LayoutOrder = 3
+	local btnLayout = Instance.new("UIListLayout", btnFrame); btnLayout.FillDirection = Enum.FillDirection.Horizontal; btnLayout.Padding = UDim.new(0,10)
+
+	local execBtn = Instance.new("TextButton", btnFrame)
+	execBtn.Size = UDim2.new(0,120,0,36); execBtn.BackgroundColor3 = Color3.fromRGB(60,140,220); execBtn.BorderSizePixel = 0
+	execBtn.Text = "Execute"; execBtn.TextColor3 = Color3.new(1,1,1); execBtn.Font = Enum.Font.GothamBold; execBtn.TextSize = 14
+	execBtn.AutoButtonColor = false; Instance.new("UICorner", execBtn).CornerRadius = UDim.new(0,6)
+
+	local clearBtn = Instance.new("TextButton", btnFrame)
+	clearBtn.Size = UDim2.new(0,100,0,36); clearBtn.BackgroundColor3 = Color3.fromRGB(180,60,60); clearBtn.BorderSizePixel = 0
+	clearBtn.Text = "Clear"; clearBtn.TextColor3 = Color3.new(1,1,1); clearBtn.Font = Enum.Font.GothamBold; clearBtn.TextSize = 14
+	clearBtn.AutoButtonColor = false; Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0,6)
+
+	local statusLabel = Instance.new("TextLabel", execPanel)
+	statusLabel.Size = UDim2.new(1,-20,0,20); statusLabel.BackgroundTransparency = 1
+	statusLabel.Text = ""; statusLabel.TextColor3 = Color3.new(1,1,1); statusLabel.Font = Enum.Font.Gotham; statusLabel.TextSize = 13; statusLabel.LayoutOrder = 4
+
+	execBtn.MouseEnter:Connect(function() execBtn.BackgroundColor3 = Color3.fromRGB(80,160,240) end)
+	execBtn.MouseLeave:Connect(function() execBtn.BackgroundColor3 = Color3.fromRGB(60,140,220) end)
+	clearBtn.MouseEnter:Connect(function() clearBtn.BackgroundColor3 = Color3.fromRGB(210,80,80) end)
+	clearBtn.MouseLeave:Connect(function() clearBtn.BackgroundColor3 = Color3.fromRGB(180,60,60) end)
+
+	clearBtn.MouseButton1Click:Connect(function()
+		playClick()
+		scriptBox.Text = ""
+		statusLabel.Text = ""
+	end)
+
+	execBtn.MouseButton1Click:Connect(function()
+		playClick()
+		local code = scriptBox.Text
+		if code == "" then
+			statusLabel.Text = "No script entered."
+			statusLabel.TextColor3 = Color3.fromRGB(255,200,100)
+			return
+		end
+		local success, err = pcall(function()
+			local f, loadErr = loadstring(code)
+			if not f then
+				error("Compilation error: " .. tostring(loadErr))
+			end
+			f()
+		end)
+		if success then
+			statusLabel.Text = "Script executed successfully."
+			statusLabel.TextColor3 = Color3.fromRGB(100,200,100)
+		else
+			statusLabel.Text = "Error: " .. tostring(err)
+			statusLabel.TextColor3 = Color3.fromRGB(255,100,100)
+		end
+		task.spawn(function()
+			task.wait(5)
+			if statusLabel.Text == "Script executed successfully." or statusLabel.Text:find("Error:") then
+				statusLabel.Text = ""
+			end
+		end)
+	end)
 end
 
 --============================================================
 -- TABS + DRAG
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
-local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"}}
+local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"},{"Executor"}}
 local selTab = nil
 
 local function switchPage(name)
