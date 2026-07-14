@@ -1780,7 +1780,7 @@ do
 	mkCheckColor(vR,"Head Dot",nil,"HeadDot",nil,10)
 
 	-- AIM PAGE
-	local aimP=createPage("AimAssistance")
+	local aimP=createPage("Combat")
 	local subBar=Instance.new("Frame",aimP); subBar.Size=UDim2.new(1,-20,0,30); subBar.Position=UDim2.new(0,10,0,0); subBar.BackgroundTransparency=1
 	local sbl=Instance.new("UIListLayout",subBar); sbl.FillDirection=Enum.FillDirection.Horizontal; sbl.Padding=UDim.new(0,15)
 	local subPF=Instance.new("Frame",aimP); subPF.Size=UDim2.new(1,0,1,-40); subPF.Position=UDim2.new(0,0,0,38); subPF.BackgroundTransparency=1
@@ -2268,7 +2268,167 @@ end
 -- TABS + DRAG
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
-local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"}}
+-- ============================================================
+-- EXECUTOR PAGE
+-- ============================================================
+local exeP = createPage("Executor")
+
+local exePanel = Instance.new("Frame", exeP)
+exePanel.Size = UDim2.new(1, -20, 1, -20)
+exePanel.Position = UDim2.new(0, 10, 0, 10)
+exePanel.BackgroundColor3 = DARK
+exePanel.BorderSizePixel = 0
+Instance.new("UICorner", exePanel).CornerRadius = UDim.new(0, 8)
+
+local exeTitle = Instance.new("TextLabel", exePanel)
+exeTitle.Size = UDim2.new(1, -20, 0, 30)
+exeTitle.Position = UDim2.new(0, 10, 0, 8)
+exeTitle.BackgroundTransparency = 1
+exeTitle.Text = "Lua Executor"
+exeTitle.TextColor3 = Color3.fromRGB(200, 200, 210)
+exeTitle.Font = Enum.Font.GothamBold
+exeTitle.TextSize = 16
+exeTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local codeScroll = Instance.new("ScrollingFrame", exePanel)
+codeScroll.Size = UDim2.new(1, -20, 1, -110)
+codeScroll.Position = UDim2.new(0, 10, 0, 45)
+codeScroll.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+codeScroll.BorderSizePixel = 0
+codeScroll.ScrollBarThickness = 5
+codeScroll.ScrollBarImageColor3 = PURPLE
+codeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+Instance.new("UICorner", codeScroll).CornerRadius = UDim.new(0, 6)
+
+local canvasFrame = Instance.new("Frame", codeScroll)
+canvasFrame.Size = UDim2.new(1, 0, 0, 0)
+canvasFrame.BackgroundTransparency = 1
+
+local lineNums = Instance.new("TextLabel", canvasFrame)
+lineNums.Size = UDim2.new(0, 45, 1, 0)
+lineNums.Position = UDim2.new(0, 0, 0, 0)
+lineNums.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+lineNums.BorderSizePixel = 0
+lineNums.Font = Enum.Font.Code
+lineNums.TextSize = 14
+lineNums.TextColor3 = Color3.fromRGB(120, 120, 130)
+lineNums.TextXAlignment = Enum.TextXAlignment.Right
+lineNums.TextYAlignment = Enum.TextYAlignment.Top
+lineNums.Text = "1"
+lineNums.RichText = false
+Instance.new("UICorner", lineNums).CornerRadius = UDim.new(0, 4)
+
+local codeBox = Instance.new("TextBox", canvasFrame)
+codeBox.Size = UDim2.new(1, -50, 1, 0)
+codeBox.Position = UDim2.new(0, 50, 0, 0)
+codeBox.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+codeBox.BorderSizePixel = 0
+codeBox.Font = Enum.Font.Code
+codeBox.TextSize = 14
+codeBox.TextColor3 = Color3.new(1, 1, 1)
+codeBox.TextXAlignment = Enum.TextXAlignment.Left
+codeBox.TextYAlignment = Enum.TextYAlignment.Top
+codeBox.ClearTextOnFocus = false
+codeBox.MultiLine = true
+codeBox.TextWrapped = false
+codeBox.Text = ""
+codeBox.RichText = false
+Instance.new("UICorner", codeBox).CornerRadius = UDim.new(0, 4)
+
+local function updateLineNumbers()
+	local text = codeBox.Text
+	local lineCount = 1
+	if text ~= "" then
+		lineCount = select(2, text:gsub("\n", "\n")) + 1
+	end
+	local nums = {}
+	for i = 1, lineCount do
+		nums[i] = tostring(i)
+	end
+	lineNums.Text = table.concat(nums, "\n")
+	local lineHeight = 20
+	local totalHeight = math.max(lineCount, 1) * lineHeight + 10
+	canvasFrame.Size = UDim2.new(1, 0, 0, totalHeight)
+	codeScroll.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+end
+
+codeBox:GetPropertyChangedSignal("Text"):Connect(updateLineNumbers)
+updateLineNumbers()
+
+local btnFrame = Instance.new("Frame", exePanel)
+btnFrame.Size = UDim2.new(1, -20, 0, 36)
+btnFrame.Position = UDim2.new(0, 10, 1, -45)
+btnFrame.BackgroundTransparency = 1
+
+local executeBtn = Instance.new("TextButton", btnFrame)
+executeBtn.Size = UDim2.new(0, 100, 1, 0)
+executeBtn.Position = UDim2.new(1, -220, 0, 0)
+executeBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220)
+executeBtn.BorderSizePixel = 0
+executeBtn.Text = "Execute"
+executeBtn.TextColor3 = Color3.new(1, 1, 1)
+executeBtn.Font = Enum.Font.GothamBold
+executeBtn.TextSize = 13
+executeBtn.AutoButtonColor = false
+Instance.new("UICorner", executeBtn).CornerRadius = UDim.new(0, 6)
+
+local clearBtn = Instance.new("TextButton", btnFrame)
+clearBtn.Size = UDim2.new(0, 100, 1, 0)
+clearBtn.Position = UDim2.new(1, -110, 0, 0)
+clearBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+clearBtn.BorderSizePixel = 0
+clearBtn.Text = "Clear"
+clearBtn.TextColor3 = Color3.new(1, 1, 1)
+clearBtn.Font = Enum.Font.GothamBold
+clearBtn.TextSize = 13
+clearBtn.AutoButtonColor = false
+Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 6)
+
+local statusLabel = Instance.new("TextLabel", btnFrame)
+statusLabel.Size = UDim2.new(1, -250, 1, 0)
+statusLabel.Position = UDim2.new(0, 5, 0, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = ""
+statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 12
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+executeBtn.MouseEnter:Connect(function() executeBtn.BackgroundColor3 = Color3.fromRGB(80, 160, 240) end)
+executeBtn.MouseLeave:Connect(function() executeBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220) end)
+executeBtn.MouseButton1Click:Connect(function()
+	playClick()
+	local code = codeBox.Text
+	if code:match("^%s*$") then
+		statusLabel.Text = "No code to execute"
+		statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+		return
+	end
+	local fn, err = loadstring(code)
+	if not fn then
+		statusLabel.Text = "Error: " .. tostring(err)
+		statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+		return
+	end
+	local success, result = pcall(fn)
+	if success then
+		statusLabel.Text = "Executed successfully" .. (result ~= nil and " | Output: " .. tostring(result) or "")
+		statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
+	else
+		statusLabel.Text = "Error: " .. tostring(result)
+		statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+	end
+end)
+
+clearBtn.MouseEnter:Connect(function() clearBtn.BackgroundColor3 = Color3.fromRGB(230, 80, 80) end)
+clearBtn.MouseLeave:Connect(function() clearBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60) end)
+clearBtn.MouseButton1Click:Connect(function()
+	playClick()
+	codeBox.Text = ""
+	statusLabel.Text = ""
+end)
+
+local tabsData = {{"Combat"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"},{"Executor"}}
 local selTab = nil
 
 local function switchPage(name)
