@@ -809,7 +809,7 @@ do
 		end
 	end)
 
-	-- 🔥 Nowy, naprawiony system powiększania hitboxów
+	-- Nowy, naprawiony system powiększania hitboxów
 	local originalSizes = {}
 	local hitHL = {}
 
@@ -1556,11 +1556,12 @@ do
 			cH = math.clamp((x-hueBar.AbsolutePosition.X)/hueBar.AbsoluteSize.X,0,1); updCP()
 		end
 	end
+	openCP = _G.BearHub_openCP
 end
 openCP = _G.BearHub_openCP
 
 --============================================================
--- GUI HELPERS
+-- GUI HELPERS (POPRAWIONE)
 --============================================================
 _G.BearHub_allSliders = {}; _G.BearHub_tabPages = {}
 local mkSection, mkCheck, mkCheckColor, mkSlider, mkDropdown, mkKeybind, mkButton, createPage
@@ -1761,7 +1762,7 @@ do
 end
 
 --============================================================
--- PAGES
+-- PAGES (wszystkie zakładki - pełna zawartość z poprzedniej wersji, włącznie z Executorem i Resources/Stopper)
 --============================================================
 do
 	local function mkPanel(parent, w, h2, xPos, yPos)
@@ -1888,7 +1889,7 @@ do
 	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
 	mkSlider(fcPanel,"FreeCam Speed",1,200,30," m/s",MISC,"FreeCamSpeed",3)
 
-	-- FREECAM HUD (skopiowany z poprzedniej wersji)
+	-- FreeCam HUD (skopiowane z poprzedniej wersji)
 	local freecamActive = false
 	local oldMouseBehavior = Enum.MouseBehavior.Default
 	local oldMouseIconEnabled = true
@@ -2040,7 +2041,7 @@ do
 	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
 	selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
-	-- PLAYERS PAGE (bez zmian)
+	-- PLAYERS PAGE
 	local plP=createPage("Players")
 	local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8)
 	local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=Color3.fromRGB(160,160,170); plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
@@ -2107,7 +2108,7 @@ do
 	plSW.MouseEnter:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(240,170,70) end); plSW.MouseLeave:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(220,150,50) end)
 	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and Color3.fromRGB(255,180,80) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 
-	-- EXPLOITS PAGE (bez zmian)
+	-- EXPLOITS PAGE (skopiowane)
 	local exP=createPage("Exploits")
 	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
 	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,15)
@@ -2117,11 +2118,9 @@ do
 	local exTwP=Instance.new("Frame",exSubPF); exTwP.Size=UDim2.new(1,0,1,0); exTwP.BackgroundTransparency=1; exTwP.Visible=true
 	local twPanel=mkPanel(exTwP,0.7,200,0,5)
 	mkSection(twPanel,"Teleport Walk",1)
-
 	local twInfoLbl=Instance.new("TextLabel",twPanel); twInfoLbl.Size=UDim2.new(1,-10,0,32); twInfoLbl.BackgroundTransparency=1
 	twInfoLbl.TextWrapped=true; twInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
 	twInfoLbl.Text="Teleports you forward each frame instead of walking. Harder to detect than WalkSpeed. Use WASD to move."; twInfoLbl.Font=Enum.Font.Gotham; twInfoLbl.TextSize=11; twInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; twInfoLbl.LayoutOrder=2
-
 	mkCheck(twPanel,"Enable Teleport Walk",EXPLOITS,"TeleportWalk",3)
 	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,nil,true)
 
@@ -2129,24 +2128,19 @@ do
 	local exCtP=Instance.new("Frame",exSubPF); exCtP.Size=UDim2.new(1,0,1,0); exCtP.BackgroundTransparency=1; exCtP.Visible=false
 	local ctPanel=mkPanel(exCtP,0.7,220,0,5)
 	mkSection(ctPanel,"Click Teleport",1)
-
 	local ctInfoLbl=Instance.new("TextLabel",ctPanel); ctInfoLbl.Size=UDim2.new(1,-10,0,32); ctInfoLbl.BackgroundTransparency=1
 	ctInfoLbl.TextWrapped=true; ctInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
 	ctInfoLbl.Text="Hold your chosen key and click LMB anywhere to teleport there. Select a key from the dropdown below."; ctInfoLbl.Font=Enum.Font.Gotham; ctInfoLbl.TextSize=11; ctInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ctInfoLbl.LayoutOrder=2
-
 	mkCheck(ctPanel,"Enable Click Teleport",EXPLOITS,"ClickTeleport",3)
-
 	-- Click teleport keybind selector
 	local ctKH=Instance.new("Frame",ctPanel); ctKH.Size=UDim2.new(1,0,0,30); ctKH.BackgroundTransparency=1; ctKH.LayoutOrder=4
 	local ctKLbl=Instance.new("TextLabel",ctKH); ctKLbl.Size=UDim2.new(1,-130,1,0); ctKLbl.Position=UDim2.new(0,5,0,0)
 	ctKLbl.BackgroundTransparency=1; ctKLbl.Text="Teleport Key (hold + LMB)"; ctKLbl.TextColor3=Color3.fromRGB(200,200,210)
 	ctKLbl.Font=Enum.Font.Gotham; ctKLbl.TextSize=12; ctKLbl.TextXAlignment=Enum.TextXAlignment.Left
-
 	local ctKeyBtn=Instance.new("TextButton",ctKH); ctKeyBtn.Size=UDim2.new(0,110,0,24); ctKeyBtn.Position=UDim2.new(1,-115,0.5,-12)
 	ctKeyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); ctKeyBtn.BorderSizePixel=0; ctKeyBtn.Text=EXPLOITS.ClickTeleportKeyName
 	ctKeyBtn.TextColor3=Color3.fromRGB(180,180,190); ctKeyBtn.Font=Enum.Font.GothamBold; ctKeyBtn.TextSize=11
 	ctKeyBtn.AutoButtonColor=false; Instance.new("UICorner",ctKeyBtn).CornerRadius=UDim.new(0,5)
-
 	local BIND_OPTIONS_CT = {
 		{"LPM (MB1)",function() return mbHeld[1] end},
 		{"PPM (MB2)",function() return mbHeld[2] end},
@@ -2155,7 +2149,6 @@ do
 	}
 	local KB2={Enum.KeyCode.E,Enum.KeyCode.F,Enum.KeyCode.G,Enum.KeyCode.H,Enum.KeyCode.Q,Enum.KeyCode.R,Enum.KeyCode.T,Enum.KeyCode.X,Enum.KeyCode.Z,Enum.KeyCode.C,Enum.KeyCode.V,Enum.KeyCode.B,Enum.KeyCode.CapsLock,Enum.KeyCode.LeftAlt,Enum.KeyCode.RightAlt,Enum.KeyCode.LeftControl,Enum.KeyCode.RightControl,Enum.KeyCode.LeftShift,Enum.KeyCode.F1,Enum.KeyCode.F2,Enum.KeyCode.F3,Enum.KeyCode.F4,Enum.KeyCode.F5,Enum.KeyCode.F6,Enum.KeyCode.F7,Enum.KeyCode.F8}
 	for _,kc in ipairs(KB2) do local kcc=kc; table.insert(BIND_OPTIONS_CT,{kc.Name,function() return UIS:IsKeyDown(kcc) end}) end
-
 	local ctTo=#BIND_OPTIONS_CT+1
 	local ctDdF=Instance.new("Frame",ctKH); ctDdF.Size=UDim2.new(0,170,0,math.min(ctTo,8)*28); ctDdF.Position=UDim2.new(1,-175,1,2)
 	ctDdF.BackgroundColor3=Color3.fromRGB(30,30,38); ctDdF.BorderSizePixel=0; ctDdF.Visible=false
@@ -2210,7 +2203,7 @@ do
 	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2); mkExB("AntiAFK","Anti-AFK",3)
 	selEx=ex1; ex1.btn.TextColor3=Color3.new(1,1,1); ex1.ul.Visible=true
 
-	-- SETTINGS PAGE (bez zmian)
+	-- SETTINGS PAGE (skopiowane)
 	local stP=createPage("Settings")
 	local stSubBar=Instance.new("Frame",stP); stSubBar.Size=UDim2.new(1,-20,0,30); stSubBar.Position=UDim2.new(0,10,0,0); stSubBar.BackgroundTransparency=1
 	local stSbl=Instance.new("UIListLayout",stSubBar); stSbl.FillDirection=Enum.FillDirection.Horizontal; stSbl.Padding=UDim.new(0,15)
@@ -2272,10 +2265,9 @@ do
 
 	-- ====== EXECUTOR PAGE (POPRAWIONY Z PRZEWIJANIEM) ======
 	local execP=createPage("Executor")
-	local execPanel=mkPanel(execP,1,420,0,5)  -- zwiększona wysokość
+	local execPanel=mkPanel(execP,1,420,0,5)
 	mkSection(execPanel,"Lua Executor",1)
 
-	-- Kontener z przewijaniem dla pola tekstowego
 	local scriptScroll = Instance.new("ScrollingFrame", execPanel)
 	scriptScroll.Size = UDim2.new(1,-20,0,220); scriptScroll.Position = UDim2.new(0,10,0,40)
 	scriptScroll.BackgroundColor3 = Color3.fromRGB(30,30,38); scriptScroll.BorderSizePixel = 0
@@ -2294,9 +2286,8 @@ do
 	scriptBox.TextXAlignment = Enum.TextXAlignment.Left; scriptBox.TextYAlignment = Enum.TextYAlignment.Top
 	scriptBox.ClearTextOnFocus = false; scriptBox.MultiLine = true
 	scriptBox.TextWrapped = true
-	scriptBox.AutomaticSize = Enum.AutomaticSize.Y  -- rośnie w dół
+	scriptBox.AutomaticSize = Enum.AutomaticSize.Y
 
-	-- Przy zmianie tekstu aktualizuj CanvasSize
 	scriptBox:GetPropertyChangedSignal("Text"):Connect(function()
 		scriptScroll.CanvasSize = UDim2.new(0,0,0,scriptBox.TextBounds.Y + 20)
 	end)
@@ -2366,10 +2357,7 @@ do
 	local resSbl=Instance.new("UIListLayout",resSubBar); resSbl.FillDirection=Enum.FillDirection.Horizontal; resSbl.Padding=UDim.new(0,15)
 	local resSubPF=Instance.new("Frame",resP); resSubPF.Size=UDim2.new(1,0,1,-40); resSubPF.Position=UDim2.new(0,0,0,38); resSubPF.BackgroundTransparency=1
 
-	-- Strona Stopper
 	local stopP=Instance.new("Frame",resSubPF); stopP.Size=UDim2.new(1,0,1,0); stopP.BackgroundTransparency=1; stopP.Visible=true
-
-	-- Panel wyszukiwania
 	local stopPanel=mkPanel(stopP,1,500,0,5)
 	mkSection(stopPanel,"Remote Stopper",1)
 
@@ -2399,26 +2387,30 @@ do
 	Instance.new("UICorner", resultsList).CornerRadius = UDim.new(0,6)
 	Instance.new("UIListLayout", resultsList).Padding = UDim.new(0,4)
 
+	-- pomocnicza funkcja zamiast table.find
+	local function table_find(tbl, value)
+		for _, v in ipairs(tbl) do
+			if v == value then return true end
+		end
+		return false
+	end
+
 	local function refreshStopResults(query)
-		-- Wyczyść poprzednie wyniki
 		for _, v in ipairs(resultsList:GetChildren()) do
 			if v:IsA("TextButton") or v:IsA("Frame") then v:Destroy() end
 		end
 		query = query and query:lower() or ""
 		local targets = {"RemoteEvent", "RemoteFunction", "BindableEvent", "BindableFunction"}
 		local found = {}
-		-- Przeszukaj ReplicatedStorage, workspace i inne serwisy
 		for _, service in ipairs({ReplicatedStorage, workspace, game:GetService("ServerScriptService"), game:GetService("ServerStorage")}) do
 			pcall(function()
 				for _, obj in ipairs(service:GetDescendants()) do
-					if table.find(targets, obj.ClassName) and (query == "" or obj.Name:lower():find(query)) then
+					if table_find(targets, obj.ClassName) and (query == "" or obj.Name:lower():find(query)) then
 						table.insert(found, obj)
 					end
 				end
 			end)
 		end
-		-- Dodaj także z innych miejsc jeśli potrzeba
-		-- Wyświetl wyniki
 		for _, obj in ipairs(found) do
 			local item = Instance.new("Frame", resultsList)
 			item.Size = UDim2.new(1,-10,0,36); item.BackgroundColor3 = Color3.fromRGB(30,30,38); item.BorderSizePixel = 0
@@ -2468,15 +2460,12 @@ do
 		refreshStopResults(searchBox.Text)
 	end)
 
-	-- Automatyczne wyszukiwanie przy pisaniu (opcjonalnie)
 	searchBox:GetPropertyChangedSignal("Text"):Connect(function()
 		refreshStopResults(searchBox.Text)
 	end)
 
-	-- Inicjalnie załaduj wszystkie
 	task.spawn(function() refreshStopResults("") end)
 
-	-- Sub-tabs dla Resources (na razie tylko Stopper)
 	local selRes=nil
 	local function switchRes(n) stopP.Visible=(n=="Stopper") end
 	local function mkResB(n,o)
@@ -2528,7 +2517,6 @@ for i, tab in ipairs(tabsData) do
 	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
--- reszta kodu GUI (minimalizacja, drag) identyczna jak poprzednio
 local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)
 local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 
