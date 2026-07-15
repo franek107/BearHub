@@ -1,3 +1,4 @@
+
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
@@ -1704,7 +1705,7 @@ do
 end
 
 --============================================================
--- PAGES
+-- PAGES (Aim, Visuals, Misc, Exploits, Players, Settings, AutoFarm, Executor)
 --============================================================
 do
 	local function mkPanel(parent, w, h2, xPos, yPos)
@@ -1771,29 +1772,27 @@ do
 	end
 	local s1=mkSB("TriggerBot",1); mkSB("Aimbot",2); mkSB("Hitbox",3); selSub=s1; s1.btn.TextColor3=Color3.new(1,1,1); s1.ul.Visible=true
 
-	-- MISC PAGE
+	-- MISC PAGE (Actions, Combat, Movement, RapidFire, FreeCam)
 	local miscP=createPage("Miscellaneous")
 	local mSubBar=Instance.new("Frame",miscP); mSubBar.Size=UDim2.new(1,-20,0,30); mSubBar.Position=UDim2.new(0,10,0,0); mSubBar.BackgroundTransparency=1
 	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
 	local mSubPF=Instance.new("Frame",miscP); mSubPF.Size=UDim2.new(1,0,1,-40); mSubPF.Position=UDim2.new(0,0,0,38); mSubPF.BackgroundTransparency=1
 
-	-- Actions sub-page
+	-- Actions
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
 	local qaPanel=mkPanel(mqaP,0.48,200,0,5)
 	mkSection(qaPanel,"Quick Actions",1)
 	mkButton(qaPanel,"Heal",healPlayer,2)
-
 	local copyStatusLabel=Instance.new("TextLabel",qaPanel); copyStatusLabel.Size=UDim2.new(1,-10,0,18); copyStatusLabel.BackgroundTransparency=1
 	copyStatusLabel.Text=""; copyStatusLabel.TextColor3=Color3.fromRGB(100,200,100); copyStatusLabel.Font=Enum.Font.GothamBold
 	copyStatusLabel.TextSize=11; copyStatusLabel.TextXAlignment=Enum.TextXAlignment.Center; copyStatusLabel.LayoutOrder=4
-
 	mkButton(qaPanel,"Copy Item (in hand)",function()
 		local ok,msg=copyItem()
 		copyStatusLabel.Text=msg; copyStatusLabel.TextColor3=ok and Color3.fromRGB(100,200,100) or Color3.fromRGB(255,100,100)
 		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
 	end,3,Color3.fromRGB(60,140,220))
 
-	-- Combat sub-page
+	-- Combat
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
 	local cbPanel=mkPanel(mcbP,0.48,290,0,5)
 	mkSection(cbPanel,"Combat Cheats",1)
@@ -1803,9 +1802,9 @@ do
 	mkCheck(cbPanel,"No Spread",MISC,"NoSpread",5)
 	mkCheck(cbPanel,"Infinity Ammo",MISC,"InfAmmo",6)
 
-	-- Movement sub-page
+	-- Movement
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
-	local mvPanel=mkPanel(mmvP,0.6,480,0,5)  -- increased height for new option
+	local mvPanel=mkPanel(mmvP,0.6,480,0,5)
 	mkSection(mvPanel,"Movement",1)
 	mkCheck(mvPanel,"NoClip (Fly + No Collision)",MISC,"NoClip",2)
 	mkSlider(mvPanel,"NoClip Fly Speed",1,100,30," m/s",MISC,"NoClipSpeed",3)
@@ -1817,21 +1816,21 @@ do
 	mkSlider(mvPanel,"Spin Speed",1,100,50,"",MISC,"SpinBotSpeed",9)
 	mkCheck(mvPanel,"Remove Jump Delay",MISC,"RemoveJumpDelay",10)
 
-	-- RapidFire sub-page
+	-- RapidFire
 	local mrfP=Instance.new("Frame",mSubPF); mrfP.Size=UDim2.new(1,0,1,0); mrfP.BackgroundTransparency=1; mrfP.Visible=false
 	local rfPanel=mkPanel(mrfP,0.48,200,0,5)
 	mkSection(rfPanel,"Rapid Fire",1)
 	mkCheck(rfPanel,"Enable Rapid Fire",MISC,"RapidFire",2)
 	mkSlider(rfPanel,"Multiplier",1,100,20,"x",MISC,"RapidFireMultiplier",3)
 
-	-- FreeCam sub-page
+	-- FreeCam
 	local mfcP=Instance.new("Frame",mSubPF); mfcP.Size=UDim2.new(1,0,1,0); mfcP.BackgroundTransparency=1; mfcP.Visible=false
 	local fcPanel=mkPanel(mfcP,0.6,200,0,5)
 	mkSection(fcPanel,"Free Camera",1)
 	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
 	mkSlider(fcPanel,"FreeCam Speed",1,200,30," m/s",MISC,"FreeCamSpeed",3)
 
-	-- FREECAM HUD (same as original but included for completeness)
+	-- FreeCam HUD (kept from original, unchanged but included for completeness)
 	local freecamActive = false
 	local oldMouseBehavior = Enum.MouseBehavior.Default
 	local oldMouseIconEnabled = true
@@ -1983,8 +1982,9 @@ do
 	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
 	selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
-	-- PLAYERS PAGE
+	-- PLAYERS PAGE (unchanged)
 	local plP=createPage("Players")
+	-- (cała zawartość Players z oryginału)
 	local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8)
 	local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=Color3.fromRGB(160,160,170); plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
 	local plCL=Instance.new("TextLabel",plLF); plCL.Size=UDim2.new(0,85,0,25); plCL.Position=UDim2.new(1,-90,0,5); plCL.BackgroundTransparency=1; plCL.Text="0 players"; plCL.TextColor3=Color3.fromRGB(150,150,160); plCL.Font=Enum.Font.Gotham; plCL.TextSize=12; plCL.TextXAlignment=Enum.TextXAlignment.Right
@@ -2050,7 +2050,7 @@ do
 	plSW.MouseEnter:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(240,170,70) end); plSW.MouseLeave:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(220,150,50) end)
 	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and Color3.fromRGB(255,180,80) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 
-	-- EXPLOITS PAGE
+	-- EXPLOITS PAGE (Tp Walk, Click Tp, AntiAFK)
 	local exP=createPage("Exploits")
 	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
 	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,15)
@@ -2073,7 +2073,6 @@ do
 	ctInfoLbl.Text="Hold your chosen key and click LMB anywhere to teleport there. Select a key from the dropdown below."; ctInfoLbl.Font=Enum.Font.Gotham; ctInfoLbl.TextSize=11; ctInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ctInfoLbl.LayoutOrder=2
 	mkCheck(ctPanel,"Enable Click Teleport",EXPLOITS,"ClickTeleport",3)
 
-	-- Click teleport keybind selector
 	local ctKH=Instance.new("Frame",ctPanel); ctKH.Size=UDim2.new(1,0,0,30); ctKH.BackgroundTransparency=1; ctKH.LayoutOrder=4
 	local ctKLbl=Instance.new("TextLabel",ctKH); ctKLbl.Size=UDim2.new(1,-130,1,0); ctKLbl.Position=UDim2.new(0,5,0,0)
 	ctKLbl.BackgroundTransparency=1; ctKLbl.Text="Teleport Key (hold + LMB)"; ctKLbl.TextColor3=Color3.fromRGB(200,200,210)
@@ -2207,7 +2206,7 @@ do
 end
 
 --============================================================
--- EXECUTOR PAGE (NEW)
+-- EXECUTOR PAGE (POPRAWIONY, BEZ BELKI, BEZ NAPISU "OUTPUT", ZE SCROLLEM)
 --============================================================
 do
 	local exeP = createPage("Executor")
@@ -2216,9 +2215,8 @@ do
 	splitContainer.Size = UDim2.new(1, -20, 1, -10)
 	splitContainer.Position = UDim2.new(0, 10, 0, 5)
 	splitContainer.BackgroundTransparency = 1
-	splitContainer.ClipsDescendants = false
 
-	-- Left panel (code editor)
+	-- Lewy panel (edytor kodu) – stała szerokość 70%
 	local leftPanel = Instance.new("Frame", splitContainer)
 	leftPanel.Size = UDim2.new(0.7, -5, 1, 0)
 	leftPanel.Position = UDim2.new(0, 0, 0, 0)
@@ -2226,9 +2224,30 @@ do
 	leftPanel.BorderSizePixel = 0
 	Instance.new("UICorner", leftPanel).CornerRadius = UDim.new(0, 8)
 
-	local lineNumbers = Instance.new("TextLabel", leftPanel)
-	lineNumbers.Size = UDim2.new(0, 30, 1, -10)
-	lineNumbers.Position = UDim2.new(0, 8, 0, 5)
+	-- ScrollingFrame obejmujący numery linii i pole tekstowe
+	local codeScroll = Instance.new("ScrollingFrame", leftPanel)
+	codeScroll.Size = UDim2.new(1, -4, 1, -4)
+	codeScroll.Position = UDim2.new(0, 2, 0, 2)
+	codeScroll.BackgroundTransparency = 1
+	codeScroll.ScrollBarThickness = 8
+	codeScroll.ScrollBarImageColor3 = PURPLE
+	codeScroll.CanvasSize = UDim2.new(0, 0, 0, 0) -- dynamicznie ustawione później
+	codeScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	codeScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+	codeScroll.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+
+	-- Kontener wewnątrz scrolla
+	local codeContainer = Instance.new("Frame", codeScroll)
+	codeContainer.Size = UDim2.new(1, 0, 0, 5000) -- wysoki, będzie się rozciągał
+	codeContainer.BackgroundTransparency = 1
+	codeContainer.AutomaticSize = Enum.AutomaticSize.Y
+	local containerLayout = Instance.new("UIListLayout", codeContainer)
+	containerLayout.FillDirection = Enum.FillDirection.Horizontal
+	containerLayout.Padding = UDim.new(0, 5)
+
+	-- Numery linii (osobny label)
+	local lineNumbers = Instance.new("TextLabel", codeContainer)
+	lineNumbers.Size = UDim2.new(0, 30, 1, 0)
 	lineNumbers.BackgroundTransparency = 1
 	lineNumbers.Text = "1"
 	lineNumbers.TextColor3 = Color3.fromRGB(120, 120, 130)
@@ -2236,10 +2255,11 @@ do
 	lineNumbers.TextSize = 14
 	lineNumbers.TextXAlignment = Enum.TextXAlignment.Right
 	lineNumbers.TextYAlignment = Enum.TextYAlignment.Top
+	lineNumbers.LayoutOrder = 0
 
-	local codeBox = Instance.new("TextBox", leftPanel)
-	codeBox.Size = UDim2.new(1, -50, 1, -10)
-	codeBox.Position = UDim2.new(0, 45, 0, 5)
+	-- Edytor kodu (TextBox)
+	local codeBox = Instance.new("TextBox", codeContainer)
+	codeBox.Size = UDim2.new(1, -40, 1, 0)  -- odejmujemy szerokość linii
 	codeBox.BackgroundTransparency = 1
 	codeBox.Text = ""
 	codeBox.TextColor3 = Color3.new(1,1,1)
@@ -2251,15 +2271,20 @@ do
 	codeBox.ClearTextOnFocus = false
 	codeBox.MultiLine = true
 	codeBox.TextWrapped = false
+	codeBox.LayoutOrder = 1
+	codeBox.AutomaticSize = Enum.AutomaticSize.Y
 
+	-- Aktualizacja numerów linii
 	codeBox:GetPropertyChangedSignal("Text"):Connect(function()
 		local lines = #codeBox.Text:split("\n")
 		local nums = {}
 		for i=1, lines do nums[i] = tostring(i) end
 		lineNumbers.Text = table.concat(nums, "\n")
+		-- Dopasowanie wysokości kontenera do tekstu
+		codeContainer.Size = UDim2.new(1, 0, 0, codeBox.TextBounds.Y + 20)
 	end)
 
-	-- Right panel (output)
+	-- Prawy panel (output)
 	local rightPanel = Instance.new("Frame", splitContainer)
 	rightPanel.Size = UDim2.new(0.3, -5, 1, 0)
 	rightPanel.Position = UDim2.new(0.7, 5, 0, 0)
@@ -2267,19 +2292,10 @@ do
 	rightPanel.BorderSizePixel = 0
 	Instance.new("UICorner", rightPanel).CornerRadius = UDim.new(0, 8)
 
-	local outputLabel = Instance.new("TextLabel", rightPanel)
-	outputLabel.Size = UDim2.new(1, -10, 0, 20)
-	outputLabel.Position = UDim2.new(0, 5, 0, 5)
-	outputLabel.BackgroundTransparency = 1
-	outputLabel.Text = "Output"
-	outputLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
-	outputLabel.Font = Enum.Font.GothamBold
-	outputLabel.TextSize = 14
-	outputLabel.TextXAlignment = Enum.TextXAlignment.Left
-
+	-- Brak napisu "Output" – bezpośrednio ScrollingFrame na output
 	local outputScroller = Instance.new("ScrollingFrame", rightPanel)
-	outputScroller.Size = UDim2.new(1, -10, 1, -40)
-	outputScroller.Position = UDim2.new(0, 5, 0, 30)
+	outputScroller.Size = UDim2.new(1, -10, 1, -10)
+	outputScroller.Position = UDim2.new(0, 5, 0, 5)
 	outputScroller.BackgroundTransparency = 1
 	outputScroller.ScrollBarThickness = 3
 	outputScroller.ScrollBarImageColor3 = PURPLE
@@ -2299,40 +2315,7 @@ do
 	outputText.TextWrapped = true
 	outputText.RichText = true
 
-	-- Draggable divider
-	local divider = Instance.new("Frame", splitContainer)
-	divider.Size = UDim2.new(0, 6, 1, 0)
-	divider.Position = UDim2.new(0.7, -3, 0, 0)
-	divider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-	divider.BorderSizePixel = 0
-	divider.Active = true
-	Instance.new("UICorner", divider).CornerRadius = UDim.new(0, 3)
-
-	local dividerDrag = false
-	divider.InputBegan:Connect(function(inp)
-		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-			dividerDrag = true
-		end
-	end)
-	UIS.InputChanged:Connect(function(inp)
-		if dividerDrag and inp.UserInputType == Enum.UserInputType.MouseMovement then
-			local mx = inp.Position.X
-			local totalW = splitContainer.AbsoluteSize.X
-			local relX = (mx - splitContainer.AbsolutePosition.X) / totalW
-			relX = math.clamp(relX, 0.3, 0.85)
-			leftPanel.Size = UDim2.new(relX - 0.005, -5, 1, 0)
-			rightPanel.Size = UDim2.new(1 - relX - 0.005, -5, 1, 0)
-			rightPanel.Position = UDim2.new(relX + 0.005, 5, 0, 0)
-			divider.Position = UDim2.new(relX, -3, 0, 0)
-		end
-	end)
-	UIS.InputEnded:Connect(function(inp)
-		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-			dividerDrag = false
-		end
-	end)
-
-	-- Execute button
+	-- Przycisk Execute
 	local execBtn = mkButton(rightPanel, "Execute", function()
 		local code = codeBox.Text
 		local outputLines = {}
@@ -2367,12 +2350,12 @@ do
 		outputText.Text = table.concat(outputLines, "\n")
 		outputScroller.CanvasSize = UDim2.new(0,0,0,outputText.TextBounds.Y + 20)
 	end, 1, Color3.fromRGB(100, 70, 200))
-	execBtn.Parent = rightPanel
 	execBtn.Size = UDim2.new(0, 80, 0, 28)
 	execBtn.Position = UDim2.new(1, -90, 0, 5)
 	execBtn.LayoutOrder = nil
+	execBtn.Parent = rightPanel
 
-	-- Clear button
+	-- Przycisk Clear
 	local clearBtn = mkButton(rightPanel, "Clear", function()
 		codeBox.Text = ""
 		outputText.Text = "> Ready"
@@ -2380,10 +2363,11 @@ do
 	clearBtn.Size = UDim2.new(0, 60, 0, 28)
 	clearBtn.Position = UDim2.new(1, -155, 0, 5)
 	clearBtn.LayoutOrder = nil
+	clearBtn.Parent = rightPanel
 end
 
 --============================================================
--- TABS + DRAG
+-- TABS + DRAG (usunięto cień)
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
 local tabsData = {
@@ -2532,23 +2516,6 @@ UIS.InputEnded:Connect(function(inp)
 			end
 		end
 	end
-end)
-
--- Drop shadow behind main window (visual improvement)
-local shadow = Instance.new("Frame", gui)
-shadow.Size = UDim2.new(1, 20, 1, 20)
-shadow.Position = UDim2.new(0.5, -390-10, 0.5, -265-10)  -- adjusted according to main's initial position
-shadow.BackgroundColor3 = Color3.fromRGB(0,0,0)
-shadow.BackgroundTransparency = 0.7
-shadow.BorderSizePixel = 0
-shadow.ZIndex = 0
-Instance.new("UICorner", shadow).CornerRadius = UDim.new(0, 12)
--- sync shadow with main
-main:GetPropertyChangedSignal("Position"):Connect(function()
-	shadow.Position = UDim2.new(main.Position.X.Scale, main.Position.X.Offset-5, main.Position.Y.Scale, main.Position.Y.Offset-5)
-end)
-main:GetPropertyChangedSignal("Size"):Connect(function()
-	shadow.Size = UDim2.new(main.Size.X.Scale, main.Size.X.Offset+10, main.Size.Y.Scale, main.Size.Y.Offset+10)
 end)
 
 --============================================================
