@@ -53,7 +53,6 @@ local AIMBOT = {
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 
--- 🔥 ZMIANA: Dodano RemoveJumpDelay
 local MISC = {
 	SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false,
 	SuperPunch = false,
@@ -435,7 +434,6 @@ do
 		}
 		for i = 1, 12 do d.skeleton[i] = makeLine(h) end
 
-		-- HEAD DOT
 		local headDot = Instance.new("Frame", h)
 		headDot.Size = UDim2.new(0, 8, 0, 8)
 		headDot.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -635,7 +633,6 @@ do
 										end
 									else for i = 1, 12 do if d.skeleton[i] then d.skeleton[i].Visible = false end end end
 
-									-- HEAD DOT
 									if ESP.HeadDot.Enabled then
 										local headPos, onScreen, depth = w2s(head.Position)
 										if onScreen and headPos and depth > 0 then
@@ -984,7 +981,7 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); lastWSEnabled = false; lastJPEnabled = false end)
 
-	-- 🌀 SpinBot
+	-- SpinBot
 	task.spawn(function()
 		while true do
 			RunService.RenderStepped:Wait()
@@ -1002,7 +999,7 @@ do
 		end
 	end)
 
-	-- 🔥 Remove Jump Delay
+	-- Remove Jump Delay
 	task.spawn(function()
 		while true do
 			RunService.RenderStepped:Wait()
@@ -1085,7 +1082,7 @@ do
 	end)
 	player.CharacterAdded:Connect(function() task.wait(0.5); stopFly() end)
 
-	-- 🔥 NAPRAWIONY Rapid Fire (mnożnik 1–100, opóźnienie znika wraz ze wzrostem wartości)
+	-- Rapid Fire + NoRecoil/NoSpread/InfAmmo
 	local hookedTools = {}
 	local function hookTool(tool)
 		if not tool or not tool:IsA("Tool") or hookedTools[tool] then return end
@@ -1151,13 +1148,12 @@ do
 		end
 	end)
 
-	-- Rapid Fire Auto‑Clicker (opóźnienie maleje wraz z mnożnikiem)
+	-- Rapid Fire Auto-Clicker
 	task.spawn(function()
 		while true do
 			if PANIC_TRIGGERED then break end
 			if MISC.RapidFire and mbHeld[1] then
 				local mult = MISC.RapidFireMultiplier or 20
-				-- Opóźnienie: od 0.05 s (mult=1) do praktycznie 0.001 s (mult=100)
 				local delay = math.max(0.001, 0.05 * (1 - mult/100))
 				if not isMouseOverGui() then
 					pcall(function()
@@ -1686,51 +1682,6 @@ do
 		end)
 	end
 
-	-- SPECIAL KEYBIND FOR CLICK TELEPORT (no enable checkbox, just key selector)
-	local function mkClickTeleportKeybind(p, o)
-		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,30); h.BackgroundTransparency=1; h.LayoutOrder=o or 0
-		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,-130,1,0); lb.Position=UDim2.new(0,5,0,0)
-		lb.BackgroundTransparency=1; lb.Text="Teleport Key (hold + LMB)"; lb.TextColor3=Color3.fromRGB(200,200,210)
-		lb.Font=Enum.Font.Gotham; lb.TextSize=12; lb.TextXAlignment=Enum.TextXAlignment.Left
-		local keyBtn=Instance.new("TextButton",h); keyBtn.Size=UDim2.new(0,110,0,24); keyBtn.Position=UDim2.new(1,-115,0.5,-12)
-		keyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); keyBtn.BorderSizePixel=0; keyBtn.Text=EXPLOITS.ClickTeleportKeyName
-		keyBtn.TextColor3=Color3.fromRGB(180,180,190); keyBtn.Font=Enum.Font.GothamBold; keyBtn.TextSize=11
-		keyBtn.AutoButtonColor=false; Instance.new("UICorner",keyBtn).CornerRadius=UDim.new(0,5)
-		local to=#BIND_OPTIONS+1
-		local ddF=Instance.new("Frame",h); ddF.Size=UDim2.new(0,170,0,math.min(to,8)*28); ddF.Position=UDim2.new(1,-175,1,2)
-		ddF.BackgroundColor3=Color3.fromRGB(30,30,38); ddF.BorderSizePixel=0; ddF.Visible=false
-		ddF.ZIndex=200; ddF.ClipsDescendants=true; Instance.new("UICorner",ddF).CornerRadius=UDim.new(0,6)
-		Instance.new("UIStroke",ddF).Color=PURPLE
-		local ddS=Instance.new("ScrollingFrame",ddF); ddS.Size=UDim2.new(1,0,1,0); ddS.BackgroundTransparency=1
-		ddS.ScrollBarThickness=3; ddS.ScrollBarImageColor3=PURPLE; ddS.CanvasSize=UDim2.new(0,0,0,to*28)
-		ddS.ZIndex=201; Instance.new("UIListLayout",ddS)
-		local nb=Instance.new("TextButton",ddS); nb.Size=UDim2.new(1,0,0,28); nb.BackgroundColor3=Color3.fromRGB(30,30,38)
-		nb.Text=" NONE"; nb.TextColor3=Color3.fromRGB(150,150,160); nb.Font=Enum.Font.Gotham; nb.TextSize=12
-		nb.TextXAlignment=Enum.TextXAlignment.Left; nb.AutoButtonColor=false; nb.ZIndex=202; nb.BorderSizePixel=0; nb.LayoutOrder=0
-		nb.MouseEnter:Connect(function() nb.BackgroundColor3=Color3.fromRGB(50,50,65) end)
-		nb.MouseLeave:Connect(function() nb.BackgroundColor3=Color3.fromRGB(30,30,38) end)
-		nb.MouseButton1Click:Connect(function()
-			playClick(); EXPLOITS.ClickTeleportKeyName="NONE"; EXPLOITS.ClickTeleportKeyCheck=nil
-			keyBtn.Text="NONE"; ddF.Visible=false
-		end)
-		for i,opt in ipairs(BIND_OPTIONS) do
-			local name=opt[1]; local cfn=opt[2]
-			local ob=Instance.new("TextButton",ddS); ob.Size=UDim2.new(1,0,0,28); ob.BackgroundColor3=Color3.fromRGB(30,30,38)
-			ob.Text=" "..name; ob.TextColor3=Color3.fromRGB(180,180,190); ob.Font=Enum.Font.Gotham; ob.TextSize=12
-			ob.TextXAlignment=Enum.TextXAlignment.Left; ob.AutoButtonColor=false; ob.ZIndex=202; ob.BorderSizePixel=0; ob.LayoutOrder=i
-			ob.MouseEnter:Connect(function() ob.BackgroundColor3=Color3.fromRGB(50,50,65) end)
-			ob.MouseLeave:Connect(function() ob.BackgroundColor3=Color3.fromRGB(30,30,38) end)
-			ob.MouseButton1Click:Connect(function()
-				playClick(); EXPLOITS.ClickTeleportKeyName=name; EXPLOITS.ClickTeleportKeyCheck=cfn
-				keyBtn.Text=name; ddF.Visible=false
-			end)
-		end
-		local ddO=false
-		keyBtn.MouseButton1Click:Connect(function() playClick(); ddO=not ddO; ddF.Visible=ddO end)
-		_G.BearHub_mkClickTpKeybind = mkClickTeleportKeybind
-	end
-	_G.BearHub_mkClickTpKeybind = mkClickTeleportKeybind
-
 	mkButton = function(p,t,cb,o,cc)
 		local btn=Instance.new("TextButton",p); btn.Size=UDim2.new(1,-10,0,36)
 		btn.BackgroundColor3=cc or PURPLE; btn.BorderSizePixel=0; btn.Text=t
@@ -1854,7 +1805,7 @@ do
 
 	-- Movement sub-page
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
-	local mvPanel=mkPanel(mmvP,0.6,480,0,5)  -- zwiększona wysokość dla nowej opcji
+	local mvPanel=mkPanel(mmvP,0.6,480,0,5)  -- increased height for new option
 	mkSection(mvPanel,"Movement",1)
 	mkCheck(mvPanel,"NoClip (Fly + No Collision)",MISC,"NoClip",2)
 	mkSlider(mvPanel,"NoClip Fly Speed",1,100,30," m/s",MISC,"NoClipSpeed",3)
@@ -1864,7 +1815,6 @@ do
 	mkSlider(mvPanel,"Jump Power Value",1,500,50," m",MISC,"JumpPower",7)
 	mkCheck(mvPanel,"Enable SpinBot",MISC,"SpinBot",8)
 	mkSlider(mvPanel,"Spin Speed",1,100,50,"",MISC,"SpinBotSpeed",9)
-	-- 🔥 NOWA OPCJA: Remove Jump Delay
 	mkCheck(mvPanel,"Remove Jump Delay",MISC,"RemoveJumpDelay",10)
 
 	-- RapidFire sub-page
@@ -1881,7 +1831,7 @@ do
 	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
 	mkSlider(fcPanel,"FreeCam Speed",1,200,30," m/s",MISC,"FreeCamSpeed",3)
 
-	-- FREECAM HUD
+	-- FREECAM HUD (same as original but included for completeness)
 	local freecamActive = false
 	local oldMouseBehavior = Enum.MouseBehavior.Default
 	local oldMouseIconEnabled = true
@@ -2106,27 +2056,21 @@ do
 	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,15)
 	local exSubPF=Instance.new("Frame",exP); exSubPF.Size=UDim2.new(1,0,1,-40); exSubPF.Position=UDim2.new(0,0,0,38); exSubPF.BackgroundTransparency=1
 
-	-- TeleportWalk sub-page
 	local exTwP=Instance.new("Frame",exSubPF); exTwP.Size=UDim2.new(1,0,1,0); exTwP.BackgroundTransparency=1; exTwP.Visible=true
 	local twPanel=mkPanel(exTwP,0.7,200,0,5)
 	mkSection(twPanel,"Teleport Walk",1)
-
 	local twInfoLbl=Instance.new("TextLabel",twPanel); twInfoLbl.Size=UDim2.new(1,-10,0,32); twInfoLbl.BackgroundTransparency=1
 	twInfoLbl.TextWrapped=true; twInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
 	twInfoLbl.Text="Teleports you forward each frame instead of walking. Harder to detect than WalkSpeed. Use WASD to move."; twInfoLbl.Font=Enum.Font.Gotham; twInfoLbl.TextSize=11; twInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; twInfoLbl.LayoutOrder=2
-
 	mkCheck(twPanel,"Enable Teleport Walk",EXPLOITS,"TeleportWalk",3)
 	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,nil,true)
 
-	-- ClickTeleport sub-page
 	local exCtP=Instance.new("Frame",exSubPF); exCtP.Size=UDim2.new(1,0,1,0); exCtP.BackgroundTransparency=1; exCtP.Visible=false
 	local ctPanel=mkPanel(exCtP,0.7,220,0,5)
 	mkSection(ctPanel,"Click Teleport",1)
-
 	local ctInfoLbl=Instance.new("TextLabel",ctPanel); ctInfoLbl.Size=UDim2.new(1,-10,0,32); ctInfoLbl.BackgroundTransparency=1
 	ctInfoLbl.TextWrapped=true; ctInfoLbl.TextColor3=Color3.fromRGB(130,130,140)
 	ctInfoLbl.Text="Hold your chosen key and click LMB anywhere to teleport there. Select a key from the dropdown below."; ctInfoLbl.Font=Enum.Font.Gotham; ctInfoLbl.TextSize=11; ctInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; ctInfoLbl.LayoutOrder=2
-
 	mkCheck(ctPanel,"Enable Click Teleport",EXPLOITS,"ClickTeleport",3)
 
 	-- Click teleport keybind selector
@@ -2179,7 +2123,6 @@ do
 	local ctDdO=false
 	ctKeyBtn.MouseButton1Click:Connect(function() playClick(); ctDdO=not ctDdO; ctDdF.Visible=ctDdO end)
 
-	-- AntiAFK sub-page
 	local exAfkP=Instance.new("Frame",exSubPF); exAfkP.Size=UDim2.new(1,0,1,0); exAfkP.BackgroundTransparency=1; exAfkP.Visible=false
 	local afkPanel=mkPanel(exAfkP,0.7,160,0,5)
 	mkSection(afkPanel,"Anti-AFK",1)
@@ -2188,7 +2131,6 @@ do
 	afkInfoLbl.Text="Prevents the game from kicking you for being AFK. Sends a virtual keypress every 55 seconds."; afkInfoLbl.Font=Enum.Font.Gotham; afkInfoLbl.TextSize=11; afkInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; afkInfoLbl.LayoutOrder=2
 	mkCheck(afkPanel,"Enable Anti-AFK",EXPLOITS,"AntiAFK",3)
 
-	-- Exploits sub-tabs
 	local selEx=nil
 	local function switchEx(n) exTwP.Visible=(n=="TpWalk"); exCtP.Visible=(n=="ClickTp"); exAfkP.Visible=(n=="AntiAFK") end
 	local function mkExB(n,dn,o)
@@ -2265,10 +2207,188 @@ do
 end
 
 --============================================================
+-- EXECUTOR PAGE (NEW)
+--============================================================
+do
+	local exeP = createPage("Executor")
+
+	local splitContainer = Instance.new("Frame", exeP)
+	splitContainer.Size = UDim2.new(1, -20, 1, -10)
+	splitContainer.Position = UDim2.new(0, 10, 0, 5)
+	splitContainer.BackgroundTransparency = 1
+	splitContainer.ClipsDescendants = false
+
+	-- Left panel (code editor)
+	local leftPanel = Instance.new("Frame", splitContainer)
+	leftPanel.Size = UDim2.new(0.7, -5, 1, 0)
+	leftPanel.Position = UDim2.new(0, 0, 0, 0)
+	leftPanel.BackgroundColor3 = DARK
+	leftPanel.BorderSizePixel = 0
+	Instance.new("UICorner", leftPanel).CornerRadius = UDim.new(0, 8)
+
+	local lineNumbers = Instance.new("TextLabel", leftPanel)
+	lineNumbers.Size = UDim2.new(0, 30, 1, -10)
+	lineNumbers.Position = UDim2.new(0, 8, 0, 5)
+	lineNumbers.BackgroundTransparency = 1
+	lineNumbers.Text = "1"
+	lineNumbers.TextColor3 = Color3.fromRGB(120, 120, 130)
+	lineNumbers.Font = Enum.Font.Code
+	lineNumbers.TextSize = 14
+	lineNumbers.TextXAlignment = Enum.TextXAlignment.Right
+	lineNumbers.TextYAlignment = Enum.TextYAlignment.Top
+
+	local codeBox = Instance.new("TextBox", leftPanel)
+	codeBox.Size = UDim2.new(1, -50, 1, -10)
+	codeBox.Position = UDim2.new(0, 45, 0, 5)
+	codeBox.BackgroundTransparency = 1
+	codeBox.Text = ""
+	codeBox.TextColor3 = Color3.new(1,1,1)
+	codeBox.PlaceholderText = "-- Enter Lua code here"
+	codeBox.Font = Enum.Font.Code
+	codeBox.TextSize = 14
+	codeBox.TextXAlignment = Enum.TextXAlignment.Left
+	codeBox.TextYAlignment = Enum.TextYAlignment.Top
+	codeBox.ClearTextOnFocus = false
+	codeBox.MultiLine = true
+	codeBox.TextWrapped = false
+
+	codeBox:GetPropertyChangedSignal("Text"):Connect(function()
+		local lines = #codeBox.Text:split("\n")
+		local nums = {}
+		for i=1, lines do nums[i] = tostring(i) end
+		lineNumbers.Text = table.concat(nums, "\n")
+	end)
+
+	-- Right panel (output)
+	local rightPanel = Instance.new("Frame", splitContainer)
+	rightPanel.Size = UDim2.new(0.3, -5, 1, 0)
+	rightPanel.Position = UDim2.new(0.7, 5, 0, 0)
+	rightPanel.BackgroundColor3 = DARK
+	rightPanel.BorderSizePixel = 0
+	Instance.new("UICorner", rightPanel).CornerRadius = UDim.new(0, 8)
+
+	local outputLabel = Instance.new("TextLabel", rightPanel)
+	outputLabel.Size = UDim2.new(1, -10, 0, 20)
+	outputLabel.Position = UDim2.new(0, 5, 0, 5)
+	outputLabel.BackgroundTransparency = 1
+	outputLabel.Text = "Output"
+	outputLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+	outputLabel.Font = Enum.Font.GothamBold
+	outputLabel.TextSize = 14
+	outputLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+	local outputScroller = Instance.new("ScrollingFrame", rightPanel)
+	outputScroller.Size = UDim2.new(1, -10, 1, -40)
+	outputScroller.Position = UDim2.new(0, 5, 0, 30)
+	outputScroller.BackgroundTransparency = 1
+	outputScroller.ScrollBarThickness = 3
+	outputScroller.ScrollBarImageColor3 = PURPLE
+	outputScroller.CanvasSize = UDim2.new(0,0,0,0)
+	outputScroller.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+	local outputText = Instance.new("TextLabel", outputScroller)
+	outputText.Size = UDim2.new(1, -10, 0, 0)
+	outputText.Position = UDim2.new(0, 5, 0, 0)
+	outputText.BackgroundTransparency = 1
+	outputText.Text = "> Ready"
+	outputText.TextColor3 = Color3.fromRGB(200,200,210)
+	outputText.Font = Enum.Font.Code
+	outputText.TextSize = 13
+	outputText.TextXAlignment = Enum.TextXAlignment.Left
+	outputText.TextYAlignment = Enum.TextYAlignment.Top
+	outputText.TextWrapped = true
+	outputText.RichText = true
+
+	-- Draggable divider
+	local divider = Instance.new("Frame", splitContainer)
+	divider.Size = UDim2.new(0, 6, 1, 0)
+	divider.Position = UDim2.new(0.7, -3, 0, 0)
+	divider.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+	divider.BorderSizePixel = 0
+	divider.Active = true
+	Instance.new("UICorner", divider).CornerRadius = UDim.new(0, 3)
+
+	local dividerDrag = false
+	divider.InputBegan:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			dividerDrag = true
+		end
+	end)
+	UIS.InputChanged:Connect(function(inp)
+		if dividerDrag and inp.UserInputType == Enum.UserInputType.MouseMovement then
+			local mx = inp.Position.X
+			local totalW = splitContainer.AbsoluteSize.X
+			local relX = (mx - splitContainer.AbsolutePosition.X) / totalW
+			relX = math.clamp(relX, 0.3, 0.85)
+			leftPanel.Size = UDim2.new(relX - 0.005, -5, 1, 0)
+			rightPanel.Size = UDim2.new(1 - relX - 0.005, -5, 1, 0)
+			rightPanel.Position = UDim2.new(relX + 0.005, 5, 0, 0)
+			divider.Position = UDim2.new(relX, -3, 0, 0)
+		end
+	end)
+	UIS.InputEnded:Connect(function(inp)
+		if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+			dividerDrag = false
+		end
+	end)
+
+	-- Execute button
+	local execBtn = mkButton(rightPanel, "Execute", function()
+		local code = codeBox.Text
+		local outputLines = {}
+		local function append(text, color)
+			table.insert(outputLines, string.format('<font color="#%s">%s</font>', color or "ffffff", text))
+		end
+		local env = setmetatable({
+			print = function(...)
+				local args = {...}
+				local str = ""
+				for i, v in ipairs(args) do
+					if i > 1 then str = str .. "    " end
+					str = str .. tostring(v)
+				end
+				append(str, "ffffff")
+			end,
+			warn = function(...) append(table.concat({...}, " "), "ffaa00") end,
+			error = function(...) append(table.concat({...}, " "), "ff5555") end,
+		}, {__index = function(_, k) return getfenv()[k] or rawget(_G, k) end})
+		local success, err = pcall(function()
+			local func, compileErr = loadstring(code)
+			if not func then
+				append("Compile error: " .. tostring(compileErr), "ff5555")
+				return
+			end
+			setfenv(func, env)
+			func()
+		end)
+		if not success then
+			append("Runtime error: " .. tostring(err), "ff5555")
+		end
+		outputText.Text = table.concat(outputLines, "\n")
+		outputScroller.CanvasSize = UDim2.new(0,0,0,outputText.TextBounds.Y + 20)
+	end, 1, Color3.fromRGB(100, 70, 200))
+	execBtn.Parent = rightPanel
+	execBtn.Size = UDim2.new(0, 80, 0, 28)
+	execBtn.Position = UDim2.new(1, -90, 0, 5)
+	execBtn.LayoutOrder = nil
+
+	-- Clear button
+	local clearBtn = mkButton(rightPanel, "Clear", function()
+		codeBox.Text = ""
+		outputText.Text = "> Ready"
+	end, 2, Color3.fromRGB(150, 60, 60))
+	clearBtn.Size = UDim2.new(0, 60, 0, 28)
+	clearBtn.Position = UDim2.new(1, -155, 0, 5)
+	clearBtn.LayoutOrder = nil
+end
+
+--============================================================
 -- TABS + DRAG
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
-local tabsData = {{"AimAssistance"},{"Visualization"},{"Miscellaneous"},{"Exploits"},{"Players"},{"Settings"},{"AutoFarm"}}
+local tabsData = {
+	{"AimAssistance"}, {"Visualization"}, {"Miscellaneous"}, {"Exploits"}, {"Players"}, {"Settings"}, {"AutoFarm"}, {"Executor"}
+}
 local selTab = nil
 
 local function switchPage(name)
@@ -2413,3 +2533,24 @@ UIS.InputEnded:Connect(function(inp)
 		end
 	end
 end)
+
+-- Drop shadow behind main window (visual improvement)
+local shadow = Instance.new("Frame", gui)
+shadow.Size = UDim2.new(1, 20, 1, 20)
+shadow.Position = UDim2.new(0.5, -390-10, 0.5, -265-10)  -- adjusted according to main's initial position
+shadow.BackgroundColor3 = Color3.fromRGB(0,0,0)
+shadow.BackgroundTransparency = 0.7
+shadow.BorderSizePixel = 0
+shadow.ZIndex = 0
+Instance.new("UICorner", shadow).CornerRadius = UDim.new(0, 12)
+-- sync shadow with main
+main:GetPropertyChangedSignal("Position"):Connect(function()
+	shadow.Position = UDim2.new(main.Position.X.Scale, main.Position.X.Offset-5, main.Position.Y.Scale, main.Position.Y.Offset-5)
+end)
+main:GetPropertyChangedSignal("Size"):Connect(function()
+	shadow.Size = UDim2.new(main.Size.X.Scale, main.Size.X.Offset+10, main.Size.Y.Scale, main.Size.Y.Offset+10)
+end)
+
+--============================================================
+-- END OF SCRIPT
+--============================================================
