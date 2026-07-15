@@ -9,15 +9,12 @@ local Camera = workspace.CurrentCamera
 local SoundService = game:GetService("SoundService")
 local VIM = game:GetService("VirtualInputManager")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerScriptService = game:GetService("ServerScriptService")
-local ServerStorage = game:GetService("ServerStorage")
 
 local CLICK_SOUND_ID = "rbxassetid://6895079853"
 local SLIDER_SOUND_ID = "rbxassetid://5765856907"
 local DRAG_SOUND_ID = "rbxassetid://5765856907"
 
-local PURPLE = Color3.fromRGB(140, 60, 255)
-local CYAN = Color3.fromRGB(0, 230, 230)
+local PURPLE = Color3.fromRGB(100, 70, 200)
 local GRAY = Color3.fromRGB(60, 60, 70)
 local DARK = Color3.fromRGB(35, 35, 42)
 local CHECK_ICON = "rbxassetid://6031094667"
@@ -1381,28 +1378,16 @@ do
 	main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	main.BorderSizePixel = 0; main.ClipsDescendants = true; main.Active = true
 	Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
-	local mainStroke = Instance.new("UIStroke", main)
-	mainStroke.Color = PURPLE
-	mainStroke.Thickness = 1.5
-	mainStroke.Transparency = 0.4
 
 	sidebar = Instance.new("Frame", main)
 	sidebar.Size = UDim2.new(0, 190, 1, 0)
 	sidebar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 	sidebar.BorderSizePixel = 0; sidebar.Active = true
 	Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 10)
-	local sidebarStroke = Instance.new("UIStroke", sidebar)
-	sidebarStroke.Color = PURPLE
-	sidebarStroke.Thickness = 1
-	sidebarStroke.Transparency = 0.6
 
 	local bearIcon = Instance.new("ImageLabel", sidebar)
 	bearIcon.Size = UDim2.new(0, 80, 0, 80); bearIcon.Position = UDim2.new(0.5, -40, 0, 15)
 	bearIcon.BackgroundTransparency = 1; bearIcon.Image = BEAR_ICON; bearIcon.ScaleType = Enum.ScaleType.Fit
-	local bearGlow = Instance.new("UIStroke", bearIcon)
-	bearGlow.Color = CYAN
-	bearGlow.Thickness = 2
-	bearGlow.Transparency = 0.3
 
 	local tabsFrame = Instance.new("Frame", sidebar)
 	tabsFrame.Name = "TabsFrame"
@@ -1418,18 +1403,12 @@ do
 	contentArea.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	contentArea.BorderSizePixel = 0; contentArea.ClipsDescendants = true
 	Instance.new("UICorner", contentArea).CornerRadius = UDim.new(0, 8)
-	local caStroke = Instance.new("UIStroke", contentArea)
-	caStroke.Color = PURPLE
-	caStroke.Thickness = 1
-	caStroke.Transparency = 0.5
 
 	contentTitle = Instance.new("TextLabel", contentArea)
 	contentTitle.Size = UDim2.new(1, -20, 0, 40); contentTitle.Position = UDim2.new(0, 15, 0, 10)
 	contentTitle.BackgroundTransparency = 1; contentTitle.Text = "AimAssistance"
-	contentTitle.TextColor3 = CYAN
-	contentTitle.Font = Enum.Font.GothamBold
+	contentTitle.TextColor3 = Color3.new(1,1,1); contentTitle.Font = Enum.Font.GothamBold
 	contentTitle.TextSize = 20; contentTitle.TextXAlignment = Enum.TextXAlignment.Left
-	Instance.new("UIStroke", contentTitle).Color = PURPLE
 
 	pagesFrame = Instance.new("Frame", contentArea)
 	pagesFrame.Size = UDim2.new(1, 0, 1, -55); pagesFrame.Position = UDim2.new(0, 0, 0, 55)
@@ -1446,7 +1425,7 @@ do
 
 	local cpTitleLbl = Instance.new("TextLabel", colorPickerGui)
 	cpTitleLbl.Size = UDim2.new(1, 0, 0, 30); cpTitleLbl.BackgroundTransparency = 1
-	cpTitleLbl.Text = "Pick Color"; cpTitleLbl.TextColor3 = CYAN
+	cpTitleLbl.Text = "Pick Color"; cpTitleLbl.TextColor3 = Color3.new(1,1,1)
 	cpTitleLbl.Font = Enum.Font.GothamBold; cpTitleLbl.TextSize = 14; cpTitleLbl.ZIndex = 101
 
 	local cpX = Instance.new("TextButton", colorPickerGui)
@@ -1534,9 +1513,8 @@ do
 
 	mkSection = function(p,t,o)
 		local l=Instance.new("TextLabel",p); l.Size=UDim2.new(1,0,0,28); l.BackgroundTransparency=1
-		l.Text=t; l.TextColor3=CYAN
-		l.Font=Enum.Font.GothamBold; l.TextSize=14; l.TextXAlignment=Enum.TextXAlignment.Left; l.LayoutOrder=o or 0
-		Instance.new("UIStroke", l).Color = PURPLE
+		l.Text=t; l.TextColor3=Color3.fromRGB(160,160,170); l.Font=Enum.Font.GothamBold
+		l.TextSize=14; l.TextXAlignment=Enum.TextXAlignment.Left; l.LayoutOrder=o or 0
 	end
 
 	mkCheck = function(p,t,tbl,k,o)
@@ -1548,16 +1526,12 @@ do
 		local ck=Instance.new("ImageLabel",box); ck.Size=UDim2.new(0.75,0,0.75,0); ck.Position=UDim2.new(0.125,0,0.125,0)
 		ck.BackgroundTransparency=1; ck.Image=CHECK_ICON; ck.Visible=en
 		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,-40,1,0); lb.Position=UDim2.new(0,35,0,0)
-		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(220,220,230)
+		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(200,200,210)
 		lb.Font=Enum.Font.Gotham; lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left
 		box.MouseButton1Click:Connect(function()
 			playClick(); en=not en; box.BackgroundColor3=en and PURPLE or GRAY; ck.Visible=en; tbl[k]=en
 			if tbl==ESP then pcall(fullRefresh) end
 		end)
-		local glow = Instance.new("UIStroke", box)
-		glow.Color = CYAN
-		glow.Thickness = 1
-		glow.Transparency = en and 0.4 or 1
 	end
 
 	mkCheckColor = function(p,t,tbl,k,ck2,o)
@@ -1570,11 +1544,11 @@ do
 		local ck=Instance.new("ImageLabel",box); ck.Size=UDim2.new(0.75,0,0.75,0); ck.Position=UDim2.new(0.125,0,0.125,0)
 		ck.BackgroundTransparency=1; ck.Image=CHECK_ICON; ck.Visible=en
 		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,-80,1,0); lb.Position=UDim2.new(0,35,0,0)
-		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(220,220,230)
+		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(200,200,210)
 		lb.Font=Enum.Font.Gotham; lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left
 		local ci=Instance.new("TextButton",h); ci.Size=UDim2.new(0,22,0,22); ci.Position=UDim2.new(1,-30,0.5,-11)
 		ci.BackgroundColor3=colRef; ci.Text=""; ci.AutoButtonColor=false; ci.BorderSizePixel=0
-		Instance.new("UICorner",ci).CornerRadius=UDim.new(1,0); Instance.new("UIStroke",ci).Color=CYAN
+		Instance.new("UICorner",ci).CornerRadius=UDim.new(1,0); Instance.new("UIStroke",ci).Color=Color3.fromRGB(80,80,90)
 		ci.MouseButton1Click:Connect(function()
 			playClick(); openCP(ci.BackgroundColor3,function(nc)
 				ci.BackgroundColor3=nc
@@ -1591,7 +1565,7 @@ do
 		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,50); h.BackgroundTransparency=1; h.LayoutOrder=o or 0
 		local val=def or minV
 		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(0.6,0,0,20); lb.Position=UDim2.new(0,5,0,0)
-		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(220,220,230)
+		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(200,200,210)
 		lb.Font=Enum.Font.GothamBold; lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left
 		local vl=Instance.new("TextLabel",h); vl.Size=UDim2.new(0.4,-5,0,20); vl.Position=UDim2.new(0.6,0,0,0)
 		vl.BackgroundTransparency=1
@@ -1599,7 +1573,7 @@ do
 			if isFloat then return string.format("%.1f", v)..(suf or "")
 			else return tostring(math.floor(v))..(suf or "") end
 		end
-		vl.Text=fmtVal(val); vl.TextColor3=CYAN
+		vl.Text=fmtVal(val); vl.TextColor3=Color3.fromRGB(150,150,160)
 		vl.Font=Enum.Font.Gotham; vl.TextSize=13; vl.TextXAlignment=Enum.TextXAlignment.Right
 		local bg=Instance.new("Frame",h); bg.Size=UDim2.new(1,-10,0,6); bg.Position=UDim2.new(0,5,0,30)
 		bg.BackgroundColor3=Color3.fromRGB(50,50,60); bg.BorderSizePixel=0
@@ -1608,7 +1582,7 @@ do
 		local fill=Instance.new("Frame",bg); fill.Size=UDim2.new(pct,0,1,0); fill.BackgroundColor3=PURPLE; fill.BorderSizePixel=0
 		Instance.new("UICorner",fill).CornerRadius=UDim.new(1,0)
 		local knob=Instance.new("Frame",bg); knob.Size=UDim2.new(0,16,0,16); knob.Position=UDim2.new(pct,-8,0.5,-8)
-		knob.BackgroundColor3=CYAN; knob.BorderSizePixel=0; knob.ZIndex=2
+		knob.BackgroundColor3=Color3.new(1,1,1); knob.BorderSizePixel=0; knob.ZIndex=2
 		Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
 		local hit=Instance.new("TextButton",bg); hit.Size=UDim2.new(1,20,0,30); hit.Position=UDim2.new(0,-10,0.5,-15)
 		hit.BackgroundTransparency=1; hit.Text=""; hit.ZIndex=3
@@ -1626,24 +1600,19 @@ do
 			if i.UserInputType==Enum.UserInputType.MouseButton1 then drag=true; upd(i.Position.X) end
 		end)
 		table.insert(allSliders,{isDragging=function() return drag end, update=upd, setDrag=function(v) drag=v end})
-		local bottomLine = Instance.new("Frame", h)
-		bottomLine.Size = UDim2.new(1, -10, 0, 1); bottomLine.Position = UDim2.new(0,5,0,45)
-		bottomLine.BackgroundColor3 = PURPLE; bottomLine.BorderSizePixel = 0
-		bottomLine.LayoutOrder = 100
 	end
 
 	mkDropdown = function(p,t,opts,tbl,k,o)
 		local h=Instance.new("Frame",p); h.Size=UDim2.new(1,0,0,60); h.BackgroundTransparency=1
 		h.LayoutOrder=o or 0; h.ClipsDescendants=false
 		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(1,0,0,20); lb.BackgroundTransparency=1
-		lb.Text=t; lb.TextColor3=CYAN; lb.Font=Enum.Font.GothamBold
+		lb.Text=t; lb.TextColor3=Color3.fromRGB(200,200,210); lb.Font=Enum.Font.GothamBold
 		lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left; lb.Position=UDim2.new(0,5,0,0)
 		local btn=Instance.new("TextButton",h); btn.Size=UDim2.new(1,-10,0,30); btn.Position=UDim2.new(0,5,0,25)
 		btn.BackgroundColor3=Color3.fromRGB(40,40,50); btn.BorderSizePixel=0; btn.Text=" "..tbl[k]
-		btn.TextColor3=CYAN; btn.Font=Enum.Font.Gotham; btn.TextSize=13
+		btn.TextColor3=Color3.fromRGB(200,200,210); btn.Font=Enum.Font.Gotham; btn.TextSize=13
 		btn.TextXAlignment=Enum.TextXAlignment.Left; btn.AutoButtonColor=false
 		Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6)
-		Instance.new("UIStroke",btn).Color = PURPLE
 		local dd=Instance.new("Frame",h); dd.Size=UDim2.new(1,-10,0,#opts*30); dd.Position=UDim2.new(0,5,0,58)
 		dd.BackgroundColor3=Color3.fromRGB(35,35,45); dd.BorderSizePixel=0; dd.Visible=false; dd.ZIndex=50
 		Instance.new("UICorner",dd).CornerRadius=UDim.new(0,6); Instance.new("UIListLayout",dd)
@@ -1678,13 +1647,12 @@ do
 		local ck=Instance.new("ImageLabel",box); ck.Size=UDim2.new(0.75,0,0.75,0); ck.Position=UDim2.new(0.125,0,0.125,0)
 		ck.BackgroundTransparency=1; ck.Image=CHECK_ICON; ck.Visible=en
 		local lb=Instance.new("TextLabel",h); lb.Size=UDim2.new(0,55,1,0); lb.Position=UDim2.new(0,35,0,0)
-		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(220,220,230)
+		lb.BackgroundTransparency=1; lb.Text=t; lb.TextColor3=Color3.fromRGB(200,200,210)
 		lb.Font=Enum.Font.Gotham; lb.TextSize=13; lb.TextXAlignment=Enum.TextXAlignment.Left
 		local keyBtn=Instance.new("TextButton",h); keyBtn.Size=UDim2.new(0,110,0,24); keyBtn.Position=UDim2.new(1,-115,0.5,-12)
 		keyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); keyBtn.BorderSizePixel=0; keyBtn.Text=tbl.KeybindName
-		keyBtn.TextColor3=CYAN; keyBtn.Font=Enum.Font.GothamBold; keyBtn.TextSize=11
+		keyBtn.TextColor3=Color3.fromRGB(180,180,190); keyBtn.Font=Enum.Font.GothamBold; keyBtn.TextSize=11
 		keyBtn.AutoButtonColor=false; Instance.new("UICorner",keyBtn).CornerRadius=UDim.new(0,5)
-		Instance.new("UIStroke",keyBtn).Color = PURPLE
 		local to=#BIND_OPTIONS+1
 		local ddF=Instance.new("Frame",h); ddF.Size=UDim2.new(0,170,0,math.min(to,8)*28); ddF.Position=UDim2.new(1,-175,1,2)
 		ddF.BackgroundColor3=Color3.fromRGB(30,30,38); ddF.BorderSizePixel=0; ddF.Visible=false
@@ -1721,7 +1689,6 @@ do
 		btn.TextColor3=Color3.new(1,1,1); btn.Font=Enum.Font.GothamBold; btn.TextSize=13
 		btn.AutoButtonColor=false; btn.LayoutOrder=o or 0
 		Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6)
-		Instance.new("UIStroke",btn).Color = CYAN
 		local bc=cc or PURPLE
 		btn.MouseEnter:Connect(function() btn.BackgroundColor3=Color3.fromRGB(math.min(bc.R*255+20,255),math.min(bc.G*255+20,255),math.min(bc.B*255+20,255)) end)
 		btn.MouseLeave:Connect(function() btn.BackgroundColor3=bc end)
@@ -1738,7 +1705,7 @@ do
 end
 
 --============================================================
--- PAGES
+-- PAGES (Aim, Visuals, Misc, Exploits, Players, Settings, AutoFarm, Executor)
 --============================================================
 do
 	local function mkPanel(parent, w, h2, xPos, yPos)
@@ -1747,7 +1714,6 @@ do
 		f.Position=UDim2.new(xPos, xPos==0 and 10 or 5, 0, yPos or 5)
 		f.BackgroundColor3=DARK; f.BorderSizePixel=0
 		Instance.new("UICorner",f).CornerRadius=UDim.new(0,8)
-		Instance.new("UIStroke",f).Color = PURPLE
 		local ll=Instance.new("UIListLayout",f); ll.Padding=UDim.new(0,4); ll.SortOrder=Enum.SortOrder.LayoutOrder
 		local pd=Instance.new("UIPadding",f); pd.PaddingTop=UDim.new(0,8); pd.PaddingLeft=UDim.new(0,5); pd.PaddingRight=UDim.new(0,5)
 		return f
@@ -1801,17 +1767,18 @@ do
 		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
 		btn.MouseButton1Click:Connect(function()
 			playClick(); if selSub then selSub.btn.TextColor3=Color3.fromRGB(120,120,130); selSub.ul.Visible=false end
-			selSub={btn=btn,ul=ul}; btn.TextColor3=CYAN; ul.Visible=true; switchSub(n)
+			selSub={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchSub(n)
 		end); return {btn=btn,ul=ul}
 	end
-	local s1=mkSB("TriggerBot",1); mkSB("Aimbot",2); mkSB("Hitbox",3); selSub=s1; s1.btn.TextColor3=CYAN; s1.ul.Visible=true
+	local s1=mkSB("TriggerBot",1); mkSB("Aimbot",2); mkSB("Hitbox",3); selSub=s1; s1.btn.TextColor3=Color3.new(1,1,1); s1.ul.Visible=true
 
-	-- MISC PAGE
+	-- MISC PAGE (Actions, Combat, Movement, RapidFire, FreeCam)
 	local miscP=createPage("Miscellaneous")
 	local mSubBar=Instance.new("Frame",miscP); mSubBar.Size=UDim2.new(1,-20,0,30); mSubBar.Position=UDim2.new(0,10,0,0); mSubBar.BackgroundTransparency=1
 	local mSbl=Instance.new("UIListLayout",mSubBar); mSbl.FillDirection=Enum.FillDirection.Horizontal; mSbl.Padding=UDim.new(0,8)
 	local mSubPF=Instance.new("Frame",miscP); mSubPF.Size=UDim2.new(1,0,1,-40); mSubPF.Position=UDim2.new(0,0,0,38); mSubPF.BackgroundTransparency=1
 
+	-- Actions
 	local mqaP=Instance.new("Frame",mSubPF); mqaP.Size=UDim2.new(1,0,1,0); mqaP.BackgroundTransparency=1; mqaP.Visible=true
 	local qaPanel=mkPanel(mqaP,0.48,200,0,5)
 	mkSection(qaPanel,"Quick Actions",1)
@@ -1825,6 +1792,7 @@ do
 		task.spawn(function() task.wait(2.5); if copyStatusLabel.Text==msg then copyStatusLabel.Text="" end end)
 	end,3,Color3.fromRGB(60,140,220))
 
+	-- Combat
 	local mcbP=Instance.new("Frame",mSubPF); mcbP.Size=UDim2.new(1,0,1,0); mcbP.BackgroundTransparency=1; mcbP.Visible=false
 	local cbPanel=mkPanel(mcbP,0.48,290,0,5)
 	mkSection(cbPanel,"Combat Cheats",1)
@@ -1834,6 +1802,7 @@ do
 	mkCheck(cbPanel,"No Spread",MISC,"NoSpread",5)
 	mkCheck(cbPanel,"Infinity Ammo",MISC,"InfAmmo",6)
 
+	-- Movement
 	local mmvP=Instance.new("Frame",mSubPF); mmvP.Size=UDim2.new(1,0,1,0); mmvP.BackgroundTransparency=1; mmvP.Visible=false
 	local mvPanel=mkPanel(mmvP,0.6,480,0,5)
 	mkSection(mvPanel,"Movement",1)
@@ -1847,26 +1816,28 @@ do
 	mkSlider(mvPanel,"Spin Speed",1,100,50,"",MISC,"SpinBotSpeed",9)
 	mkCheck(mvPanel,"Remove Jump Delay",MISC,"RemoveJumpDelay",10)
 
+	-- RapidFire
 	local mrfP=Instance.new("Frame",mSubPF); mrfP.Size=UDim2.new(1,0,1,0); mrfP.BackgroundTransparency=1; mrfP.Visible=false
 	local rfPanel=mkPanel(mrfP,0.48,200,0,5)
 	mkSection(rfPanel,"Rapid Fire",1)
 	mkCheck(rfPanel,"Enable Rapid Fire",MISC,"RapidFire",2)
 	mkSlider(rfPanel,"Multiplier",1,100,20,"x",MISC,"RapidFireMultiplier",3)
 
+	-- FreeCam
 	local mfcP=Instance.new("Frame",mSubPF); mfcP.Size=UDim2.new(1,0,1,0); mfcP.BackgroundTransparency=1; mfcP.Visible=false
 	local fcPanel=mkPanel(mfcP,0.6,200,0,5)
 	mkSection(fcPanel,"Free Camera",1)
 	mkCheck(fcPanel,"Enable FreeCam",MISC,"FreeCam",2)
 	mkSlider(fcPanel,"FreeCam Speed",1,200,30," m/s",MISC,"FreeCamSpeed",3)
 
-	-- FreeCam HUD (bez zmian, ale dodać neonowe akcenty)
+	-- FreeCam HUD (kept from original, unchanged but included for completeness)
 	local freecamActive = false
 	local oldMouseBehavior = Enum.MouseBehavior.Default
 	local oldMouseIconEnabled = true
 
 	local fcDot = Instance.new("Frame", gui)
 	fcDot.Size = UDim2.new(0, 6, 0, 6); fcDot.AnchorPoint = Vector2.new(0.5, 0.5)
-	fcDot.Position = UDim2.new(0.5, 0, 0.5, 0); fcDot.BackgroundColor3 = CYAN
+	fcDot.Position = UDim2.new(0.5, 0, 0.5, 0); fcDot.BackgroundColor3 = Color3.new(1,1,1)
 	fcDot.BorderSizePixel = 0; fcDot.Visible = false; fcDot.ZIndex = 9998
 	Instance.new("UICorner", fcDot).CornerRadius = UDim.new(1, 0)
 
@@ -1880,16 +1851,15 @@ do
 	local fcLabel = Instance.new("TextLabel", fcBar)
 	fcLabel.Size = UDim2.new(0, 140, 1, 0); fcLabel.Position = UDim2.new(0, 10, 0, 0)
 	fcLabel.BackgroundTransparency = 1; fcLabel.Text = "FREE CAM"
-	fcLabel.TextColor3 = CYAN; fcLabel.Font = Enum.Font.GothamBold
+	fcLabel.TextColor3 = Color3.fromRGB(180, 140, 255); fcLabel.Font = Enum.Font.GothamBold
 	fcLabel.TextSize = 14; fcLabel.TextXAlignment = Enum.TextXAlignment.Left; fcLabel.ZIndex = 9999
 
 	local fcTpBtn = Instance.new("TextButton", fcBar)
 	fcTpBtn.Size = UDim2.new(0, 120, 0, 28); fcTpBtn.Position = UDim2.new(1, -130, 0.5, -14)
-	fcTpBtn.BackgroundColor3 = PURPLE; fcTpBtn.BorderSizePixel = 0
+	fcTpBtn.BackgroundColor3 = Color3.fromRGB(60, 140, 220); fcTpBtn.BorderSizePixel = 0
 	fcTpBtn.Text = "Teleport (LMB)"; fcTpBtn.TextColor3 = Color3.new(1,1,1)
 	fcTpBtn.Font = Enum.Font.GothamBold; fcTpBtn.TextSize = 12; fcTpBtn.AutoButtonColor = false; fcTpBtn.ZIndex = 9999
 	Instance.new("UICorner", fcTpBtn).CornerRadius = UDim.new(0, 6)
-	Instance.new("UIStroke", fcTpBtn).Color = CYAN
 
 	local function stopFreeCam()
 		if not freecamActive then return end
@@ -2006,34 +1976,35 @@ do
 		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
 		btn.MouseButton1Click:Connect(function()
 			playClick(); if selMS then selMS.btn.TextColor3=Color3.fromRGB(120,120,130); selMS.ul.Visible=false end
-			selMS={btn=btn,ul=ul}; btn.TextColor3=CYAN; ul.Visible=true; switchMS(n)
+			selMS={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchMS(n)
 		end); return {btn=btn,ul=ul}
 	end
 	local ms1=mkMSB("Actions","Actions",1); mkMSB("Combat","Combat",2); mkMSB("Movement","Move",3); mkMSB("RapidFire","Rapid",4); mkMSB("FreeCam","FreeCam",5)
-	selMS=ms1; ms1.btn.TextColor3=CYAN; ms1.ul.Visible=true
+	selMS=ms1; ms1.btn.TextColor3=Color3.new(1,1,1); ms1.ul.Visible=true
 
-	-- PLAYERS PAGE (bez zmian, ale z neonowymi akcentami na przyciskach itp.)
+	-- PLAYERS PAGE (unchanged)
 	local plP=createPage("Players")
-	local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8); Instance.new("UIStroke",plLF).Color = PURPLE
-	local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=CYAN; plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
-	local plCL=Instance.new("TextLabel",plLF); plCL.Size=UDim2.new(0,85,0,25); plCL.Position=UDim2.new(1,-90,0,5); plCL.BackgroundTransparency=1; plCL.Text="0 players"; plCL.TextColor3=CYAN; plCL.Font=Enum.Font.Gotham; plCL.TextSize=12; plCL.TextXAlignment=Enum.TextXAlignment.Right
+	-- (cała zawartość Players z oryginału)
+	local plLF=Instance.new("Frame",plP); plLF.Size=UDim2.new(0.42,0,1,-10); plLF.Position=UDim2.new(0,10,0,5); plLF.BackgroundColor3=DARK; plLF.BorderSizePixel=0; Instance.new("UICorner",plLF).CornerRadius=UDim.new(0,8)
+	local plLT=Instance.new("TextLabel",plLF); plLT.Size=UDim2.new(1,-100,0,25); plLT.Position=UDim2.new(0,10,0,5); plLT.BackgroundTransparency=1; plLT.Text="Players in Server"; plLT.TextColor3=Color3.fromRGB(160,160,170); plLT.Font=Enum.Font.GothamBold; plLT.TextSize=14; plLT.TextXAlignment=Enum.TextXAlignment.Left
+	local plCL=Instance.new("TextLabel",plLF); plCL.Size=UDim2.new(0,85,0,25); plCL.Position=UDim2.new(1,-90,0,5); plCL.BackgroundTransparency=1; plCL.Text="0 players"; plCL.TextColor3=Color3.fromRGB(150,150,160); plCL.Font=Enum.Font.Gotham; plCL.TextSize=12; plCL.TextXAlignment=Enum.TextXAlignment.Right
 	local plS=Instance.new("ScrollingFrame",plLF); plS.Size=UDim2.new(1,-10,1,-40); plS.Position=UDim2.new(0,5,0,32); plS.BackgroundTransparency=1; plS.ScrollBarThickness=3; plS.ScrollBarImageColor3=PURPLE; plS.CanvasSize=UDim2.new(0,0,0,0); plS.AutomaticCanvasSize=Enum.AutomaticSize.Y; plS.BorderSizePixel=0; Instance.new("UIListLayout",plS).Padding=UDim.new(0,4)
-	local plIF=Instance.new("Frame",plP); plIF.Size=UDim2.new(0.55,0,1,-10); plIF.Position=UDim2.new(0.44,5,0,5); plIF.BackgroundColor3=DARK; plIF.BorderSizePixel=0; Instance.new("UICorner",plIF).CornerRadius=UDim.new(0,8); Instance.new("UIStroke",plIF).Color = PURPLE
-	local plIT=Instance.new("TextLabel",plIF); plIT.Size=UDim2.new(1,-20,0,22); plIT.Position=UDim2.new(0,10,0,8); plIT.BackgroundTransparency=1; plIT.Text="Selected Player"; plIT.TextColor3=CYAN; plIT.Font=Enum.Font.GothamBold; plIT.TextSize=14; plIT.TextXAlignment=Enum.TextXAlignment.Left
-	local plAF=Instance.new("Frame",plIF); plAF.Size=UDim2.new(0,60,0,60); plAF.Position=UDim2.new(0.5,-30,0,35); plAF.BackgroundColor3=Color3.fromRGB(50,50,60); plAF.BorderSizePixel=0; Instance.new("UICorner",plAF).CornerRadius=UDim.new(1,0); Instance.new("UIStroke",plAF).Color = CYAN
+	local plIF=Instance.new("Frame",plP); plIF.Size=UDim2.new(0.55,0,1,-10); plIF.Position=UDim2.new(0.44,5,0,5); plIF.BackgroundColor3=DARK; plIF.BorderSizePixel=0; Instance.new("UICorner",plIF).CornerRadius=UDim.new(0,8)
+	local plIT=Instance.new("TextLabel",plIF); plIT.Size=UDim2.new(1,-20,0,22); plIT.Position=UDim2.new(0,10,0,8); plIT.BackgroundTransparency=1; plIT.Text="Selected Player"; plIT.TextColor3=Color3.fromRGB(160,160,170); plIT.Font=Enum.Font.GothamBold; plIT.TextSize=14; plIT.TextXAlignment=Enum.TextXAlignment.Left
+	local plAF=Instance.new("Frame",plIF); plAF.Size=UDim2.new(0,60,0,60); plAF.Position=UDim2.new(0.5,-30,0,35); plAF.BackgroundColor3=Color3.fromRGB(50,50,60); plAF.BorderSizePixel=0; Instance.new("UICorner",plAF).CornerRadius=UDim.new(1,0)
 	local plAv=Instance.new("ImageLabel",plAF); plAv.Size=UDim2.new(1,0,1,0); plAv.BackgroundTransparency=1; plAv.Image=""; plAv.ScaleType=Enum.ScaleType.Crop; Instance.new("UICorner",plAv).CornerRadius=UDim.new(1,0)
 	local plNL=Instance.new("TextLabel",plIF); plNL.Size=UDim2.new(1,-20,0,18); plNL.Position=UDim2.new(0,10,0,100); plNL.BackgroundTransparency=1; plNL.Text="No player selected"; plNL.TextColor3=Color3.new(1,1,1); plNL.Font=Enum.Font.GothamBold; plNL.TextSize=14; plNL.TextXAlignment=Enum.TextXAlignment.Center
-	local plUL=Instance.new("TextLabel",plIF); plUL.Size=UDim2.new(1,-20,0,15); plUL.Position=UDim2.new(0,10,0,119); plUL.BackgroundTransparency=1; plUL.Text=""; plUL.TextColor3=CYAN; plUL.Font=Enum.Font.Gotham; plUL.TextSize=11; plUL.TextXAlignment=Enum.TextXAlignment.Center
-	local plIL=Instance.new("TextLabel",plIF); plIL.Size=UDim2.new(0.5,-15,0,15); plIL.Position=UDim2.new(0,10,0,136); plIL.BackgroundTransparency=1; plIL.Text=""; plIL.TextColor3=CYAN; plIL.Font=Enum.Font.Gotham; plIL.TextSize=11; plIL.TextXAlignment=Enum.TextXAlignment.Center
-	local plDL=Instance.new("TextLabel",plIF); plDL.Size=UDim2.new(0.5,-15,0,15); plDL.Position=UDim2.new(0.5,5,0,136); plDL.BackgroundTransparency=1; plDL.Text=""; plDL.TextColor3=CYAN; plDL.Font=Enum.Font.GothamBold; plDL.TextSize=11; plDL.TextXAlignment=Enum.TextXAlignment.Center
+	local plUL=Instance.new("TextLabel",plIF); plUL.Size=UDim2.new(1,-20,0,15); plUL.Position=UDim2.new(0,10,0,119); plUL.BackgroundTransparency=1; plUL.Text=""; plUL.TextColor3=Color3.fromRGB(150,150,160); plUL.Font=Enum.Font.Gotham; plUL.TextSize=11; plUL.TextXAlignment=Enum.TextXAlignment.Center
+	local plIL=Instance.new("TextLabel",plIF); plIL.Size=UDim2.new(0.5,-15,0,15); plIL.Position=UDim2.new(0,10,0,136); plIL.BackgroundTransparency=1; plIL.Text=""; plIL.TextColor3=Color3.fromRGB(150,150,160); plIL.Font=Enum.Font.Gotham; plIL.TextSize=11; plIL.TextXAlignment=Enum.TextXAlignment.Center
+	local plDL=Instance.new("TextLabel",plIF); plDL.Size=UDim2.new(0.5,-15,0,15); plDL.Position=UDim2.new(0.5,5,0,136); plDL.BackgroundTransparency=1; plDL.Text=""; plDL.TextColor3=Color3.fromRGB(100,200,255); plDL.Font=Enum.Font.GothamBold; plDL.TextSize=11; plDL.TextXAlignment=Enum.TextXAlignment.Center
 	local r1=Instance.new("Frame",plIF); r1.Size=UDim2.new(1,-20,0,28); r1.Position=UDim2.new(0,10,0,160); r1.BackgroundTransparency=1
-	local plSB=Instance.new("TextButton",r1); plSB.Size=UDim2.new(0.5,-3,1,0); plSB.BackgroundColor3=PURPLE; plSB.BorderSizePixel=0; plSB.Text="Spectate"; plSB.TextColor3=Color3.new(1,1,1); plSB.Font=Enum.Font.GothamBold; plSB.TextSize=13; plSB.AutoButtonColor=false; Instance.new("UICorner",plSB).CornerRadius=UDim.new(0,6); Instance.new("UIStroke",plSB).Color = CYAN
+	local plSB=Instance.new("TextButton",r1); plSB.Size=UDim2.new(0.5,-3,1,0); plSB.BackgroundColor3=PURPLE; plSB.BorderSizePixel=0; plSB.Text="Spectate"; plSB.TextColor3=Color3.new(1,1,1); plSB.Font=Enum.Font.GothamBold; plSB.TextSize=13; plSB.AutoButtonColor=false; Instance.new("UICorner",plSB).CornerRadius=UDim.new(0,6)
 	local plUB=Instance.new("TextButton",r1); plUB.Size=UDim2.new(0.5,-3,1,0); plUB.Position=UDim2.new(0.5,3,0,0); plUB.BackgroundColor3=Color3.fromRGB(180,60,60); plUB.BorderSizePixel=0; plUB.Text="Unspectate"; plUB.TextColor3=Color3.new(1,1,1); plUB.Font=Enum.Font.GothamBold; plUB.TextSize=13; plUB.AutoButtonColor=false; Instance.new("UICorner",plUB).CornerRadius=UDim.new(0,6)
 	local r2=Instance.new("Frame",plIF); r2.Size=UDim2.new(1,-20,0,28); r2.Position=UDim2.new(0,10,0,193); r2.BackgroundTransparency=1
-	local plTB=Instance.new("TextButton",r2); plTB.Size=UDim2.new(0.5,-3,1,0); plTB.BackgroundColor3=Color3.fromRGB(60,140,220); plTB.BorderSizePixel=0; plTB.Text="Teleport"; plTB.TextColor3=Color3.new(1,1,1); plTB.Font=Enum.Font.GothamBold; plTB.TextSize=13; plTB.AutoButtonColor=false; Instance.new("UICorner",plTB).CornerRadius=UDim.new(0,6); Instance.new("UIStroke",plTB).Color = CYAN
-	local plBB=Instance.new("TextButton",r2); plBB.Size=UDim2.new(0.5,-3,1,0); plBB.Position=UDim2.new(0.5,3,0,0); plBB.BackgroundColor3=Color3.fromRGB(80,180,100); plBB.BorderSizePixel=0; plBB.Text="Bring"; plBB.TextColor3=Color3.new(1,1,1); plBB.Font=Enum.Font.GothamBold; plBB.TextSize=13; plBB.AutoButtonColor=false; Instance.new("UICorner",plBB).CornerRadius=UDim.new(0,6); Instance.new("UIStroke",plBB).Color = CYAN
-	local plSW=Instance.new("TextButton",plIF); plSW.Size=UDim2.new(1,-20,0,28); plSW.Position=UDim2.new(0,10,0,226); plSW.BackgroundColor3=Color3.fromRGB(220,150,50); plSW.BorderSizePixel=0; plSW.Text="Switch Places"; plSW.TextColor3=Color3.new(1,1,1); plSW.Font=Enum.Font.GothamBold; plSW.TextSize=13; plSW.AutoButtonColor=false; Instance.new("UICorner",plSW).CornerRadius=UDim.new(0,6); Instance.new("UIStroke",plSW).Color = CYAN
-	local plSL=Instance.new("TextLabel",plIF); plSL.Size=UDim2.new(1,-20,0,20); plSL.Position=UDim2.new(0,10,1,-28); plSL.BackgroundTransparency=1; plSL.Text=""; plSL.TextColor3=CYAN; plSL.Font=Enum.Font.GothamBold; plSL.TextSize=12; plSL.TextXAlignment=Enum.TextXAlignment.Center
+	local plTB=Instance.new("TextButton",r2); plTB.Size=UDim2.new(0.5,-3,1,0); plTB.BackgroundColor3=Color3.fromRGB(60,140,220); plTB.BorderSizePixel=0; plTB.Text="Teleport"; plTB.TextColor3=Color3.new(1,1,1); plTB.Font=Enum.Font.GothamBold; plTB.TextSize=13; plTB.AutoButtonColor=false; Instance.new("UICorner",plTB).CornerRadius=UDim.new(0,6)
+	local plBB=Instance.new("TextButton",r2); plBB.Size=UDim2.new(0.5,-3,1,0); plBB.Position=UDim2.new(0.5,3,0,0); plBB.BackgroundColor3=Color3.fromRGB(80,180,100); plBB.BorderSizePixel=0; plBB.Text="Bring"; plBB.TextColor3=Color3.new(1,1,1); plBB.Font=Enum.Font.GothamBold; plBB.TextSize=13; plBB.AutoButtonColor=false; Instance.new("UICorner",plBB).CornerRadius=UDim.new(0,6)
+	local plSW=Instance.new("TextButton",plIF); plSW.Size=UDim2.new(1,-20,0,28); plSW.Position=UDim2.new(0,10,0,226); plSW.BackgroundColor3=Color3.fromRGB(220,150,50); plSW.BorderSizePixel=0; plSW.Text="Switch Places"; plSW.TextColor3=Color3.new(1,1,1); plSW.Font=Enum.Font.GothamBold; plSW.TextSize=13; plSW.AutoButtonColor=false; Instance.new("UICorner",plSW).CornerRadius=UDim.new(0,6)
+	local plSL=Instance.new("TextLabel",plIF); plSL.Size=UDim2.new(1,-20,0,20); plSL.Position=UDim2.new(0,10,1,-28); plSL.BackgroundTransparency=1; plSL.Text=""; plSL.TextColor3=Color3.fromRGB(100,200,100); plSL.Font=Enum.Font.GothamBold; plSL.TextSize=12; plSL.TextXAlignment=Enum.TextXAlignment.Center
 
 	local selPl, pBtns = nil, {}
 	local function showSt(t,c,d) plSL.Text=t; plSL.TextColor3=c or Color3.fromRGB(100,200,100); if d then task.spawn(function() task.wait(d); if plSL.Text==t then plSL.Text="" end end) end end
@@ -2043,12 +2014,12 @@ do
 	local function selectPl(p) selPl=p; for pp,data in pairs(pBtns) do data.btn.BackgroundColor3=(pp==p) and Color3.fromRGB(70,50,140) or Color3.fromRGB(40,40,50) end; updSelInfo() end
 	local function createPB(plr)
 		if pBtns[plr] then return end
-		local btn=Instance.new("TextButton",plS); btn.Size=UDim2.new(1,-6,0,42); btn.BackgroundColor3=Color3.fromRGB(40,40,50); btn.BorderSizePixel=0; btn.Text=""; btn.AutoButtonColor=false; btn.LayoutOrder=plr.UserId; Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6); Instance.new("UIStroke",btn).Color = PURPLE
+		local btn=Instance.new("TextButton",plS); btn.Size=UDim2.new(1,-6,0,42); btn.BackgroundColor3=Color3.fromRGB(40,40,50); btn.BorderSizePixel=0; btn.Text=""; btn.AutoButtonColor=false; btn.LayoutOrder=plr.UserId; Instance.new("UICorner",btn).CornerRadius=UDim.new(0,6)
 		local af=Instance.new("Frame",btn); af.Size=UDim2.new(0,32,0,32); af.Position=UDim2.new(0,5,0.5,-16); af.BackgroundColor3=Color3.fromRGB(50,50,60); af.BorderSizePixel=0; Instance.new("UICorner",af).CornerRadius=UDim.new(1,0)
 		local av=Instance.new("ImageLabel",af); av.Size=UDim2.new(1,0,1,0); av.BackgroundTransparency=1; av.Image=""; av.ScaleType=Enum.ScaleType.Crop; Instance.new("UICorner",av).CornerRadius=UDim.new(1,0)
 		task.spawn(function() pcall(function() av.Image=Players:GetUserThumbnailAsync(plr.UserId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size48x48) end) end)
 		local nl=Instance.new("TextLabel",btn); nl.Size=UDim2.new(1,-45,0,18); nl.Position=UDim2.new(0,42,0,3); nl.BackgroundTransparency=1; nl.Text=plr.DisplayName or plr.Name; nl.TextColor3=Color3.new(1,1,1); nl.Font=Enum.Font.GothamBold; nl.TextSize=13; nl.TextXAlignment=Enum.TextXAlignment.Left; nl.TextTruncate=Enum.TextTruncate.AtEnd
-		local ul2=Instance.new("TextLabel",btn); ul2.Size=UDim2.new(1,-45,0,16); ul2.Position=UDim2.new(0,42,0,21); ul2.BackgroundTransparency=1; ul2.Text="@"..plr.Name; ul2.TextColor3=CYAN; ul2.Font=Enum.Font.Gotham; ul2.TextSize=11; ul2.TextXAlignment=Enum.TextXAlignment.Left; ul2.TextTruncate=Enum.TextTruncate.AtEnd
+		local ul2=Instance.new("TextLabel",btn); ul2.Size=UDim2.new(1,-45,0,16); ul2.Position=UDim2.new(0,42,0,21); ul2.BackgroundTransparency=1; ul2.Text="@"..plr.Name; ul2.TextColor3=Color3.fromRGB(150,150,160); ul2.Font=Enum.Font.Gotham; ul2.TextSize=11; ul2.TextXAlignment=Enum.TextXAlignment.Left; ul2.TextTruncate=Enum.TextTruncate.AtEnd
 		btn.MouseEnter:Connect(function() if selPl~=plr then btn.BackgroundColor3=Color3.fromRGB(50,50,65) end end)
 		btn.MouseLeave:Connect(function() if selPl~=plr then btn.BackgroundColor3=Color3.fromRGB(40,40,50) end end)
 		btn.MouseButton1Click:Connect(function() playClick(); selectPl(plr) end)
@@ -2069,17 +2040,17 @@ do
 	task.spawn(function() while true do task.wait(3); if PANIC_TRIGGERED then break end; pcall(refreshPL) end end)
 
 	plSB.MouseEnter:Connect(function() plSB.BackgroundColor3=Color3.fromRGB(120,90,220) end); plSB.MouseLeave:Connect(function() plSB.BackgroundColor3=PURPLE end)
-	plSB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then startSpectate(selPl); showSt("SPECTATING",CYAN) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
+	plSB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then startSpectate(selPl); showSt("SPECTATING",Color3.fromRGB(100,200,100)) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 	plUB.MouseEnter:Connect(function() plUB.BackgroundColor3=Color3.fromRGB(210,80,80) end); plUB.MouseLeave:Connect(function() plUB.BackgroundColor3=Color3.fromRGB(180,60,60) end)
 	plUB.MouseButton1Click:Connect(function() playClick(); stopSpectate(); showSt("Stopped",Color3.fromRGB(150,150,160),1.5) end)
 	plTB.MouseEnter:Connect(function() plTB.BackgroundColor3=Color3.fromRGB(80,160,240) end); plTB.MouseLeave:Connect(function() plTB.BackgroundColor3=Color3.fromRGB(60,140,220) end)
-	plTB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=teleportTo(selPl); showSt(msg,ok and CYAN or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
+	plTB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=teleportTo(selPl); showSt(msg,ok and Color3.fromRGB(100,200,255) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 	plBB.MouseEnter:Connect(function() plBB.BackgroundColor3=Color3.fromRGB(100,200,120) end); plBB.MouseLeave:Connect(function() plBB.BackgroundColor3=Color3.fromRGB(80,180,100) end)
-	plBB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=bringPlayer(selPl); showSt(msg,ok and CYAN or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
+	plBB.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=bringPlayer(selPl); showSt(msg,ok and Color3.fromRGB(120,220,130) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 	plSW.MouseEnter:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(240,170,70) end); plSW.MouseLeave:Connect(function() plSW.BackgroundColor3=Color3.fromRGB(220,150,50) end)
-	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and CYAN or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
+	plSW.MouseButton1Click:Connect(function() playClick(); if selPl and selPl.Parent then local ok,msg=switchPlaces(selPl); showSt(msg,ok and Color3.fromRGB(255,180,80) or Color3.fromRGB(255,100,100),2) else showSt("Select a player first!",Color3.fromRGB(255,100,100),2) end end)
 
-	-- EXPLOITS PAGE
+	-- EXPLOITS PAGE (Tp Walk, Click Tp, AntiAFK)
 	local exP=createPage("Exploits")
 	local exSubBar=Instance.new("Frame",exP); exSubBar.Size=UDim2.new(1,-20,0,30); exSubBar.Position=UDim2.new(0,10,0,0); exSubBar.BackgroundTransparency=1
 	local exSbl=Instance.new("UIListLayout",exSubBar); exSbl.FillDirection=Enum.FillDirection.Horizontal; exSbl.Padding=UDim.new(0,15)
@@ -2104,14 +2075,13 @@ do
 
 	local ctKH=Instance.new("Frame",ctPanel); ctKH.Size=UDim2.new(1,0,0,30); ctKH.BackgroundTransparency=1; ctKH.LayoutOrder=4
 	local ctKLbl=Instance.new("TextLabel",ctKH); ctKLbl.Size=UDim2.new(1,-130,1,0); ctKLbl.Position=UDim2.new(0,5,0,0)
-	ctKLbl.BackgroundTransparency=1; ctKLbl.Text="Teleport Key (hold + LMB)"; ctKLbl.TextColor3=CYAN
+	ctKLbl.BackgroundTransparency=1; ctKLbl.Text="Teleport Key (hold + LMB)"; ctKLbl.TextColor3=Color3.fromRGB(200,200,210)
 	ctKLbl.Font=Enum.Font.Gotham; ctKLbl.TextSize=12; ctKLbl.TextXAlignment=Enum.TextXAlignment.Left
 
 	local ctKeyBtn=Instance.new("TextButton",ctKH); ctKeyBtn.Size=UDim2.new(0,110,0,24); ctKeyBtn.Position=UDim2.new(1,-115,0.5,-12)
 	ctKeyBtn.BackgroundColor3=Color3.fromRGB(40,40,50); ctKeyBtn.BorderSizePixel=0; ctKeyBtn.Text=EXPLOITS.ClickTeleportKeyName
-	ctKeyBtn.TextColor3=CYAN; ctKeyBtn.Font=Enum.Font.GothamBold; ctKeyBtn.TextSize=11
+	ctKeyBtn.TextColor3=Color3.fromRGB(180,180,190); ctKeyBtn.Font=Enum.Font.GothamBold; ctKeyBtn.TextSize=11
 	ctKeyBtn.AutoButtonColor=false; Instance.new("UICorner",ctKeyBtn).CornerRadius=UDim.new(0,5)
-	Instance.new("UIStroke",ctKeyBtn).Color = PURPLE
 
 	local BIND_OPTIONS_CT = {
 		{"LPM (MB1)",function() return mbHeld[1] end},
@@ -2168,11 +2138,11 @@ do
 		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
 		btn.MouseButton1Click:Connect(function()
 			playClick(); if selEx then selEx.btn.TextColor3=Color3.fromRGB(120,120,130); selEx.ul.Visible=false end
-			selEx={btn=btn,ul=ul}; btn.TextColor3=CYAN; ul.Visible=true; switchEx(n)
+			selEx={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchEx(n)
 		end); return {btn=btn,ul=ul}
 	end
 	local ex1=mkExB("TpWalk","Tp Walk",1); mkExB("ClickTp","Click Tp",2); mkExB("AntiAFK","Anti-AFK",3)
-	selEx=ex1; ex1.btn.TextColor3=CYAN; ex1.ul.Visible=true
+	selEx=ex1; ex1.btn.TextColor3=Color3.new(1,1,1); ex1.ul.Visible=true
 
 	-- SETTINGS PAGE
 	local stP=createPage("Settings")
@@ -2182,7 +2152,7 @@ do
 
 	local stGenP=Instance.new("Frame",stSubPF); stGenP.Size=UDim2.new(1,0,1,0); stGenP.BackgroundTransparency=1; stGenP.Visible=true
 	local sgPanel=Instance.new("Frame",stGenP); sgPanel.Size=UDim2.new(0.6,0,0,120); sgPanel.Position=UDim2.new(0,10,0,10); sgPanel.BackgroundColor3=DARK; sgPanel.BorderSizePixel=0
-	Instance.new("UICorner",sgPanel).CornerRadius=UDim.new(0,8); Instance.new("UIStroke",sgPanel).Color = PURPLE
+	Instance.new("UICorner",sgPanel).CornerRadius=UDim.new(0,8)
 	local sgLL=Instance.new("UIListLayout",sgPanel); sgLL.Padding=UDim.new(0,4); sgLL.SortOrder=Enum.SortOrder.LayoutOrder
 	local sgPD=Instance.new("UIPadding",sgPanel); sgPD.PaddingTop=UDim.new(0,8); sgPD.PaddingLeft=UDim.new(0,5); sgPD.PaddingRight=UDim.new(0,5)
 	mkSection(sgPanel,"Menu Settings",1)
@@ -2190,13 +2160,12 @@ do
 	local MENU_BIND = {KeyName = "RightShift", KeyCode = Enum.KeyCode.RightShift}
 	local mbH=Instance.new("Frame",sgPanel); mbH.Size=UDim2.new(1,0,0,30); mbH.BackgroundTransparency=1; mbH.LayoutOrder=2
 	local mbLbl=Instance.new("TextLabel",mbH); mbLbl.Size=UDim2.new(0.5,0,1,0); mbLbl.Position=UDim2.new(0,5,0,0)
-	mbLbl.BackgroundTransparency=1; mbLbl.Text="Toggle Menu Key"; mbLbl.TextColor3=CYAN
+	mbLbl.BackgroundTransparency=1; mbLbl.Text="Toggle Menu Key"; mbLbl.TextColor3=Color3.fromRGB(200,200,210)
 	mbLbl.Font=Enum.Font.Gotham; mbLbl.TextSize=13; mbLbl.TextXAlignment=Enum.TextXAlignment.Left
 	local mbBtn=Instance.new("TextButton",mbH); mbBtn.Size=UDim2.new(0,120,0,24); mbBtn.Position=UDim2.new(1,-125,0.5,-12)
 	mbBtn.BackgroundColor3=Color3.fromRGB(40,40,50); mbBtn.BorderSizePixel=0; mbBtn.Text=MENU_BIND.KeyName
-	mbBtn.TextColor3=CYAN; mbBtn.Font=Enum.Font.GothamBold; mbBtn.TextSize=11
+	mbBtn.TextColor3=Color3.fromRGB(180,180,190); mbBtn.Font=Enum.Font.GothamBold; mbBtn.TextSize=11
 	mbBtn.AutoButtonColor=false; Instance.new("UICorner",mbBtn).CornerRadius=UDim.new(0,5)
-	Instance.new("UIStroke",mbBtn).Color = PURPLE
 
 	local mbListening = false
 	mbBtn.MouseButton1Click:Connect(function()
@@ -2206,16 +2175,16 @@ do
 	UIS.InputBegan:Connect(function(inp, gp)
 		if mbListening and inp.UserInputType == Enum.UserInputType.Keyboard then
 			mbListening = false; MENU_BIND.KeyCode = inp.KeyCode; MENU_BIND.KeyName = inp.KeyCode.Name
-			mbBtn.Text = MENU_BIND.KeyName; mbBtn.TextColor3 = CYAN
+			mbBtn.Text = MENU_BIND.KeyName; mbBtn.TextColor3 = Color3.fromRGB(180,180,190)
 		end
 	end)
 	_G.BearHub_getMenuBind = function() return MENU_BIND.KeyCode end
 
 	local stPanicP=Instance.new("Frame",stSubPF); stPanicP.Size=UDim2.new(1,0,1,0); stPanicP.BackgroundTransparency=1; stPanicP.Visible=false
-	local panicC=Instance.new("Frame",stPanicP); panicC.Size=UDim2.new(0.7,0,0,300); panicC.Position=UDim2.new(0.15,0,0,20); panicC.BackgroundColor3=DARK; panicC.BorderSizePixel=0; Instance.new("UICorner",panicC).CornerRadius=UDim.new(0,10); Instance.new("UIStroke",panicC).Color = PURPLE
+	local panicC=Instance.new("Frame",stPanicP); panicC.Size=UDim2.new(0.7,0,0,300); panicC.Position=UDim2.new(0.15,0,0,20); panicC.BackgroundColor3=DARK; panicC.BorderSizePixel=0; Instance.new("UICorner",panicC).CornerRadius=UDim.new(0,10)
 	local pI=Instance.new("TextLabel",panicC); pI.Size=UDim2.new(1,0,0,50); pI.Position=UDim2.new(0,0,0,20); pI.BackgroundTransparency=1; pI.Text="⚠️"; pI.TextColor3=Color3.fromRGB(255,60,60); pI.Font=Enum.Font.GothamBold; pI.TextSize=40
 	local pT=Instance.new("TextLabel",panicC); pT.Size=UDim2.new(1,-20,0,25); pT.Position=UDim2.new(0,10,0,75); pT.BackgroundTransparency=1; pT.Text="PANIC BUTTON"; pT.TextColor3=Color3.fromRGB(255,80,80); pT.Font=Enum.Font.GothamBold; pT.TextSize=20
-	local pD=Instance.new("TextLabel",panicC); pD.Size=UDim2.new(1,-30,0,60); pD.Position=UDim2.new(0,15,0,105); pD.BackgroundTransparency=1; pD.TextWrapped=true; pD.Text="Instantly destroys the entire script, removes all traces (ESP, hitbox, GUI, sounds). It will look like you never used any cheats."; pD.TextColor3=CYAN; pD.Font=Enum.Font.Gotham; pD.TextSize=12
+	local pD=Instance.new("TextLabel",panicC); pD.Size=UDim2.new(1,-30,0,60); pD.Position=UDim2.new(0,15,0,105); pD.BackgroundTransparency=1; pD.TextWrapped=true; pD.Text="Instantly destroys the entire script, removes all traces (ESP, hitbox, GUI, sounds). It will look like you never used any cheats."; pD.TextColor3=Color3.fromRGB(160,160,170); pD.Font=Enum.Font.Gotham; pD.TextSize=12
 	local pBtn=Instance.new("TextButton",panicC); pBtn.Size=UDim2.new(0.6,0,0,60); pBtn.Position=UDim2.new(0.2,0,0,185); pBtn.BackgroundColor3=Color3.fromRGB(200,30,30); pBtn.BorderSizePixel=0; pBtn.Text="SPIERDALAJ"; pBtn.TextColor3=Color3.new(1,1,1); pBtn.Font=Enum.Font.GothamBold; pBtn.TextSize=24; pBtn.AutoButtonColor=false; Instance.new("UICorner",pBtn).CornerRadius=UDim.new(0,10)
 	local pSt=Instance.new("UIStroke",pBtn); pSt.Color=Color3.fromRGB(255,60,60); pSt.Thickness=2
 	pBtn.MouseEnter:Connect(function() pBtn.BackgroundColor3=Color3.fromRGB(255,40,40); pSt.Color=Color3.fromRGB(255,100,100) end)
@@ -2227,131 +2196,17 @@ do
 	local function mkSSB(n,o)
 		local btn=Instance.new("TextButton",stSubBar); btn.Size=UDim2.new(0,100,1,0); btn.BackgroundTransparency=1; btn.BorderSizePixel=0; btn.Text=n; btn.TextColor3=Color3.fromRGB(120,120,130); btn.Font=Enum.Font.GothamBold; btn.TextSize=14; btn.AutoButtonColor=false; btn.LayoutOrder=o
 		local ul=Instance.new("Frame",btn); ul.Size=UDim2.new(1,0,0,2); ul.Position=UDim2.new(0,0,1,-2); ul.BackgroundColor3=PURPLE; ul.BorderSizePixel=0; ul.Visible=false
-		btn.MouseButton1Click:Connect(function() playClick(); if selSS then selSS.btn.TextColor3=Color3.fromRGB(120,120,130); selSS.ul.Visible=false end; selSS={btn=btn,ul=ul}; btn.TextColor3=CYAN; ul.Visible=true; switchSS(n) end)
+		btn.MouseButton1Click:Connect(function() playClick(); if selSS then selSS.btn.TextColor3=Color3.fromRGB(120,120,130); selSS.ul.Visible=false end; selSS={btn=btn,ul=ul}; btn.TextColor3=Color3.new(1,1,1); ul.Visible=true; switchSS(n) end)
 		return {btn=btn,ul=ul}
 	end
-	local ss1=mkSSB("General",1); mkSSB("Panic",2); selSS=ss1; ss1.btn.TextColor3=CYAN; ss1.ul.Visible=true
+	local ss1=mkSSB("General",1); mkSSB("Panic",2); selSS=ss1; ss1.btn.TextColor3=Color3.new(1,1,1); ss1.ul.Visible=true
 
 	local afP=createPage("AutoFarm")
-	local afL=Instance.new("TextLabel",afP); afL.Size=UDim2.new(1,-20,0,40); afL.Position=UDim2.new(0,10,0,10); afL.BackgroundTransparency=1; afL.Text="AutoFarm - Coming Soon"; afL.TextColor3=CYAN; afL.Font=Enum.Font.Gotham; afL.TextSize=16
+	local afL=Instance.new("TextLabel",afP); afL.Size=UDim2.new(1,-20,0,40); afL.Position=UDim2.new(0,10,0,10); afL.BackgroundTransparency=1; afL.Text="AutoFarm - Coming Soon"; afL.TextColor3=Color3.fromRGB(100,100,110); afL.Font=Enum.Font.Gotham; afL.TextSize=16
 end
 
 --============================================================
--- RESOURCES PAGE
---============================================================
-do
-	local resP = createPage("Resources")
-	local subBar = Instance.new("Frame", resP)
-	subBar.Size = UDim2.new(1, -20, 0, 30); subBar.Position = UDim2.new(0, 10, 0, 0)
-	subBar.BackgroundTransparency = 1
-	local sbl = Instance.new("UIListLayout", subBar)
-	sbl.FillDirection = Enum.FillDirection.Horizontal; sbl.Padding = UDim.new(0, 15)
-
-	local subPF = Instance.new("Frame", resP)
-	subPF.Size = UDim2.new(1, 0, 1, -40); subPF.Position = UDim2.new(0, 0, 0, 38)
-	subPF.BackgroundTransparency = 1
-
-	local resPage = Instance.new("Frame", subPF)
-	resPage.Size = UDim2.new(1, 0, 1, 0); resPage.BackgroundTransparency = 1; resPage.Visible = true
-
-	local panel = mkPanel(resPage, 1, 400, 0, 5)
-
-	local searchBox = Instance.new("TextBox", panel)
-	searchBox.Size = UDim2.new(1, -10, 0, 28)
-	searchBox.Position = UDim2.new(0, 5, 0, 5)
-	searchBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-	searchBox.Text = ""
-	searchBox.PlaceholderText = "Search resources..."
-	searchBox.TextColor3 = Color3.new(1,1,1)
-	searchBox.Font = Enum.Font.Gotham
-	searchBox.TextSize = 13
-	searchBox.BorderSizePixel = 0
-	Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 6)
-	Instance.new("UIStroke", searchBox).Color = PURPLE
-
-	local list = Instance.new("ScrollingFrame", panel)
-	list.Size = UDim2.new(1, -10, 1, -40)
-	list.Position = UDim2.new(0, 5, 0, 38)
-	list.BackgroundTransparency = 1
-	list.ScrollBarThickness = 5
-	list.ScrollBarImageColor3 = PURPLE
-	list.CanvasSize = UDim2.new(0,0,0,0)
-	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
-	local content = Instance.new("TextLabel", list)
-	content.Size = UDim2.new(1, 0, 0, 0)
-	content.BackgroundTransparency = 1
-	content.Text = ""
-	content.TextColor3 = Color3.fromRGB(200, 200, 210)
-	content.Font = Enum.Font.Code
-	content.TextSize = 13
-	content.TextXAlignment = Enum.TextXAlignment.Left
-	content.TextYAlignment = Enum.TextYAlignment.Top
-	content.TextWrapped = false
-	content.RichText = true
-
-	local function gatherItems()
-		local items = {}
-		local function scan(obj, indent)
-			if not obj then return end
-			local name = obj.Name
-			local className = obj.ClassName
-			local path = obj:GetFullName()
-			table.insert(items, {Name = name, Class = className, Path = path, Indent = indent})
-			for _, child in ipairs(obj:GetChildren()) do
-				scan(child, indent + 1)
-			end
-		end
-		scan(ReplicatedStorage, 0)
-		scan(ServerScriptService, 0)
-		scan(ServerStorage, 0)
-		scan(workspace, 0)
-		table.sort(items, function(a,b) return a.Name:lower() < b.Name:lower() end)
-		return items
-	end
-
-	local function refreshList(filterText)
-		if filterText == "" then filterText = nil end
-		local items = gatherItems()
-		local lines = {}
-		for _, item in ipairs(items) do
-			if not filterText or item.Name:lower():find(filterText:lower()) then
-				local indent = string.rep("    ", item.Indent)
-				local line = string.format('%s<font color="#%s">%s</font> <font color="#aaaaaa">[%s]</font>',
-					indent,
-					(item.Class == "ModuleScript" and "00ffcc") or (item.Class == "LocalScript" and "66ccff") or (item.Class == "Script" and "ffaa66") or "ffffff",
-					item.Name,
-					item.Class
-				)
-				table.insert(lines, line)
-			end
-		end
-		content.Text = table.concat(lines, "\n")
-		content.Size = UDim2.new(1, 0, 0, content.TextBounds.Y + 20)
-		list.CanvasSize = UDim2.new(0,0,0,content.TextBounds.Y + 20)
-	end
-
-	searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-		refreshList(searchBox.Text)
-	end)
-	refreshList("")
-
-	local refreshBtn = mkButton(panel, "Refresh", function()
-		refreshList(searchBox.Text)
-	end, 1, Color3.fromRGB(60, 140, 220))
-	refreshBtn.Size = UDim2.new(0, 80, 0, 28)
-	refreshBtn.Position = UDim2.new(1, -90, 0, 5)
-
-	local selR = nil
-	local btn = Instance.new("TextButton", subBar)
-	btn.Size = UDim2.new(0, 100, 1, 0); btn.BackgroundTransparency = 1; btn.BorderSizePixel = 0
-	btn.Text = "Resources"; btn.TextColor3 = CYAN; btn.Font = Enum.Font.GothamBold; btn.TextSize = 14; btn.AutoButtonColor = false; btn.LayoutOrder = 1
-	local ul = Instance.new("Frame", btn); ul.Size = UDim2.new(1,0,0,2); ul.Position = UDim2.new(0,0,1,-2); ul.BackgroundColor3 = PURPLE; ul.BorderSizePixel = 0; ul.Visible = true
-	selR = {btn=btn, ul=ul}
-end
-
---============================================================
--- EXECUTOR PAGE (z numerami linii po lewej)
+-- EXECUTOR PAGE (POPRAWIONY, BEZ BELKI, BEZ NAPISU "OUTPUT", ZE SCROLLEM)
 --============================================================
 do
 	local exeP = createPage("Executor")
@@ -2361,50 +2216,53 @@ do
 	splitContainer.Position = UDim2.new(0, 10, 0, 5)
 	splitContainer.BackgroundTransparency = 1
 
-	-- Lewy panel (edytor)
+	-- Lewy panel (edytor kodu) – stała szerokość 70%
 	local leftPanel = Instance.new("Frame", splitContainer)
 	leftPanel.Size = UDim2.new(0.7, -5, 1, 0)
 	leftPanel.Position = UDim2.new(0, 0, 0, 0)
 	leftPanel.BackgroundColor3 = DARK
 	leftPanel.BorderSizePixel = 0
 	Instance.new("UICorner", leftPanel).CornerRadius = UDim.new(0, 8)
-	Instance.new("UIStroke", leftPanel).Color = PURPLE
 
+	-- ScrollingFrame obejmujący numery linii i pole tekstowe
 	local codeScroll = Instance.new("ScrollingFrame", leftPanel)
 	codeScroll.Size = UDim2.new(1, -4, 1, -4)
 	codeScroll.Position = UDim2.new(0, 2, 0, 2)
 	codeScroll.BackgroundTransparency = 1
 	codeScroll.ScrollBarThickness = 8
 	codeScroll.ScrollBarImageColor3 = PURPLE
-	codeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	codeScroll.CanvasSize = UDim2.new(0, 0, 0, 0) -- dynamicznie ustawione później
 	codeScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 	codeScroll.ScrollingDirection = Enum.ScrollingDirection.Y
 	codeScroll.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
 
+	-- Kontener wewnątrz scrolla
 	local codeContainer = Instance.new("Frame", codeScroll)
-	codeContainer.Size = UDim2.new(1, 0, 0, 5000)
+	codeContainer.Size = UDim2.new(1, 0, 0, 5000) -- wysoki, będzie się rozciągał
 	codeContainer.BackgroundTransparency = 1
 	codeContainer.AutomaticSize = Enum.AutomaticSize.Y
 	local containerLayout = Instance.new("UIListLayout", codeContainer)
 	containerLayout.FillDirection = Enum.FillDirection.Horizontal
 	containerLayout.Padding = UDim.new(0, 5)
 
+	-- Numery linii (osobny label)
 	local lineNumbers = Instance.new("TextLabel", codeContainer)
-	lineNumbers.Size = UDim2.new(0, 35, 1, 0)
+	lineNumbers.Size = UDim2.new(0, 30, 1, 0)
 	lineNumbers.BackgroundTransparency = 1
 	lineNumbers.Text = "1"
-	lineNumbers.TextColor3 = Color3.fromRGB(150, 150, 170)
+	lineNumbers.TextColor3 = Color3.fromRGB(120, 120, 130)
 	lineNumbers.Font = Enum.Font.Code
 	lineNumbers.TextSize = 14
 	lineNumbers.TextXAlignment = Enum.TextXAlignment.Right
 	lineNumbers.TextYAlignment = Enum.TextYAlignment.Top
 	lineNumbers.LayoutOrder = 0
 
+	-- Edytor kodu (TextBox)
 	local codeBox = Instance.new("TextBox", codeContainer)
-	codeBox.Size = UDim2.new(1, -40, 1, 0)
+	codeBox.Size = UDim2.new(1, -40, 1, 0)  -- odejmujemy szerokość linii
 	codeBox.BackgroundTransparency = 1
 	codeBox.Text = ""
-	codeBox.TextColor3 = CYAN
+	codeBox.TextColor3 = Color3.new(1,1,1)
 	codeBox.PlaceholderText = "-- Enter Lua code here"
 	codeBox.Font = Enum.Font.Code
 	codeBox.TextSize = 14
@@ -2416,11 +2274,13 @@ do
 	codeBox.LayoutOrder = 1
 	codeBox.AutomaticSize = Enum.AutomaticSize.Y
 
+	-- Aktualizacja numerów linii
 	codeBox:GetPropertyChangedSignal("Text"):Connect(function()
 		local lines = #codeBox.Text:split("\n")
 		local nums = {}
 		for i=1, lines do nums[i] = tostring(i) end
 		lineNumbers.Text = table.concat(nums, "\n")
+		-- Dopasowanie wysokości kontenera do tekstu
 		codeContainer.Size = UDim2.new(1, 0, 0, codeBox.TextBounds.Y + 20)
 	end)
 
@@ -2431,8 +2291,8 @@ do
 	rightPanel.BackgroundColor3 = DARK
 	rightPanel.BorderSizePixel = 0
 	Instance.new("UICorner", rightPanel).CornerRadius = UDim.new(0, 8)
-	Instance.new("UIStroke", rightPanel).Color = PURPLE
 
+	-- Brak napisu "Output" – bezpośrednio ScrollingFrame na output
 	local outputScroller = Instance.new("ScrollingFrame", rightPanel)
 	outputScroller.Size = UDim2.new(1, -10, 1, -10)
 	outputScroller.Position = UDim2.new(0, 5, 0, 5)
@@ -2455,6 +2315,7 @@ do
 	outputText.TextWrapped = true
 	outputText.RichText = true
 
+	-- Przycisk Execute
 	local execBtn = mkButton(rightPanel, "Execute", function()
 		local code = codeBox.Text
 		local outputLines = {}
@@ -2488,12 +2349,13 @@ do
 		end
 		outputText.Text = table.concat(outputLines, "\n")
 		outputScroller.CanvasSize = UDim2.new(0,0,0,outputText.TextBounds.Y + 20)
-	end, 1, Color3.fromRGB(140, 60, 255))
+	end, 1, Color3.fromRGB(100, 70, 200))
 	execBtn.Size = UDim2.new(0, 80, 0, 28)
 	execBtn.Position = UDim2.new(1, -90, 0, 5)
 	execBtn.LayoutOrder = nil
 	execBtn.Parent = rightPanel
 
+	-- Przycisk Clear
 	local clearBtn = mkButton(rightPanel, "Clear", function()
 		codeBox.Text = ""
 		outputText.Text = "> Ready"
@@ -2505,11 +2367,11 @@ do
 end
 
 --============================================================
--- TABS + DRAG
+-- TABS + DRAG (usunięto cień)
 --============================================================
 local tabsFrame = sidebar:FindFirstChild("TabsFrame")
 local tabsData = {
-	{"AimAssistance"}, {"Visualization"}, {"Miscellaneous"}, {"Exploits"}, {"Players"}, {"Settings"}, {"AutoFarm"}, {"Resources"}, {"Executor"}
+	{"AimAssistance"}, {"Visualization"}, {"Miscellaneous"}, {"Exploits"}, {"Players"}, {"Settings"}, {"AutoFarm"}, {"Executor"}
 }
 local selTab = nil
 
@@ -2533,14 +2395,14 @@ local function makeTabBtn(name, order)
 	btn.MouseButton1Click:Connect(function()
 		playClick()
 		if selTab then selTab.BackgroundTransparency=1; selTab.TextColor3=Color3.fromRGB(150,150,160) end
-		selTab=btn; btn.BackgroundTransparency=0.5; btn.TextColor3=CYAN; switchPage(name)
+		selTab=btn; btn.BackgroundTransparency=0.5; btn.TextColor3=Color3.new(1,1,1); switchPage(name)
 	end)
 	return btn
 end
 
 for i, tab in ipairs(tabsData) do
 	local b = makeTabBtn(tab[1], i)
-	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=CYAN; switchPage(tab[1]) end
+	if i == 1 then selTab=b; b.BackgroundTransparency=0.5; b.TextColor3=Color3.new(1,1,1); switchPage(tab[1]) end
 end
 
 local ORIGINAL_SIZE = UDim2.new(0, 780, 0, 530)
@@ -2549,11 +2411,10 @@ local BALL_SIZE = UDim2.new(0, 60, 0, 60)
 local miniBall = Instance.new("ImageButton", gui)
 miniBall.Size = BALL_SIZE; miniBall.Position = UDim2.new(0, 40, 0.5, -30)
 miniBall.BackgroundColor3 = Color3.fromRGB(30, 25, 30); miniBall.BorderSizePixel = 0
-miniBall.Image = BEAR_ICON; miniBall.ImageColor3 = CYAN
+miniBall.Image = BEAR_ICON; miniBall.ImageColor3 = Color3.new(1,1,1)
 miniBall.ScaleType = Enum.ScaleType.Fit; miniBall.AutoButtonColor = false
 miniBall.Visible = false; miniBall.ClipsDescendants = true
 Instance.new("UICorner", miniBall).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", miniBall).Color = PURPLE
 
 local minimized = false; local animating = false
 local TW = TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
