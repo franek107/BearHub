@@ -2260,152 +2260,153 @@ do
 	end
 	local ss1=mkSSB("General",1); mkSSB("Panic",2); selSS=ss1; ss1.btn.TextColor3=Color3.new(1,1,1); ss1.ul.Visible=true
 
--- EXECUTOR PAGE
-local execPage = createPage("Executor")
-local execMainFrame = Instance.new("Frame", execPage)
-execMainFrame.Size = UDim2.new(1, -20, 1, -20)
-execMainFrame.Position = UDim2.new(0, 10, 0, 10)
-execMainFrame.BackgroundTransparency = 1
-
-local execEditorFrame = Instance.new("Frame", execMainFrame)
-execEditorFrame.Size = UDim2.new(1, 0, 0, 250)
-execEditorFrame.BackgroundColor3 = DARK
-execEditorFrame.BorderSizePixel = 0
-Instance.new("UICorner", execEditorFrame).CornerRadius = UDim.new(0, 6)
-
--- ScrollingFrame dla linii i kodu
-local execScroller = Instance.new("ScrollingFrame", execEditorFrame)
-execScroller.Size = UDim2.new(1, -10, 1, -10)
-execScroller.Position = UDim2.new(0, 5, 0, 5)
-execScroller.BackgroundTransparency = 1
-execScroller.ScrollBarThickness = 6
-execScroller.ScrollBarImageColor3 = PURPLE
-execScroller.CanvasSize = UDim2.new(0, 0, 0, 0)
-execScroller.BorderSizePixel = 0
-
--- Kontener wewnątrz ScrollingFrame
-local execContent = Instance.new("Frame", execScroller)
-execContent.Size = UDim2.new(1, 0, 0, 0)
-execContent.BackgroundTransparency = 1
-
--- Numeracja linii
-local lnLabel = Instance.new("TextLabel", execContent)
-lnLabel.Size = UDim2.new(0, 35, 0, 0)
-lnLabel.Position = UDim2.new(0, 0, 0, 0)
-lnLabel.BackgroundTransparency = 1
-lnLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
-lnLabel.Font = Enum.Font.Code
-lnLabel.TextSize = 14
-lnLabel.TextXAlignment = Enum.TextXAlignment.Right
-lnLabel.TextYAlignment = Enum.TextYAlignment.Top
-lnLabel.Text = "1\n"
-
--- Edytor kodu
-local codeBox = Instance.new("TextBox", execContent)
-codeBox.Size = UDim2.new(1, -40, 0, 0)
-codeBox.Position = UDim2.new(0, 38, 0, 0)
-codeBox.BackgroundTransparency = 1
-codeBox.TextColor3 = Color3.new(1, 1, 1)
-codeBox.Font = Enum.Font.Code
-codeBox.TextSize = 14
-codeBox.TextXAlignment = Enum.TextXAlignment.Left
-codeBox.TextYAlignment = Enum.TextYAlignment.Top
-codeBox.TextWrapped = false
-codeBox.ClearTextOnFocus = false
-codeBox.TextEditable = true
-codeBox.MultiLine = true
-codeBox.Text = "print('Hello from BearHub!')\n"
-
--- Aktualizacja numeracji i wysokości
-local LINE_HEIGHT = 18  -- dopasowane do TextSize 14
-
-local function updateEditor()
-	local lines = codeBox.Text:split("\n")
-	local lineCount = #lines
-	local lineText = ""
-	for i = 1, lineCount do
-		lineText = lineText .. tostring(i) .. "\n"
-	end
-	lnLabel.Text = lineText
-	local totalHeight = math.max(lineCount, 1) * LINE_HEIGHT
-	execContent.Size = UDim2.new(1, 0, 0, totalHeight)
-	lnLabel.Size = UDim2.new(0, 35, 0, totalHeight)
-	codeBox.Size = UDim2.new(1, -40, 0, totalHeight)
-	execScroller.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
-end
-
-codeBox:GetPropertyChangedSignal("Text"):Connect(updateEditor)
-updateEditor()
-
--- Output
-local outputBox = Instance.new("TextBox", execMainFrame)
-outputBox.Size = UDim2.new(1, 0, 0, 120)
-outputBox.Position = UDim2.new(0, 0, 0, 260)
-outputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-outputBox.BorderSizePixel = 0
-outputBox.TextColor3 = Color3.fromRGB(180, 200, 180)
-outputBox.Font = Enum.Font.Code
-outputBox.TextSize = 12
-outputBox.TextXAlignment = Enum.TextXAlignment.Left
-outputBox.TextYAlignment = Enum.TextYAlignment.Top
-outputBox.TextEditable = false
-outputBox.MultiLine = true
-outputBox.Text = ""
-outputBox.ScrollBarThickness = 4
-outputBox.ScrollBarImageColor3 = PURPLE
-Instance.new("UICorner", outputBox).CornerRadius = UDim.new(0, 4)
-
--- Przyciski
-local execBtnFrame = Instance.new("Frame", execMainFrame)
-execBtnFrame.Size = UDim2.new(1, 0, 0, 36)
-execBtnFrame.Position = UDim2.new(0, 0, 0, 390)
-execBtnFrame.BackgroundTransparency = 1
-
-local executeBtn = mkButton(execBtnFrame, "Execute", nil, 1, Color3.fromRGB(100, 180, 100))
-executeBtn.Size = UDim2.new(0, 90, 0, 30)
-executeBtn.Position = UDim2.new(0, 0, 0.5, -15)
-
-local clearBtn = mkButton(execBtnFrame, "Clear Output", nil, 2, Color3.fromRGB(180, 60, 60))
-clearBtn.Size = UDim2.new(0, 110, 0, 30)
-clearBtn.Position = UDim2.new(0, 100, 0.5, -15)
-
--- Funkcje wykonawcze
-local function customPrint(...)
-	local args = {...}
-	local str = ""
-	for i, v in ipairs(args) do
-		if i > 1 then str = str .. "\t" end
-		str = str .. tostring(v)
-	end
-	outputBox.Text = outputBox.Text .. str .. "\n"
-	-- Auto-przewijanie do dołu
-	task.wait()
-	outputBox.CursorPosition = #outputBox.Text
-end
-
-local function executeCode()
-	outputBox.Text = "-- Output --\n"
-	local code = codeBox.Text
-	local oldPrint = print
-	print = customPrint
-	task.spawn(function()
-		local success, err = pcall(function()
-			local f, err2 = loadstring(code)
-			if not f then error(err2) end
-			f()
-		end)
-		print = oldPrint
-		if not success then
-			outputBox.Text = outputBox.Text .. "\n❌ Error: " .. tostring(err)
-		end
-	end)
-end
-
-executeBtn.MouseButton1Click:Connect(executeCode)
-clearBtn.MouseButton1Click:Connect(function() playClick(); outputBox.Text = "" end)
-
+	-- AUTO FARM PAGE (COMING SOON)
 	local afP=createPage("AutoFarm")
 	local afL=Instance.new("TextLabel",afP); afL.Size=UDim2.new(1,-20,0,40); afL.Position=UDim2.new(0,10,0,10); afL.BackgroundTransparency=1; afL.Text="AutoFarm - Coming Soon"; afL.TextColor3=Color3.fromRGB(100,100,110); afL.Font=Enum.Font.Gotham; afL.TextSize=16
+
+	-- EXECUTOR PAGE
+	local execPage = createPage("Executor")
+	local execMainFrame = Instance.new("Frame", execPage)
+	execMainFrame.Size = UDim2.new(1, -20, 1, -20)
+	execMainFrame.Position = UDim2.new(0, 10, 0, 10)
+	execMainFrame.BackgroundTransparency = 1
+
+	local execEditorFrame = Instance.new("Frame", execMainFrame)
+	execEditorFrame.Size = UDim2.new(1, 0, 0, 250)
+	execEditorFrame.BackgroundColor3 = DARK
+	execEditorFrame.BorderSizePixel = 0
+	Instance.new("UICorner", execEditorFrame).CornerRadius = UDim.new(0, 6)
+
+	-- ScrollingFrame dla linii i kodu
+	local execScroller = Instance.new("ScrollingFrame", execEditorFrame)
+	execScroller.Size = UDim2.new(1, -10, 1, -10)
+	execScroller.Position = UDim2.new(0, 5, 0, 5)
+	execScroller.BackgroundTransparency = 1
+	execScroller.ScrollBarThickness = 6
+	execScroller.ScrollBarImageColor3 = PURPLE
+	execScroller.CanvasSize = UDim2.new(0, 0, 0, 0)
+	execScroller.BorderSizePixel = 0
+
+	-- Kontener wewnątrz ScrollingFrame
+	local execContent = Instance.new("Frame", execScroller)
+	execContent.Size = UDim2.new(1, 0, 0, 0)
+	execContent.BackgroundTransparency = 1
+
+	-- Numeracja linii
+	local lnLabel = Instance.new("TextLabel", execContent)
+	lnLabel.Size = UDim2.new(0, 35, 0, 0)
+	lnLabel.Position = UDim2.new(0, 0, 0, 0)
+	lnLabel.BackgroundTransparency = 1
+	lnLabel.TextColor3 = Color3.fromRGB(120, 120, 140)
+	lnLabel.Font = Enum.Font.Code
+	lnLabel.TextSize = 14
+	lnLabel.TextXAlignment = Enum.TextXAlignment.Right
+	lnLabel.TextYAlignment = Enum.TextYAlignment.Top
+	lnLabel.Text = "1\n"
+
+	-- Edytor kodu
+	local codeBox = Instance.new("TextBox", execContent)
+	codeBox.Size = UDim2.new(1, -40, 0, 0)
+	codeBox.Position = UDim2.new(0, 38, 0, 0)
+	codeBox.BackgroundTransparency = 1
+	codeBox.TextColor3 = Color3.new(1, 1, 1)
+	codeBox.Font = Enum.Font.Code
+	codeBox.TextSize = 14
+	codeBox.TextXAlignment = Enum.TextXAlignment.Left
+	codeBox.TextYAlignment = Enum.TextYAlignment.Top
+	codeBox.TextWrapped = false
+	codeBox.ClearTextOnFocus = false
+	codeBox.TextEditable = true
+	codeBox.MultiLine = true
+	codeBox.Text = "print('Hello from BearHub!')\n"
+
+	-- Aktualizacja numeracji i wysokości
+	local LINE_HEIGHT = 18  -- dopasowane do TextSize 14
+
+	local function updateEditor()
+		local lines = codeBox.Text:split("\n")
+		local lineCount = #lines
+		local lineText = ""
+		for i = 1, lineCount do
+			lineText = lineText .. tostring(i) .. "\n"
+		end
+		lnLabel.Text = lineText
+		local totalHeight = math.max(lineCount, 1) * LINE_HEIGHT
+		execContent.Size = UDim2.new(1, 0, 0, totalHeight)
+		lnLabel.Size = UDim2.new(0, 35, 0, totalHeight)
+		codeBox.Size = UDim2.new(1, -40, 0, totalHeight)
+		execScroller.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+	end
+
+	codeBox:GetPropertyChangedSignal("Text"):Connect(updateEditor)
+	updateEditor()
+
+	-- Output
+	local outputBox = Instance.new("TextBox", execMainFrame)
+	outputBox.Size = UDim2.new(1, 0, 0, 120)
+	outputBox.Position = UDim2.new(0, 0, 0, 260)
+	outputBox.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	outputBox.BorderSizePixel = 0
+	outputBox.TextColor3 = Color3.fromRGB(180, 200, 180)
+	outputBox.Font = Enum.Font.Code
+	outputBox.TextSize = 12
+	outputBox.TextXAlignment = Enum.TextXAlignment.Left
+	outputBox.TextYAlignment = Enum.TextYAlignment.Top
+	outputBox.TextEditable = false
+	outputBox.MultiLine = true
+	outputBox.Text = ""
+	outputBox.ScrollBarThickness = 4
+	outputBox.ScrollBarImageColor3 = PURPLE
+	Instance.new("UICorner", outputBox).CornerRadius = UDim.new(0, 4)
+
+	-- Przyciski
+	local execBtnFrame = Instance.new("Frame", execMainFrame)
+	execBtnFrame.Size = UDim2.new(1, 0, 0, 36)
+	execBtnFrame.Position = UDim2.new(0, 0, 0, 390)
+	execBtnFrame.BackgroundTransparency = 1
+
+	local executeBtn = mkButton(execBtnFrame, "Execute", nil, 1, Color3.fromRGB(100, 180, 100))
+	executeBtn.Size = UDim2.new(0, 90, 0, 30)
+	executeBtn.Position = UDim2.new(0, 0, 0.5, -15)
+
+	local clearBtn = mkButton(execBtnFrame, "Clear Output", nil, 2, Color3.fromRGB(180, 60, 60))
+	clearBtn.Size = UDim2.new(0, 110, 0, 30)
+	clearBtn.Position = UDim2.new(0, 100, 0.5, -15)
+
+	-- Funkcje wykonawcze
+	local function customPrint(...)
+		local args = {...}
+		local str = ""
+		for i, v in ipairs(args) do
+			if i > 1 then str = str .. "\t" end
+			str = str .. tostring(v)
+		end
+		outputBox.Text = outputBox.Text .. str .. "\n"
+		-- Auto-przewijanie do dołu
+		task.wait()
+		outputBox.CursorPosition = #outputBox.Text
+	end
+
+	local function executeCode()
+		outputBox.Text = "-- Output --\n"
+		local code = codeBox.Text
+		local oldPrint = print
+		print = customPrint
+		task.spawn(function()
+			local success, err = pcall(function()
+				local f, err2 = loadstring(code)
+				if not f then error(err2) end
+				f()
+			end)
+			print = oldPrint
+			if not success then
+				outputBox.Text = outputBox.Text .. "\n❌ Error: " .. tostring(err)
+			end
+		end)
+	end
+
+	executeBtn.MouseButton1Click:Connect(executeCode)
+	clearBtn.MouseButton1Click:Connect(function() playClick(); outputBox.Text = "" end)
 end
 
 --============================================================
