@@ -53,7 +53,6 @@ local AIMBOT = {
 
 local HITBOX = {Enabled = false, Bone = "Head", Size = 0}
 
--- 🔥 ZMIANA: Dodano RemoveJumpDelay
 local MISC = {
 	SemiGod = false, NoRecoil = false, NoSpread = false, InfAmmo = false,
 	SuperPunch = false,
@@ -1864,7 +1863,6 @@ do
 	mkSlider(mvPanel,"Jump Power Value",1,500,50," m",MISC,"JumpPower",7)
 	mkCheck(mvPanel,"Enable SpinBot",MISC,"SpinBot",8)
 	mkSlider(mvPanel,"Spin Speed",1,100,50,"",MISC,"SpinBotSpeed",9)
-	-- 🔥 NOWA OPCJA: Remove Jump Delay
 	mkCheck(mvPanel,"Remove Jump Delay",MISC,"RemoveJumpDelay",10)
 
 	-- RapidFire sub-page
@@ -1964,7 +1962,11 @@ do
 		local bvel = Instance.new("BodyVelocity"); bvel.Name = "BearHub_FCvel"
 		bvel.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bvel.Velocity = Vector3.zero; bvel.Parent = root
 		local hum = char:FindFirstChildOfClass("Humanoid")
-		if hum then hum.WalkSpeed = 0; hum.JumpPower = 0; hum.JumpHeight = 0 end
+		if hum then
+			hum.WalkSpeed = 0
+			hum.JumpPower = 0
+			-- usunięto: hum.JumpHeight = 0 (właściwość nie istnieje)
+		end
 		Camera.CameraType = Enum.CameraType.Scriptable
 		local look = Camera.CFrame.LookVector
 		local camYaw = math.atan2(-look.X, -look.Z)
@@ -2116,7 +2118,7 @@ do
 	twInfoLbl.Text="Teleports you forward each frame instead of walking. Harder to detect than WalkSpeed. Use WASD to move."; twInfoLbl.Font=Enum.Font.Gotham; twInfoLbl.TextSize=11; twInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; twInfoLbl.LayoutOrder=2
 
 	mkCheck(twPanel,"Enable Teleport Walk",EXPLOITS,"TeleportWalk",3)
-	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,nil,true)
+	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,true)  -- poprawione: usunięto zbędny nil
 
 	-- ClickTeleport sub-page
 	local exCtP=Instance.new("Frame",exSubPF); exCtP.Size=UDim2.new(1,0,1,0); exCtP.BackgroundTransparency=1; exCtP.Visible=false
@@ -2277,7 +2279,6 @@ do
 	execEditorFrame.BorderSizePixel = 0
 	Instance.new("UICorner", execEditorFrame).CornerRadius = UDim.new(0, 6)
 
-	-- ScrollingFrame dla linii i kodu
 	local execScroller = Instance.new("ScrollingFrame", execEditorFrame)
 	execScroller.Size = UDim2.new(1, -10, 1, -10)
 	execScroller.Position = UDim2.new(0, 5, 0, 5)
@@ -2287,12 +2288,10 @@ do
 	execScroller.CanvasSize = UDim2.new(0, 0, 0, 0)
 	execScroller.BorderSizePixel = 0
 
-	-- Kontener wewnątrz ScrollingFrame
 	local execContent = Instance.new("Frame", execScroller)
 	execContent.Size = UDim2.new(1, 0, 0, 0)
 	execContent.BackgroundTransparency = 1
 
-	-- Numeracja linii
 	local lnLabel = Instance.new("TextLabel", execContent)
 	lnLabel.Size = UDim2.new(0, 35, 0, 0)
 	lnLabel.Position = UDim2.new(0, 0, 0, 0)
@@ -2304,7 +2303,6 @@ do
 	lnLabel.TextYAlignment = Enum.TextYAlignment.Top
 	lnLabel.Text = "1\n"
 
-	-- Edytor kodu
 	local codeBox = Instance.new("TextBox", execContent)
 	codeBox.Size = UDim2.new(1, -40, 0, 0)
 	codeBox.Position = UDim2.new(0, 38, 0, 0)
@@ -2320,8 +2318,7 @@ do
 	codeBox.MultiLine = true
 	codeBox.Text = "print('Hello from BearHub!')\n"
 
-	-- Aktualizacja numeracji i wysokości
-	local LINE_HEIGHT = 18  -- dopasowane do TextSize 14
+	local LINE_HEIGHT = 18
 
 	local function updateEditor()
 		local lines = codeBox.Text:split("\n")
@@ -2341,7 +2338,6 @@ do
 	codeBox:GetPropertyChangedSignal("Text"):Connect(updateEditor)
 	updateEditor()
 
-	-- Output
 	local outputBox = Instance.new("TextBox", execMainFrame)
 	outputBox.Size = UDim2.new(1, 0, 0, 120)
 	outputBox.Position = UDim2.new(0, 0, 0, 260)
@@ -2359,7 +2355,6 @@ do
 	outputBox.ScrollBarImageColor3 = PURPLE
 	Instance.new("UICorner", outputBox).CornerRadius = UDim.new(0, 4)
 
-	-- Przyciski
 	local execBtnFrame = Instance.new("Frame", execMainFrame)
 	execBtnFrame.Size = UDim2.new(1, 0, 0, 36)
 	execBtnFrame.Position = UDim2.new(0, 0, 0, 390)
@@ -2373,7 +2368,6 @@ do
 	clearBtn.Size = UDim2.new(0, 110, 0, 30)
 	clearBtn.Position = UDim2.new(0, 100, 0.5, -15)
 
-	-- Funkcje wykonawcze
 	local function customPrint(...)
 		local args = {...}
 		local str = ""
@@ -2382,7 +2376,6 @@ do
 			str = str .. tostring(v)
 		end
 		outputBox.Text = outputBox.Text .. str .. "\n"
-		-- Auto-przewijanie do dołu
 		task.wait()
 		outputBox.CursorPosition = #outputBox.Text
 	end
