@@ -1,3 +1,32 @@
+print("=== BearHub FULL START ===")
+local ok, err = pcall(function()
+    -- tutaj wklej CAŁY swój pełny skrypt (od początku do końca)
+end)
+if not ok then
+    print("=== BŁĄD BEARHUB ===")
+    print(err)
+    warn(err)
+    -- opcjonalnie wyświetl błąd w GUI
+    local errorGui = Instance.new("ScreenGui")
+    errorGui.Name = "BearHub_Error"
+    errorGui.Parent = playerGui
+    local frame = Instance.new("Frame", errorGui)
+    frame.Size = UDim2.new(0, 600, 0, 200)
+    frame.Position = UDim2.new(0.5, -300, 0.5, -100)
+    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+    frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(1, -20, 1, -20)
+    label.Position = UDim2.new(0, 10, 0, 10)
+    label.BackgroundTransparency = 1
+    label.Text = "Błąd BearHub:\n" .. tostring(err)
+    label.TextColor3 = Color3.fromRGB(255, 100, 100)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 14
+    label.TextWrapped = true
+end
+
 local player = game.Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
