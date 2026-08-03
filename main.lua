@@ -9,6 +9,16 @@ local SoundService = game:GetService("SoundService")
 local VIM = game:GetService("VirtualInputManager")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- ===== POMOCNICZA FUNKCJA SPLIT (brak wbudowanego) =====
+local function splitString(str, sep)
+    local parts = {}
+    if not str or str == "" then return parts end
+    for part in (str..sep):gmatch("(.-)"..sep) do
+        table.insert(parts, part)
+    end
+    return parts
+end
+
 local CLICK_SOUND_ID = "rbxassetid://6895079853"
 local SLIDER_SOUND_ID = "rbxassetid://5765856907"
 local DRAG_SOUND_ID = "rbxassetid://5765856907"
@@ -1965,7 +1975,6 @@ do
 		if hum then
 			hum.WalkSpeed = 0
 			hum.JumpPower = 0
-			-- usunięto: hum.JumpHeight = 0 (właściwość nie istnieje)
 		end
 		Camera.CameraType = Enum.CameraType.Scriptable
 		local look = Camera.CFrame.LookVector
@@ -2118,7 +2127,7 @@ do
 	twInfoLbl.Text="Teleports you forward each frame instead of walking. Harder to detect than WalkSpeed. Use WASD to move."; twInfoLbl.Font=Enum.Font.Gotham; twInfoLbl.TextSize=11; twInfoLbl.TextXAlignment=Enum.TextXAlignment.Left; twInfoLbl.LayoutOrder=2
 
 	mkCheck(twPanel,"Enable Teleport Walk",EXPLOITS,"TeleportWalk",3)
-	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,true)  -- poprawione: usunięto zbędny nil
+	mkSlider(twPanel,"Step Distance",1,300,5," m",EXPLOITS,"TeleportWalkDistance",4,true)
 
 	-- ClickTeleport sub-page
 	local exCtP=Instance.new("Frame",exSubPF); exCtP.Size=UDim2.new(1,0,1,0); exCtP.BackgroundTransparency=1; exCtP.Visible=false
@@ -2321,7 +2330,7 @@ do
 	local LINE_HEIGHT = 18
 
 	local function updateEditor()
-		local lines = codeBox.Text:split("\n")
+		local lines = splitString(codeBox.Text, "\n")
 		local lineCount = #lines
 		local lineText = ""
 		for i = 1, lineCount do
